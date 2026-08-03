@@ -6,7 +6,7 @@ use CodeIgniter\Router\RouteCollection;
  * @var RouteCollection $routes
  */
 
-// $routes->get('/', 'AuthController::index');
+$routes->get('/', 'AuthController::exlogin');
 $routes->get('event/(:segment)', 'AuthController::index/$1');
 $routes->get('login/(:segment)', 'AuthController::exlogin/$1');
 $routes->post('checklogin', 'AuthController::checkLogin');

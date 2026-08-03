@@ -18,14 +18,13 @@ class AuthController extends BaseController
 
     public function generate_main_event_code($enc_id = null)
     {
-   
-        // $decrypted_id = decryptData(4);
-        // print_r($decrypted_id);die;
+        $encrypted_id = encryptData(4);
+        return redirect()->to('login/' . $encrypted_id);
     }
-    
+
     public function index($enc_id = null)
     {
-        
+
         $referreral_website = $this->request->getServer('HTTP_REFERER');
         $decrypted_id = decryptData($enc_id);
         if (!$decrypted_id) {
@@ -49,15 +48,18 @@ class AuthController extends BaseController
     public function exlogin($encrypted_sub_event_id = null)
     {
         if (!$encrypted_sub_event_id) {
-            return redirect()->to('event/' . $encrypted_sub_event_id)->with('fail', 'Invalid request');
+            return $this->generate_main_event_code();
         }
+
         $sub_event_id = decryptData($encrypted_sub_event_id);
         if (!$sub_event_id) {
             return redirect()->to('event/' . $encrypted_sub_event_id)->with('fail', 'Invalid event data');
         }
+
         if (session()->get('logged_in')) {
             return redirect()->to('dashboard');
         }
+
         return view('login', [
             'enc_sub_event_id' => $encrypted_sub_event_id,
             'referreral_website' => $this->session->get('referreral_website'),
@@ -221,7 +223,7 @@ class AuthController extends BaseController
             'user_email' => $user->email,
             'exhibitor_id' => $user->exhibitor_id,
             'sub_event_id' => $enc_sub_event_id,
-            
+
             'logged_in' => true,
         ]);
         return redirect()->to(base_url('dashboard'))
