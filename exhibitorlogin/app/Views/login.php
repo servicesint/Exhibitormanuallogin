@@ -296,6 +296,21 @@
         const csrfHash = '<?= csrf_hash() ?>';
 
         $(function() {
+            $.ajax({
+                url: '<?= base_url('/guestlogin') ?>',
+                type: 'GET',
+                dataType: 'json',       
+                success: function(res) {
+                    console.log(res);
+                    if (res.status === 'success' && res.data && res.data.referreral_website) {
+                        localStorage.setItem('reference_website', res.data.referreral_website);
+                    }
+                },
+                error: function() {
+                    console.warn('Unable to fetch reference website.');
+                }
+            });
+
             const toastEl = document.getElementById('appToast');
             const toastMsg = $('#toastMessage');
             const toast = new bootstrap.Toast(toastEl, {
@@ -391,7 +406,7 @@
                     data: {
                         identifier: identifier,
                         enc_sub_event_id: $('#enc_sub_event_id').val(),
-                        referral_website: $('#referral_website').val(), // ✅ add this
+                        referral_website: $('#referral_website').val(),
                         [csrfName]: csrfHash
                     },
                     success: function(res) {
@@ -404,7 +419,6 @@
                             showToast(res.message, 'success');
                             if (res.debug_otp) {
                                 showToast(
-                                    // 'Otp Send Successfully: ' + res.debug_otp,
                                     'Otp Send Successfully',
                                     'info'
                                 );
@@ -465,7 +479,7 @@
                             showToast(res.message, 'success');
                             if (res && res.token) {
                                 localStorage.setItem('api_token', res.token);
-                                localStorage.setItem('referral_website', referral);
+                                localStorage.setItem('reference_website', referral);
                                 document.cookie = 'api_token=' + res.token + '; path=/; SameSite=Strict';
                             }
                             setTimeout(function() {
