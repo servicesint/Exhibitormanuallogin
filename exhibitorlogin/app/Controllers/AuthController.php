@@ -19,12 +19,12 @@ class AuthController extends BaseController
     public function generate_main_event_code($enc_id = null)
     {
         $encrypted_id = encryptData(4);
+
         return redirect()->to('login/' . $encrypted_id);
     }
 
     public function index($enc_id = null)
     {
-
         $referreral_website = $this->request->getServer('HTTP_REFERER');
         $decrypted_id = decryptData($enc_id);
         if (!$decrypted_id) {
@@ -48,21 +48,57 @@ class AuthController extends BaseController
     public function exlogin($encrypted_sub_event_id = null)
     {
         if (!$encrypted_sub_event_id) {
-            return $this->generate_main_event_code();
-        }
-
-        $sub_event_id = decryptData($encrypted_sub_event_id);
-        if (!$sub_event_id) {
-            return redirect()->to('event/' . $encrypted_sub_event_id)->with('fail', 'Invalid event data');
+            $event_id = 4;
+            $encrypted_sub_event_id = encryptData($event_id);
+        } else {
+            $event_id = decryptData($encrypted_sub_event_id);
+            if (!$event_id) {
+                return redirect()->to('event/' . $encrypted_sub_event_id)->with('fail', 'Invalid event data');
+            }
         }
 
         if (session()->get('logged_in')) {
             return redirect()->to('dashboard');
         }
 
+        $eventRow = $this->db->table('company_events')
+            ->select('url')
+            ->where('id', $event_id)
+            ->get()
+            ->getRowArray();
+
+        $company_url = $eventRow['url'] ?? null;
+
+        $subEventRow = $this->db->table('company_sub_events')
+            ->select('id')
+            ->where('event_id', $event_id)
+            ->where('start_date >', date('Y-m-d H:i:s'))
+            ->orderBy('start_date', 'ASC')
+            ->get(1)
+            ->getRowArray();
+
+        $sub_event_id = $subEventRow['id'] ?? null;
+
+        session()->set('sub_event_id', $sub_event_id);
+
+        if ($company_url) {
+            session()->set('referreral_website', $company_url);
+        }
+
         return view('login', [
-            'enc_sub_event_id' => $encrypted_sub_event_id,
-            'referreral_website' => $this->session->get('referreral_website'),
+            'enc_sub_event_id' => encryptData($sub_event_id),
+            'referreral_website' => $company_url ?? session()->get('referreral_website'),
+        ]);
+    }
+
+    public function guestlogin()
+    {
+        return $this->response->setJSON([
+            'status' => 'success',
+            'data' => [
+                'referreral_website' => session()->get('referreral_website'),
+                'sub_event_id' => session()->get('sub_event_id')
+            ]
         ]);
     }
 

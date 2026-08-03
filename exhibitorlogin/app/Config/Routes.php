@@ -9,6 +9,7 @@ use CodeIgniter\Router\RouteCollection;
 $routes->get('/', 'AuthController::exlogin');
 $routes->get('event/(:segment)', 'AuthController::index/$1');
 $routes->get('login/(:segment)', 'AuthController::exlogin/$1');
+$routes->get('guestlogin', 'AuthController::guestlogin');
 $routes->post('checklogin', 'AuthController::checkLogin');
 $routes->post('sendOtp', 'AuthController::sendOtp');
 $routes->get('testEncrypt', 'AuthController::testEncrypt');
