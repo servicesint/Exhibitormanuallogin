@@ -5,6 +5,11 @@ $signature = !empty($signature) ? $uploadBaseUrl . '/' . ltrim($signature, '/') 
 $displayCustomerName = !empty($customer_name) ? $customer_name : 'M/s Services International';
 $displayCustomerAddress = $customer_address ?? '';
 $displayCustomerGstin = !empty($customer_gstin) ? $customer_gstin : 'N/A';
+
+// Normalize exhibitor type: default to Domestic if not supplied
+$exhibitorType = !empty($exhibitor_type) ? strtolower(trim($exhibitor_type)) : 'domestic';
+$isInternational = ($exhibitorType === 'international');
+
 ?>
 
 <!DOCTYPE html>
@@ -17,6 +22,7 @@ $displayCustomerGstin = !empty($customer_gstin) ? $customer_gstin : 'N/A';
             font-family: dejavusans;
             font-size: 12px;
             color: #000;
+
         }
 
         .header-table {
@@ -55,11 +61,11 @@ $displayCustomerGstin = !empty($customer_gstin) ? $customer_gstin : 'N/A';
 
         .invoice-title {
             text-align: center;
-            font-size: 24px;
+            font-size: 22px;
             font-weight: bold;
             text-decoration: underline;
-            margin-top: 35px;
-            margin-bottom: 30px;
+            margin-top: 22px;
+            margin-bottom: 20px;
             letter-spacing: 2px;
         }
 
@@ -120,7 +126,7 @@ $displayCustomerGstin = !empty($customer_gstin) ? $customer_gstin : 'N/A';
         }
 
         .signature {
-            text-align: center;
+            text-align: right;
             padding-top: 20px;
         }
 
@@ -131,29 +137,124 @@ $displayCustomerGstin = !empty($customer_gstin) ? $customer_gstin : 'N/A';
         }
 
         .note {
-            position: fixed;
-            bottom: 20px;
-            left: 0;
-            right: 0;
             width: 100%;
             text-align: center;
-            font-size: 11px;
+            font-size: 10.5px;
             font-style: italic;
+            color: #444444;
+            margin-top: 22px;
+            padding-top: 6px;
+            border-top: 1px solid #e0e0e0;
         }
 
-        .footer-table {
+        /* ---- Bank details box ---- */
+        .bank-box {
             width: 100%;
-            margin-top: 35px;
+            border: 1px solid #b5b5b5;
+            box-sizing: border-box;
+            margin-top: 8px;
+            page-break-inside: avoid;
         }
 
-        .footer-table td {
-            vertical-align: top;
+        .bank-heading-bar {
+            background-color: #1f2d3d;
+            color: #ffffff;
+            text-align: center;
             font-size: 12px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            padding: 5px 0;
         }
 
-        .signature {
-            text-align: right;
-            padding-top: 20px;
+        .bank-payee-line {
+            text-align: center;
+            font-size: 10.5px;
+            font-style: italic;
+            color: #333333;
+            padding: 6px 14px 2px 14px;
+        }
+
+        .bank-inner {
+            padding: 2px 14px 10px 14px;
+        }
+
+        .bank-columns {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .bank-col-beneficiary {
+            width: 58%;
+            vertical-align: top;
+            padding-right: 12px;
+        }
+
+        .bank-col-intermediary {
+            width: 42%;
+            vertical-align: top;
+            padding-left: 12px;
+            border-left: 1px solid #d5d5d5;
+        }
+
+        .bank-section-title {
+            font-size: 10px;
+            font-weight: bold;
+            color: #1f2d3d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 6px 0 3px 0;
+            border-bottom: 1px solid #d5d5d5;
+            margin-bottom: 2px;
+        }
+
+        .bank-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .bank-table td {
+            font-size: 10.5px;
+            padding: 2.5px 4px;
+            vertical-align: top;
+            line-height: 1.35;
+        }
+
+        .bank-table tr:nth-child(even) td {
+            background-color: #f6f7f9;
+        }
+
+        .bank-label {
+            width: 42%;
+            font-weight: bold;
+            color: #333333;
+        }
+
+        .bank-colon {
+            width: 3%;
+            color: #333333;
+        }
+
+        .bank-value {
+            width: 55%;
+            color: #000000;
+        }
+
+        .pan-gst-strip {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+        }
+
+        .pan-gst-strip td {
+            font-size: 10.5px;
+            padding: 5px 10px;
+            background-color: #f6f7f9;
+            border: 1px solid #e0e0e0;
+        }
+
+        .pan-gst-strip .pg-label {
+            font-weight: bold;
+            color: #1f2d3d;
         }
     </style>
 </head>
@@ -265,31 +366,145 @@ $displayCustomerGstin = !empty($customer_gstin) ? $customer_gstin : 'N/A';
             </td>
         </tr>
     </table>
+
     <table class="footer-table">
         <tr>
-            <td style="width: 50%; text-align:left;">
-                <strong>Bank Account Details:</strong>
-                <br>services International<br>
-                Bank Name: IndusInd Bank <br>
-                Payee Name: Services International
-                <br>
-                Account Number: 259810057161<br>
-                Account Type: Current Account<br>
-                IFSC Code (RTGS/NEFT): INDB0001617<br>
-                SWIFT Code: INDBINBBXXX<br>
-                Bank Address: Unit No. 21, DLF Cross Point, Opp. Galleria Market, DLF Phase 4, Gurugram -
-                122002<br>
+            <td style="width: 100%;">
+                <div class="bank-box">
+                    <div class="bank-heading-bar">BANK DETAILS</div>
+                    <div class="bank-payee-line">
+                        Payment to be made in favor of &ldquo;Services International&rdquo;
+                    </div>
+
+                    <div class="bank-inner">
+                        <?php if ($isInternational): ?>
+                            <table class="bank-columns">
+                                <tr>
+                                    <td class="bank-col-beneficiary">
+                                        <div class="bank-section-title">Beneficiary Bank</div>
+                                        <table class="bank-table">
+                                            <tr>
+                                                <td class="bank-label">Name</td>
+                                                <td class="bank-colon">:</td>
+                                                <td class="bank-value">Services International</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="bank-label">Bank Name</td>
+                                                <td class="bank-colon">:</td>
+                                                <td class="bank-value">HDFC Bank</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="bank-label">Address</td>
+                                                <td class="bank-colon">:</td>
+                                                <td class="bank-value">209-214, Kailash Building 26,
+                                                    Kasturba Gandhi Marg, New Delhi - 110001</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="bank-label">Account Number</td>
+                                                <td class="bank-colon">:</td>
+                                                <td class="bank-value">00032210003368</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="bank-label">Account Type</td>
+                                                <td class="bank-colon">:</td>
+                                                <td class="bank-value">Current Account</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="bank-label">RTGS/NEFT IFSC</td>
+                                                <td class="bank-colon">:</td>
+                                                <td class="bank-value">HDFC0000003</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="bank-label">Swift Code</td>
+                                                <td class="bank-colon">:</td>
+                                                <td class="bank-value">HDFCINBB</td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                    <td class="bank-col-intermediary">
+                                        <div class="bank-section-title">Intermediary Bank</div>
+                                        <table class="bank-table">
+                                            <tr>
+                                                <td class="bank-label">Bank</td>
+                                                <td class="bank-colon">:</td>
+                                                <td class="bank-value">JP Morgan Chase Bank,
+                                                    New York</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="bank-label">Account No.</td>
+                                                <td class="bank-colon">:</td>
+                                                <td class="bank-value">001-1-406717</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="bank-label">Swift Code</td>
+                                                <td class="bank-colon">:</td>
+                                                <td class="bank-value">CHASUS33</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="bank-label">ABA Code</td>
+                                                <td class="bank-colon">:</td>
+                                                <td class="bank-value">021000021</td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                        <?php else: ?>
+                            <table class="bank-table">
+                                <tr>
+                                    <td class="bank-label">Name</td>
+                                    <td class="bank-colon">:</td>
+                                    <td class="bank-value">Services International</td>
+                                </tr>
+                                <tr>
+                                    <td class="bank-label">Bank Name</td>
+                                    <td class="bank-colon">:</td>
+                                    <td class="bank-value">IndusInd Bank</td>
+                                </tr>
+                                <tr>
+                                    <td class="bank-label">Address</td>
+                                    <td class="bank-colon">:</td>
+                                    <td class="bank-value">Unit No. 21, DLF Cross Point, Opp. Galleria
+                                        Market, DLF Phase 4, Gurugram - 122002</td>
+                                </tr>
+                                <tr>
+                                    <td class="bank-label">Account Number</td>
+                                    <td class="bank-colon">:</td>
+                                    <td class="bank-value">259810057161</td>
+                                </tr>
+                                <tr>
+                                    <td class="bank-label">Account Type</td>
+                                    <td class="bank-colon">:</td>
+                                    <td class="bank-value">Current Account</td>
+                                </tr>
+                                <tr>
+                                    <td class="bank-label">IFSC Code (RTGS/NEFT)</td>
+                                    <td class="bank-colon">:</td>
+                                    <td class="bank-value">INDB0001617</td>
+                                </tr>
+                            </table>
+                        <?php endif; ?>
+
+                        <table class="pan-gst-strip">
+                            <tr>
+                                <td style="width:50%;">
+                                    <span class="pg-label">PAN No.:</span> AABFS1981P
+                                </td>
+                                <td style="width:50%;">
+                                    <span class="pg-label">GST No.:</span> 07AABFS1981P1ZO
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
             </td>
         </tr>
         <tr>
-            <td style="width: 50%; text-align:left;">
-                <strong>Pan No. AABFS1981P</strong>
-            </td>
             <td style="width: 50%; text-align:right;" class="signature">
-                For Services International<br><br><br>
+                For Services International<br><br>
                 <img src="<?= esc($signature) ?>"
-                    width="110"
-                    style="max-width:110px; height:auto; object-fit:contain;"><br>
+                    width="100"
+                    style="max-width:100px; height:auto; object-fit:contain;"><br>
                 (Authorised Signature)
             </td>
         </tr>

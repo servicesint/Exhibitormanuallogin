@@ -70,9 +70,8 @@ class AuthController extends BaseController
         }
         return $this->response->setJSON([
             'status' => 'success',
-            'message' => 'OTP sent successfully:-' . $otp,
+            'message' => 'OTP sent successfully',
             'channel' => $channel,
-            'debug_otp' => (ENVIRONMENT === 'development') ? $otp : null,
         ]);
     }
 
@@ -198,10 +197,7 @@ class AuthController extends BaseController
             'status' => true,
             'message' => 'OTP resent successfully.',
             'next_resend_after' => ($resendCount + 2) * 15,
-            'expires_in' => 300,
-            'debug_otp' => ENVIRONMENT === 'development'
-                ? $otp
-                : null
+            'expires_in' => 300
         ]);
     }
 
