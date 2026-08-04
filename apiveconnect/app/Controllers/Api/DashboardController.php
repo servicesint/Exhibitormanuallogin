@@ -795,10 +795,12 @@ class DashboardController extends BaseController
                     ]);
             }
             $isInternational = $this->resolveIsInternational($vendorId);
+
             $currencySymbol  = $isInternational ? '$' : '₹';
             $currencyText    = $isInternational ? 'USD' : 'INR';
             $contactModel = new ExhibitorContactPersonModel();
             $profile      = $contactModel->getProfile($vendorId);
+
             $cartModel = new CartModel();
             $items     = $cartModel->getItems($vendorId, $isInternational);
             if (empty($items)) {
@@ -907,6 +909,7 @@ class DashboardController extends BaseController
                 'subtotal'         => $subtotal,
                 'company_name'     => $companyInfo['company_name'],
                 'company_image'    => $companyInfo['company_logo'],
+                'exhibitor_type'    => $exhibitorInfo['exhibitor_type'],
                 'cgst'             => $cgst,
                 'sgst'             => $sgst,
                 'igst'             => $igst,
@@ -959,7 +962,7 @@ class DashboardController extends BaseController
     private function getExhibitorTaxInfo(int $exhibitorId): array
     {
         $row = $this->db->table('exhibitors as e')
-            ->select('e.organisation_name, e.gst_number, e.organisation_address as address, s.name')
+            ->select('e.organisation_name, e.gst_number, e.organisation_address as address, e.exhibitor_type, s.name')
             ->join('states as s', 's.id = e.state_id', 'left')
             ->where('e.id', $exhibitorId)
             ->get()
@@ -970,6 +973,7 @@ class DashboardController extends BaseController
             'gst_number'        => null,
             'address'           => null,
             'name'              => null,
+            'exhibitor_type'    => null,
         ];
     }
 
@@ -4196,7 +4200,7 @@ class DashboardController extends BaseController
                 '{{end_date}}'     => !empty($template['end_date'])
                     ? (new \DateTime($template['end_date']))->format('jS M Y')
                     : '',
-                    '{{full_date}}'    => $fullDate,
+                '{{full_date}}'    => $fullDate,
             ];
             // print_r($placeholders); die;
             $html = str_replace(array_keys($placeholders), array_values($placeholders), $template['permit_content']);
