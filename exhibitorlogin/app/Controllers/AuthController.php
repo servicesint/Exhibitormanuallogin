@@ -25,23 +25,30 @@ class AuthController extends BaseController
 
     public function index($enc_id = null)
     {
-        $referreral_website = $this->request->getServer('HTTP_REFERER');
         $decrypted_id = decryptData($enc_id);
         if (!$decrypted_id) {
             return redirect()->to('event/' . $enc_id)->with('fail', 'Invalid request');
         }
+
         $subevents = $this->exhibitorModel->getActiveSubEvents($decrypted_id);
         if (empty($subevents)) {
             return redirect()->to('event/' . $enc_id)->with('fail', 'No active events found');
         }
+
+        $referreral_website = !empty($subevents[0]->url)
+            ? $subevents[0]->url
+            : $this->request->getServer('HTTP_REFERER');
+
         $this->session->set([
             'enc_sub_event_id' => $enc_id,
             'referreral_website' => $referreral_website,
         ]);
+
         if (count($subevents) === 1) {
             $encrypted_sub_event_id = encryptData($subevents[0]->sub_event_id);
             return redirect()->to('login/' . $encrypted_sub_event_id);
         }
+
         return view('event', ['subevents' => $subevents]);
     }
 

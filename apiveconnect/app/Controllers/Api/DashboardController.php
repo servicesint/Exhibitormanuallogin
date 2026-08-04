@@ -4169,6 +4169,25 @@ class DashboardController extends BaseController
                     'data'    => null,
                 ]);
             }
+            $fullDate = '';
+
+            if (!empty($template['start_date']) && !empty($template['end_date'])) {
+                $start = new \DateTime($template['start_date']);
+                $end   = new \DateTime($template['end_date']);
+
+                if ($start->format('F Y') === $end->format('F Y')) {
+                    // Same month & year
+                    $fullDate = strtoupper($start->format('jS')) . ' - ' .
+                        strtoupper($end->format('jS')) . ' ' .
+                        $end->format('F Y');
+                } else {
+                    // Different month/year
+                    $fullDate = strtoupper($start->format('jS')) . ' ' .
+                        $start->format('F') . ' - ' .
+                        strtoupper($end->format('jS')) . ' ' .
+                        $end->format('F Y');
+                }
+            }
             $placeholders = [
                 '{{venue_city}}'   => $template['venue_city'],
                 '{{event_name}}'   => $template['event_name'],
@@ -4177,7 +4196,9 @@ class DashboardController extends BaseController
                 '{{end_date}}'     => !empty($template['end_date'])
                     ? (new \DateTime($template['end_date']))->format('jS M Y')
                     : '',
+                    '{{full_date}}'    => $fullDate,
             ];
+            // print_r($placeholders); die;
             $html = str_replace(array_keys($placeholders), array_values($placeholders), $template['permit_content']);
             $html = $this->cleanTrailingContent($html);
             $html = $this->compactPdfHtml($html);
@@ -4191,6 +4212,94 @@ class DashboardController extends BaseController
                 'message' => 'Something went wrong while generating the PDF.',
                 'error'   => $e->getMessage(),
                 'data'    => null,
+            ]);
+        }
+    }
+
+    public function welcomeLetter()
+    {
+        try {
+            $jwt         = $this->getJwtContext();
+            $exhibitorId = $jwt['exhibitor_id'] ?? null;
+            $eventId     = $jwt['eventId'] ?? null;
+            $subEventId  = $jwt['subEventId'] ?? null;
+
+            if (!$exhibitorId) {
+                return $this->response->setStatusCode(401)->setJSON([
+                    'status'  => false,
+                    'code'    => 401,
+                    'message' => 'Unauthorized.',
+                    'data'    => null,
+                ]);
+            }
+
+            $template = $this->db->table('letters as l')
+                ->select('l.letter_name, l.content, cse.sub_event_name, cse.venue, cse.full_date, cse.start_date, cse.end_date, l.stamp, c.company_logo, e.organisation_name,e.stall_number')
+                ->join('company_sub_events as cse', 'cse.id = l.sub_event_id', 'left')
+                ->join('companies as c', 'c.id = cse.company_id', 'left')
+                ->join('exhibitors as e', 'e.sub_event_id = cse.id', 'left')
+                ->where('e.event_id', $eventId)
+                ->where(strtolower('l.letter_name'), 'Welcome-Letter')
+                ->where('e.id', $exhibitorId)
+                ->where('e.sub_event_id', $subEventId)
+                ->where('l.is_deleted', 0)
+                ->get()
+                ->getRowArray();
+            /* print_r($template); die; */
+            if (!$template || empty($template['content'])) {
+                return $this->response->setStatusCode(404)->setJSON([
+                    'status'  => false,
+                    'code'    => 404,
+                    'message' => 'PDF template not found.',
+                    'data'    => null,
+                ]);
+            }
+            $uploadBaseUrl = rtrim(env('UPLOAD_BASE_URL', getenv('UPLOAD_BASE_URL')), '/');
+            $placeholders = [
+                '{{company_logo}}'      => !empty($template['company_logo'])
+                    ? $uploadBaseUrl . '/' . ltrim($template['company_logo'], '/')
+                    : '',
+                '{{date}}'              => date('jS M Y'),
+                '{{exhibitor_company}}' => $template['organisation_name'],
+                '{{sub_event_name}}'    => $template['sub_event_name'],
+                '{{venue}}'             => $template['venue'],
+                '{{full_date}}'         => $template['full_date'],
+                '{{stall_number}}'      => $template['stall_number'],
+                '{{stamp}}'             => !empty($template['stamp'])
+                    ? $uploadBaseUrl . '/' . ltrim($template['stamp'], '/')
+                    : '',
+            ];
+
+            $html = str_replace(array_keys($placeholders), array_values($placeholders), $template['content']);
+
+            $fileName = 'welcome-letter-' . time() . '.pdf';
+
+            // --- FIX: Pass custom margin options to force it into 1 page ---
+            $pdfOptions = [
+                'margin_left'   => 10,
+                'margin_right'  => 10,
+                'margin_top'    => 10,
+                'margin_bottom' => 10,
+            ];
+
+            // Pass the $pdfOptions array as the 4th parameter
+            return PdfHelper::download($this->response, $html, $fileName, $pdfOptions);
+        } catch (\Throwable $e) {
+            log_message(
+                'error',
+                'Welcome Letter Error : ' .
+                    $e->getMessage() .
+                    ' File : ' .
+                    $e->getFile() .
+                    ' Line : ' .
+                    $e->getLine()
+            );
+
+            return $this->response->setStatusCode(500)->setJSON([
+                'status'  => false,
+                'code'    => 500,
+                'message' => 'Something went wrong while generating the PDF.',
+                'error'   => $e->getMessage(),
             ]);
         }
     }
