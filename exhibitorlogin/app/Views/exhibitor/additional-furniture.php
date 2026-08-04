@@ -1162,7 +1162,7 @@
                             <p>GST (18%) <span>₹0</span></p>
                             <p class="fw-bold fs-5">Total <span>₹0</span></p>
                         </div>
-                        <button id="checkoutButton" type="button" class="btn btn-dark w-100" disabled>Proceed to Checkout</button>
+                        <!-- <button id="checkoutButton" type="button" class="btn btn-dark w-100" disabled>Proceed to Checkout</button> -->
                         <button id="quotationButton" type="button" class="btn btn-dark w-100" disabled>Generate Quotation</button>
                     </div>
                 </div>
