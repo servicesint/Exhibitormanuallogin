@@ -2214,6 +2214,7 @@
             dom.quotationButton.disabled = true;
         }
 
+        
         async function addToCart({
             item_id,
             quantity
