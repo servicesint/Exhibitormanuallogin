@@ -519,7 +519,7 @@
         };
 
         const EVENT_SECTIONS = {
-            'Drone Expo & Conference': {
+            'Drone Expo': {
                 fields: [{
                         label: 'Company Product Specialization*',
                         name: 'company_product_specialization',
