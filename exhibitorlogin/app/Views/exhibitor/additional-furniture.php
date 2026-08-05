@@ -1162,7 +1162,7 @@
                             <p>GST (18%) <span>₹0</span></p>
                             <p class="fw-bold fs-5">Total <span>₹0</span></p>
                         </div>
-                        <button id="checkoutButton" type="button" class="btn btn-dark w-100" disabled style="display:none;">Proceed to Checkout</button>
+                        <button id="checkoutButton" type="button" class="btn btn-dark w-100" disabled>Proceed to Checkout</button>
                         <button id="quotationButton" type="button" class="btn btn-dark w-100" disabled>Generate Quotation</button>
                     </div>
                 </div>
@@ -1411,7 +1411,7 @@
             dom.furnitureTableBody = document.getElementById('furnitureTableBody');
             dom.cartItemsContainer = document.getElementById('cartItemsContainer');
             dom.cartSummary = document.getElementById('cartSummary');
-         //   dom.checkoutButton = document.getElementById('checkoutButton');
+           dom.checkoutButton = document.getElementById('checkoutButton');
             dom.quotationButton = document.getElementById('quotationButton');
             dom.cartCountBadge = document.getElementById('cartCountBadge');
             dom.cartCountHeader = document.getElementById('cartCountHeader');
@@ -2179,10 +2179,10 @@
             );
             state.cartHasOutOfStock = hasOutOfStockItem;
             if (hasOutOfStockItem || state.isOptedOut) {
-                // dom.checkoutButton.disabled = true;
+                dom.checkoutButton.disabled = true;
                 dom.quotationButton.disabled = true;
             } else {
-                // dom.checkoutButton.disabled = false;
+                dom.checkoutButton.disabled = false;
                 dom.quotationButton.disabled = false;
             }
         }
@@ -2203,14 +2203,14 @@
                 <p>Subtotal <span>${money(0)}</span></p>
                 <p>GST (18%) <span>${money(0)}</span></p>
                 <p class="fw-bold fs-5">Total <span>${money(0)}</span></p>`;
-            // dom.checkoutButton.disabled = true;
+            dom.checkoutButton.disabled = true;
             dom.quotationButton.disabled = true;
         }
 
         function renderCartError() {
             updateCartCount(0);
             dom.cartItemsContainer.innerHTML = '<p class="text-danger">Unable to load cart.</p>';
-            // dom.checkoutButton.disabled = true;
+            dom.checkoutButton.disabled = true;
             dom.quotationButton.disabled = true;
         }
 
@@ -2284,11 +2284,11 @@
                 showToast('Please remove out-of-stock items from your cart before proceeding.', 'danger');
                 return;
             }
-            // const checkoutBtn = document.getElementById('checkoutButton');
-            // if (checkoutBtn) {
-            //     checkoutBtn.disabled = true;
-            //     checkoutBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating Payment...';
-            // }
+            const checkoutBtn = document.getElementById('checkoutButton');
+            if (checkoutBtn) {
+                checkoutBtn.disabled = true;
+                checkoutBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating Payment...';
+            }
             const result = await apiCall(ORDER_ENDPOINTS.checkout, {
                 method: 'POST',
                 body: {
@@ -2827,11 +2827,11 @@
                     return;
                 }
 
-                // const checkoutBtn = event.target.closest('#checkoutButton');
-                // if (checkoutBtn) {
-                //     placeOrder();
-                //     return;
-                // }
+                const checkoutBtn = event.target.closest('#checkoutButton');
+                if (checkoutBtn) {
+                    placeOrder();
+                    return;
+                }
 
                 const quotationBtn = event.target.closest('#quotationButton');
                 if (quotationBtn) {
