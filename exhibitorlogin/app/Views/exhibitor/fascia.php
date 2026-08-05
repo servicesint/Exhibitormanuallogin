@@ -830,14 +830,10 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
                         </div>
                     </div>
                     <div class="fascia-group" id="rawNotesBlock">
-                        <div class="fascia-notes">
-                            <div class="fascia-notes-title"><i class="bi bi-info-circle"></i> Notes</div>
-                            <div class="note-info">1. Please submit your design with height and length whole dimensions in 3d image.</div>
-                            <div class="note-info">2. Maximum height of the side stands 4.5 mtrs including platform.</div>
-                            <div class="note-info">3. Onsite approval of design will attract the fine of Rs 25000/- per design per stand.</div>
-                            <div class="note-info">4. Exceeding the mentioned electricity will be subject to additional charges.</div>
-                        </div>
-                    </div>
+    <div class="fascia-notes" id="fasciaNotesContent">
+        <!-- populated dynamically from API's raw_text -->
+    </div>
+</div>
                     <div class="fascia-actions">
                         <button type="submit" class="btn fascia-btn" id="rawSubmitBtn">Submit</button>
                     </div>
@@ -880,7 +876,16 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
         const API_BASE_URL = '<?= env('API_BASE_URL') ?>';
         const FASCIA_URL = `${API_BASE_URL}/v1/dashboard/fascia`;
         let isViewOnly = false;
-
+        function renderFasciaNotes(rawText) {
+    const $notes = $('#fasciaNotesContent');
+    if (!rawText) {
+        $notes.empty();
+        return;
+    }
+    // raw_text may contain HTML from the admin-configured footer,
+    // so inject as-is rather than escaping
+    $notes.html(rawText);
+}
         function checkFasciaStatus() {
             let status = 'enabled_open';
             if (window.getFormStatus) {
@@ -1254,6 +1259,7 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
                     if (saved && Object.keys(saved).length) {
                         hydrateSavedFascia(saved);
                     }
+                    renderFasciaNotes(response?.raw_text || '');
                 }
             });
         }
