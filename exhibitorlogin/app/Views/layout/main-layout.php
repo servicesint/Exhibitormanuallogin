@@ -186,21 +186,7 @@
                     </a>
                 </li>
 
-                <!-- Participation Letter -->
-                <li class="nav-item">
-                    <a class="nav-link" href="javascript:void(0);" onclick="downloadParticipationLetter()">
-                        <i class="bi bi-people"></i>
-                        <span class="nav-text">Download Participation Letter</span>
-                    </a>
-                </li>
-
-                <!-- Exit Permit -->
-                <li class="nav-item">
-                    <a class="nav-link" href="javascript:void(0);" onclick="downloadExitPermit()">
-                        <i class="bi bi-box-arrow-right"></i>
-                        <span class="nav-text">Download Exit Permit</span>
-                    </a>
-                </li>
+                 
 
                 <!-- Fascia -->
                 <li id="fasciaNavItem" style="display:none;">
@@ -245,7 +231,27 @@
                         <span id="status-visitor_ticket_requests" class="status-circle pending"><i class="bi bi-x-lg"></i></span>
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="javascript:void(0);" onclick="downloadWelcomeLetter()">
+                        <i class="bi bi-box-arrow-right"></i>
+                        <span class="nav-text">Download Welcome Letter</span>
+                    </a>
+                </li>
+                 <!-- Participation Letter -->
+                <li class="nav-item">
+                    <a class="nav-link" href="javascript:void(0);" onclick="downloadParticipationLetter()">
+                        <i class="bi bi-people"></i>
+                        <span class="nav-text">Download Participation Letter</span>
+                    </a>
+                </li>
 
+                <!-- Exit Permit -->
+                <li class="nav-item">
+                    <a class="nav-link" href="javascript:void(0);" onclick="downloadExitPermit()">
+                        <i class="bi bi-box-arrow-right"></i>
+                        <span class="nav-text">Download Exit Permit</span>
+                    </a>
+                </li>
                 <!-- Important Information -->
                 <li class="nav-item">
                     <a class="nav-link d-flex justify-content-between align-items-center"
@@ -808,8 +814,8 @@
             const eventName = String(profile?.event_name || '').trim();
             const exhibitorType = String(profile?.exhibitor_type || '').trim().toLowerCase();
 
-            const alwaysHiddenEvents = ['Drone Expo'];
-            const internationalRestrictedEvents = ['Fire India', 'Drone Expo', 'Secure Nation'];
+            const alwaysHiddenEvents = ['Drone Expo & Conference'];
+            const internationalRestrictedEvents = ['Fire India', 'Drone Expo & Conference', 'Secure Nation'];
 
             const isAlwaysHidden = alwaysHiddenEvents.includes(eventName);
             const isInternationalRestricted = internationalRestrictedEvents.includes(eventName) && exhibitorType === 'international';
@@ -824,8 +830,8 @@
             const eventName = String(profile?.event_name || '').trim();
             const exhibitorType = String(profile?.exhibitor_type || '').trim().toLowerCase();
 
-            const alwaysHiddenEvents = ['Drone Expo'];
-            const internationalRestrictedEvents = ['Fire India', 'Drone Expo', 'Secure Nation'];
+            const alwaysHiddenEvents = ['Drone Expo & Conference'];
+            const internationalRestrictedEvents = ['Fire India', 'Drone Expo & Conference', 'Secure Nation'];
 
             const isAlwaysHidden = alwaysHiddenEvents.includes(eventName);
             const isInternationalRestricted = internationalRestrictedEvents.includes(eventName) && exhibitorType === 'international';
@@ -898,9 +904,10 @@
             e.preventDefault();
 
             const token = getAuthToken();
-            const referralWebsite = localStorage.getItem('referral_website');
+            
+            const referralWebsite = localStorage.getItem('reference_website');
+            
             const logoutBtn = document.getElementById('logoutBtn');
-
             if (logoutBtn) {
                 logoutBtn.classList.add('disabled');
                 logoutBtn.textContent = 'Logging out...';
@@ -925,33 +932,19 @@
                 window.location.href = referralWebsite;
             }
         }
-
-        // ============================================================
-        // 10. DOWNLOAD FUNCTIONS
-        // ============================================================
         const downloadParticipationLetter = () => downloadPdf(`${API_BASE_URL}/v1/exhibitor/participation-letter/pdf`, 'participation-letter.pdf');
+        const downloadWelcomeLetter = () => downloadPdf(`${API_BASE_URL}/v1/exhibitor/welcome-letter/pdf`, 'welcome-letter.pdf');
         const downloadExitPermit = () => downloadPdf(`${API_BASE_URL}/v1/exhibitor/exit-permit/pdf`, 'exit-permit.pdf');
-
-        // ============================================================
-        // 11. INITIALIZATION
-        // ============================================================
         document.addEventListener('DOMContentLoaded', async () => {
             try {
-                // Load guidelines
                 loadGuidelinesMenu();
-
-                // Load online forms config
                 await initOnlineFormsConfig();
-
-                // Load fascia category
                 const fasciaData = await loadFasciaCategory();
                 if (fasciaData) {
                     window.fasciaCategory = fasciaData.fascia_category;
                     window.fasciaOptions = fasciaData.fascia_options;
                     applyFasciaNavItem(fasciaData.fascia_category);
                 }
-
-                // Load profile
                 const profile = await loadHeaderProfile();
                 if (profile) {
                     window.profileData = profile;
@@ -1001,6 +994,7 @@
         window.isVisitorInvitationAllowed = isVisitorInvitationAllowed;
         window.guardVisitorInvitationPage = guardVisitorInvitationPage;
         window.downloadParticipationLetter = downloadParticipationLetter;
+        window.downloadWelcomeLetter = downloadWelcomeLetter;
         window.downloadExitPermit = downloadExitPermit;
     </script>
 

@@ -258,7 +258,8 @@ class DashboardController extends BaseController
         $exhibitor = $this->db->table('exhibitor_contact_persons as ecp')
             ->join('exhibitors as e', 'e.id = ecp.exhibitor_id', 'left')
             ->join('stall_categories as sc', 'sc.exhibitor_id = ecp.exhibitor_id', 'left')
-            ->select('e.id as exhibitor_id, e.stall_type_id, sc.electricity_requirement, sc.stall_layout as fascia_design, sc.status as fascia_design_status, sc.stall_open_side, sc.fascia_board_text, sc.salutation, sc.first_name, sc.last_name, sc.fabricator_company_name, sc.mobile_number, sc.email')
+            ->join('manual_setups as ms', 'ms.sub_event_id = sc.sub_event_id', 'left')
+            ->select('e.id as exhibitor_id, e.stall_type_id, sc.electricity_requirement, sc.stall_layout as fascia_design, sc.status as fascia_design_status, sc.stall_open_side, sc.fascia_board_text, sc.salutation, sc.first_name, sc.last_name, sc.fabricator_company_name, sc.mobile_number, sc.email, ms.manual_raw_design_footer')
             ->where('ecp.id', $vendorId)
             ->get()->getRowArray();
         $exhibitorId = $exhibitor['exhibitor_id'] ?? null;
@@ -303,6 +304,7 @@ class DashboardController extends BaseController
                 'code' => 200,
                 'message' => 'Fascia data fetched successfully.',
                 'data' => $data,
+                'raw_text'=> $exhibitor['manual_raw_design_footer'] ?? ''
             ]);
     }
 
@@ -2942,7 +2944,7 @@ class DashboardController extends BaseController
             'data' => [
                 'page_id' => $page['page_id'],
                 'page_title' => $page['page_title'],
-                'page_content' => html_entity_decode($page['page_content']),
+                'page_content' => $page['page_content'],
             ],
         ]);
     }
@@ -3652,9 +3654,7 @@ class DashboardController extends BaseController
                 UploadHelper::delete($exhibitor['app_logo'], 'exhibitors_app_logoes');
                 $data['app_logo'] = UploadHelper::upload($appLogo, 'exhibitors_app_logoes');
             }
-
             $this->db->transBegin();
-
             try {
                 $updated = $this->db->table('exhibitors')
                     ->where('id', $exhibitor['exhibitor_id'])
@@ -3689,7 +3689,6 @@ class DashboardController extends BaseController
                     if (!empty($productDealsIn)) {
                         $insertData = [];
                         foreach ($productDealsIn as $productId) {
-                            // Get the category ID for this product
                             $product = $this->db->table('products')
                                 ->select('product_category_id')
                                 ->where('id', $productId)
@@ -4195,14 +4194,16 @@ class DashboardController extends BaseController
             $placeholders = [
                 '{{venue_city}}'   => $template['venue_city'],
                 '{{event_name}}'   => $template['event_name'],
+                '{{sub_event_name}}' => $template['sub_event_name'],
                 '{{company_name}}' => $template['company_name'],
                 '{{date}}'         => date('jS M Y'),
+                '{{venue}}'         => $template['venue'],
+                '{{venue_city}}'         => $template['venue_city'],
                 '{{end_date}}'     => !empty($template['end_date'])
                     ? (new \DateTime($template['end_date']))->format('jS M Y')
                     : '',
-                '{{full_date}}'    => $fullDate,
+                    '{{full_date}}'    => $fullDate,
             ];
-            // print_r($placeholders); die;
             $html = str_replace(array_keys($placeholders), array_values($placeholders), $template['permit_content']);
             $html = $this->cleanTrailingContent($html);
             $html = $this->compactPdfHtml($html);
