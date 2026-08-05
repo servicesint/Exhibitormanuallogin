@@ -262,6 +262,7 @@ class DashboardController extends BaseController
             ->select('e.id as exhibitor_id, e.stall_type_id, sc.electricity_requirement, sc.stall_layout as fascia_design, sc.status as fascia_design_status, sc.stall_open_side, sc.fascia_board_text, sc.salutation, sc.first_name, sc.last_name, sc.fabricator_company_name, sc.mobile_number, sc.email, ms.manual_fascia_note')
             ->where('ecp.id', $vendorId)
             ->get()->getRowArray();
+
         $exhibitorId = $exhibitor['exhibitor_id'] ?? null;
         if (!$exhibitorId) {
             return $this->response
@@ -780,7 +781,7 @@ class DashboardController extends BaseController
         }
     }
 
-    public function generate_quotation()
+     public function generate_quotation()
     {
         try {
             $jwt = $this->getJwtContext();
@@ -845,12 +846,10 @@ class DashboardController extends BaseController
             $isSameState = $gstBreakdown['is_same_state'];
             $total = round($subtotal + $cgst + $sgst + $igst, 2);
             $eventName = '';
-            if (!empty($subEvent->event_name)) {
-                $eventName = $subEvent->event_name;
-            } elseif (!empty($subEvent->manual_welcome_note)) {
-                $eventName = strip_tags(html_entity_decode($subEvent->manual_welcome_note));
-                $eventName = trim(preg_replace('/\s+/', ' ', $eventName));
-                $eventName = mb_substr($eventName, 0, 80);
+            if (!empty($subEvents->sub_event_name)) {
+                $eventName = $subEvents->sub_event_name;
+            } else {
+                $eventName = '';
             }
             $yearStart = (int) date('y');
             if ((int) date('m') < 4) {
