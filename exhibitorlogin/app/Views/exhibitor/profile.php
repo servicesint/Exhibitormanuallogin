@@ -729,7 +729,6 @@
                 showToast(result.message || 'Unable to fetch profile.', 'error');
                 return null;
             } catch (error) {
-                console.error(error);
                 showToast('Network error while fetching profile.', 'error');
                 return null;
             }
@@ -766,13 +765,13 @@
                 const allChildrenSelected = children.length > 0 && children.every(child => child.selected === true);
 
                 rowsHtml += `
-                <div class="pdi-parent-row">
-                    <label class="pdi-checkbox-label pdi-parent-label">
-                        <input type="checkbox" class="pdi-parent-checkbox" data-parent-id="${parent.id}" ${allChildrenSelected ? 'checked' : ''}>
-                        <strong>${escapeHtml(parent.name)}</strong>
-                    </label>
-                    <div class="pdi-children-list">
-            `;
+                        <div class="pdi-parent-row">
+                            <label class="pdi-checkbox-label pdi-parent-label">
+                                <input type="checkbox" class="pdi-parent-checkbox" data-parent-id="${parent.id}" ${allChildrenSelected ? 'checked' : ''}>
+                                <strong>${escapeHtml(parent.name)}</strong>
+                            </label>
+                            <div class="pdi-children-list">
+                    `;
 
                 children.forEach(child => {
                     const checked = child.selected ? 'checked' : '';
