@@ -259,7 +259,7 @@ class DashboardController extends BaseController
             ->join('exhibitors as e', 'e.id = ecp.exhibitor_id', 'left')
             ->join('stall_categories as sc', 'sc.exhibitor_id = ecp.exhibitor_id', 'left')
             ->join('manual_setups as ms', 'ms.sub_event_id = sc.sub_event_id', 'left')
-            ->select('e.id as exhibitor_id, e.stall_type_id, sc.electricity_requirement, sc.stall_layout as fascia_design, sc.status as fascia_design_status, sc.stall_open_side, sc.fascia_board_text, sc.salutation, sc.first_name, sc.last_name, sc.fabricator_company_name, sc.mobile_number, sc.email, ms.manual_raw_design_footer')
+            ->select('e.id as exhibitor_id, e.stall_type_id, sc.electricity_requirement, sc.stall_layout as fascia_design, sc.status as fascia_design_status, sc.stall_open_side, sc.fascia_board_text, sc.salutation, sc.first_name, sc.last_name, sc.fabricator_company_name, sc.mobile_number, sc.email, ms.manual_fascia_note')
             ->where('ecp.id', $vendorId)
             ->get()->getRowArray();
         $exhibitorId = $exhibitor['exhibitor_id'] ?? null;
@@ -304,7 +304,7 @@ class DashboardController extends BaseController
                 'code' => 200,
                 'message' => 'Fascia data fetched successfully.',
                 'data' => $data,
-                'raw_text'=> $exhibitor['manual_raw_design_footer'] ?? ''
+                'raw_text'=> $exhibitor['manual_fascia_note'] ?? ''
             ]);
     }
 
@@ -2799,7 +2799,6 @@ class DashboardController extends BaseController
         $builder->join('manual_pages p', 'p.menu_id = m.id AND p.is_deleted = 0', 'left');
         $builder->where('m.is_deleted', 0);
         $builder->where('m.sub_event_id', $subEventId);
-        $builder->orderBy('m.id', 'ASC');
         $builder->orderBy('p.serial_no', 'ASC');
         $result = $builder->get()->getResultArray();
         $menus = [];
@@ -2827,7 +2826,7 @@ class DashboardController extends BaseController
             'message' => 'Guidelines fetched successfully.',
             'data' => ['menus' => array_values($menus)],
         ]);
-    }
+    } 
 
     public function getFasicaMenu()
     {
