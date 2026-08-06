@@ -1372,7 +1372,7 @@
             }
             el.textContent = formatted;
         }
-
+        const baseUrl = window.location.origin + window.location.pathname.split('/').slice(0, -1).join('/');
         const API_BASE_URL = '<?= env('API_BASE_URL') ?>';
         const UPLOAD_BASE_URL = '<?= env('UPLOAD_BASE_URL') ?>';
         const LOGIN_URL = '<?= base_url('login') ?>';
@@ -1680,8 +1680,8 @@
                     body: {
                         payment_method: 'razorpay',
                         order_id: orderId,
-                        success_url: window.location.origin + '/payment/success',
-                        failed_url: window.location.origin + '/payment/failed',
+                        success_url: '/payment/success',
+                        failed_url: '/payment/failed',
                         callback_url: ORDER_ENDPOINTS.razorpayCallback
                     },
                 });
@@ -2293,8 +2293,8 @@
                 method: 'POST',
                 body: {
                     payment_method: 'razorpay',
-                    success_url: window.location.origin + '/payment/success',
-                    failed_url: window.location.origin + '/payment/failed',
+                    success_url: baseUrl + '/payment/success',
+                    failed_url: baseUrl + '/payment/failed',
                     callback_url: ORDER_ENDPOINTS.razorpayCallback
                 },
             });
