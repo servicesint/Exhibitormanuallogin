@@ -2293,8 +2293,8 @@
                 method: 'POST',
                 body: {
                     payment_method: 'razorpay',
-                    success_url: baseUrl + '/payment/success',
-                    failed_url: baseUrl + '/payment/failed',
+                    success_url:'/payment/success',
+                    failed_url: '/payment/failed',
                     callback_url: ORDER_ENDPOINTS.razorpayCallback
                 },
             });

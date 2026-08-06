@@ -2391,234 +2391,233 @@ class DashboardController extends BaseController
     }
 
     public function download_order_invoice($encryptedOrderId = null)
-    {
-        try {
-            $jwt = $this->getJwtContext();
-            $vendorId = $jwt['exhibitor_id'] ?? null;
-            $subEventId = $jwt['subEventId'] ?? null;
+{
+    try {
+        $jwt = $this->getJwtContext();
+        $vendorId = $jwt['exhibitor_id'] ?? null;
+        $subEventId = $jwt['subEventId'] ?? null;
 
-            if (!$vendorId || !$subEventId) {
-                return $this->response
-                    ->setStatusCode(401)
-                    ->setJSON([
-                        'status'  => false,
-                        'code'    => 401,
-                        'message' => 'Unauthorized.',
-                        'data'    => null
-                    ]);
-            }
-
-            if (empty($encryptedOrderId)) {
-                return $this->response
-                    ->setStatusCode(400)
-                    ->setJSON([
-                        'status'  => false,
-                        'code'    => 400,
-                        'message' => 'Order ID is required.',
-                        'data'    => null
-                    ]);
-            }
-
-            $decrypted = decryptData($encryptedOrderId);
-            if ($decrypted === false || $decrypted === null) {
-                return $this->response
-                    ->setStatusCode(400)
-                    ->setJSON([
-                        'status'  => false,
-                        'code'    => 400,
-                        'message' => 'Invalid order reference.',
-                        'data'    => null
-                    ]);
-            }
-
-            $orderId = json_decode($decrypted, true);
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                $orderId = $decrypted;
-            }
-
-            if (!is_numeric($orderId)) {
-                return $this->response
-                    ->setStatusCode(400)
-                    ->setJSON([
-                        'status'  => false,
-                        'code'    => 400,
-                        'message' => 'Invalid order reference.',
-                        'data'    => null
-                    ]);
-            }
-            $orderId = (int) $orderId;
-
-            $order = $this->db->table('orders')
-                ->where('id', $orderId)
-                ->where('exhibitor_id', $vendorId)
-                ->get()
-                ->getRowArray();
-
-            if (!$order) {
-                return $this->response
-                    ->setStatusCode(404)
-                    ->setJSON([
-                        'status'  => false,
-                        'code'    => 404,
-                        'message' => 'Order not found.',
-                        'data'    => null
-                    ]);
-            }
-
-            $eligibleStatuses = ['paid', 'completed', 'success'];
-            $paymentStatus = strtolower($order['payment_status'] ?? '');
-            if (!in_array($paymentStatus, $eligibleStatuses, true)) {
-                return $this->response
-                    ->setStatusCode(422)
-                    ->setJSON([
-                        'status'  => false,
-                        'code'    => 422,
-                        'message' => 'Invoice is not available until payment is confirmed.',
-                        'data'    => null
-                    ]);
-            }
-
-            $isInternational = $this->resolveIsInternational($vendorId);
-            $currencySymbol  = $order['currency'] === 'USD' ? '$' : ($isInternational ? '$' : '₹');
-            $currencyText    = $order['currency'] ?? ($isInternational ? 'USD' : 'INR');
-
-            $contactModel = new ExhibitorContactPersonModel();
-            $profile = $contactModel->getProfile($vendorId);
-            if (!is_array($profile)) {
-                $profile = [];
-            }
-
-            $orderItems = $this->db->table('order_items')
-                ->where('order_id', $orderId)
-                ->get()
-                ->getResultArray();
-
-            $subEvent = $this->db->table('manual_setups')
-                ->where('sub_event_id', $subEventId)
-                ->get()
-                ->getRow();
-
-            $subEvents = $this->db->table('company_sub_events')
-                ->where('id', $subEventId)
-                ->get()
-                ->getRow();
-
-            // === YAHAN exhibitor table se organisation_name aur gst_number fetch ho raha hai ===
-            $exhibitorInfo = $this->getExhibitorTaxInfo($vendorId);
-
-            $taxAmount = is_numeric($order['tax'] ?? null) ? (float) $order['tax'] : 0.0;
-            $gstBreakdown = $this->resolveGstBreakdown(
-                $taxAmount,
-                $exhibitorInfo['state_name'] ?? null,
-                $subEvents->venue_state ?? null
-            );
-            $cgst = $gstBreakdown['cgst'];
-            $sgst = $gstBreakdown['sgst'];
-            $igst = $gstBreakdown['igst'];
-            $isSameState = $gstBreakdown['is_same_state'];
-
-            $eventName = '';
-            if (!empty($subEvent->event_name)) {
-                $eventName = $subEvent->event_name;
-            } elseif (!empty($subEvent->manual_welcome_note)) {
-                $eventName = strip_tags(html_entity_decode($subEvent->manual_welcome_note));
-                $eventName = trim(preg_replace('/\s+/', ' ', $eventName));
-                $eventName = mb_substr($eventName, 0, 80);
-            }
-
-            $invoiceDate = !empty($order['created_at']) && strtotime($order['created_at']) !== false
-                ? date('d.m.Y', strtotime($order['created_at']))
-                : date('d.m.Y');
-
-            $companyInfo = $this->db->table('companies')
-                ->select('company_name, company_logo')
-                ->where('id', 1)
-                ->get()
-                ->getRowArray();
-
-            $invoiceData = [
-                'invoice_no'        => $order['order_number'] ?? ('ORD-' . $orderId),
-                'date'              => $invoiceDate,
-                'profile'           => $profile,
-                'items'             => $orderItems,
-                'subtotal'          => $order['subtotal'] ?? 0,
-                'cgst'              => $cgst,
-                'sgst'              => $sgst,
-                'igst'              => $igst,
-                'is_same_state'     => $isSameState,
-                'total'             => $order['total'] ?? 0,
-                'currency_symbol'   => $currencySymbol,
-                'currency_text'     => $currencyText,
-                'event_name'        => $eventName,
-
-                // header block — apni company (Services International)
-                'company_name'      => $companyInfo['company_name'] ?? '',
-                'company_image'     => $companyInfo['company_logo'] ?? '',
-
-                // billed-to block — EXHIBITOR ka organisation_name aur gst_number
-                'customer_name'     => $exhibitorInfo['organisation_name'] ?? 'M/s Services International',
-                'customer_gstin'    => $exhibitorInfo['gst_number'] ?? 'N/A',
-                'customer_address'  => $exhibitorInfo['address'] ?? '',
-
-                'payment_method'    => $order['payment_method'] ?? '',
-                'payment_reference' => $order['payment_reference'] ?? '',
-            ];
-
-            $html = $this->quotationInvoiceHtml2($invoiceData);
-
-            if (empty($html)) {
-                log_message('error', 'download_order_invoice: quotationInvoiceHtml2 returned empty HTML for order ' . $orderId);
-                throw new \RuntimeException('Invoice template returned no content.');
-            }
-
-            $tempDir = WRITEPATH . 'mpdf';
-            if (!is_dir($tempDir)) {
-                if (!mkdir($tempDir, 0775, true) && !is_dir($tempDir)) {
-                    log_message('error', 'download_order_invoice: failed to create mpdf temp dir at ' . $tempDir);
-                    throw new \RuntimeException('Unable to prepare PDF working directory.');
-                }
-            }
-            if (!is_writable($tempDir)) {
-                log_message('error', 'download_order_invoice: mpdf temp dir not writable at ' . $tempDir);
-                throw new \RuntimeException('PDF working directory is not writable.');
-            }
-
-            $mpdf = new Mpdf([
-                'mode'          => 'utf-8',
-                'format'        => 'A4',
-                'margin_left'   => 10,
-                'margin_right'  => 10,
-                'margin_top'    => 10,
-                'margin_bottom' => 10,
-                'default_font'  => 'dejavusans',
-                'tempDir'       => $tempDir,
-            ]);
-
-            $mpdf->WriteHTML($html);
-
-            $fileName = 'Invoice-' . str_replace('/', '-', (string) $invoiceData['invoice_no']) . '.pdf';
-            $pdfContent = $mpdf->Output($fileName, Destination::STRING_RETURN);
-
+        if (!$vendorId || !$subEventId) {
             return $this->response
-                ->setStatusCode(200)
-                ->setHeader('Content-Type', 'application/pdf')
-                ->setHeader('Content-Disposition', 'attachment; filename="' . $fileName . '"')
-                ->setHeader('Content-Length', (string) strlen($pdfContent))
-                ->setBody($pdfContent);
-        } catch (\Throwable $e) {
-            log_message('error', 'download_order_invoice failed: ' . $e->getMessage() . ' | ' . $e->getFile() . ':' . $e->getLine() . "\n" . $e->getTraceAsString());
-
-            return $this->response
-                ->setStatusCode(500)
+                ->setStatusCode(401)
                 ->setJSON([
                     'status'  => false,
-                    'code'    => 500,
-                    'message' => 'Something went wrong while generating invoice PDF.',
-                    'error'   => $e->getMessage(),
+                    'code'    => 401,
+                    'message' => 'Unauthorized.',
                     'data'    => null
                 ]);
         }
+
+        if (empty($encryptedOrderId)) {
+            return $this->response
+                ->setStatusCode(400)
+                ->setJSON([
+                    'status'  => false,
+                    'code'    => 400,
+                    'message' => 'Order ID is required.',
+                    'data'    => null
+                ]);
+        }
+
+        $decrypted = decryptData($encryptedOrderId);
+        if ($decrypted === false || $decrypted === null) {
+            return $this->response
+                ->setStatusCode(400)
+                ->setJSON([
+                    'status'  => false,
+                    'code'    => 400,
+                    'message' => 'Invalid order reference.',
+                    'data'    => null
+                ]);
+        }
+
+        $orderId = json_decode($decrypted, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            $orderId = $decrypted;
+        }
+
+        if (!is_numeric($orderId)) {
+            return $this->response
+                ->setStatusCode(400)
+                ->setJSON([
+                    'status'  => false,
+                    'code'    => 400,
+                    'message' => 'Invalid order reference.',
+                    'data'    => null
+                ]);
+        }
+        $orderId = (int) $orderId;
+
+        $order = $this->db->table('orders')
+            ->where('id', $orderId)
+            ->where('exhibitor_id', $vendorId)
+            ->get()
+            ->getRowArray();
+
+        if (!$order) {
+            return $this->response
+                ->setStatusCode(404)
+                ->setJSON([
+                    'status'  => false,
+                    'code'    => 404,
+                    'message' => 'Order not found.',
+                    'data'    => null
+                ]);
+        }
+
+        $eligibleStatuses = ['paid', 'completed', 'success'];
+        $paymentStatus = strtolower($order['payment_status'] ?? '');
+        if (!in_array($paymentStatus, $eligibleStatuses, true)) {
+            return $this->response
+                ->setStatusCode(422)
+                ->setJSON([
+                    'status'  => false,
+                    'code'    => 422,
+                    'message' => 'Invoice is not available until payment is confirmed.',
+                    'data'    => null
+                ]);
+        }
+
+        $isInternational = $this->resolveIsInternational($vendorId);
+        $currencySymbol  = $order['currency'] === 'USD' ? '$' : ($isInternational ? '$' : '₹');
+        $currencyText    = $order['currency'] ?? ($isInternational ? 'USD' : 'INR');
+
+        $contactModel = new ExhibitorContactPersonModel();
+        $profile = $contactModel->getProfile($vendorId);
+        if (!is_array($profile)) {
+            $profile = [];
+        }
+
+        $orderItems = $this->db->table('order_items')
+            ->where('order_id', $orderId)
+            ->get()
+            ->getResultArray();
+
+        $subEvent = $this->db->table('manual_setups')
+            ->where('sub_event_id', $subEventId)
+            ->get()
+            ->getRow();
+
+        $subEvents = $this->db->table('company_sub_events')
+            ->where('id', $subEventId)
+            ->get()
+            ->getRow();
+
+        $exhibitorInfo = $this->getExhibitorTaxInfo($vendorId);
+
+        $taxAmount = is_numeric($order['tax'] ?? null) ? (float) $order['tax'] : 0.0;
+        $gstBreakdown = $this->resolveGstBreakdown(
+            $taxAmount,
+            $exhibitorInfo['name'] ?? null,
+            $subEvents->venue_state ?? null,
+            $isInternational
+        );
+        $cgst = $gstBreakdown['cgst'];
+        $sgst = $gstBreakdown['sgst'];
+        $igst = $gstBreakdown['igst'];
+        $isSameState = $gstBreakdown['is_same_state'];
+
+        $eventName = '';
+        if (!empty($subEvent->event_name)) {
+            $eventName = $subEvent->event_name;
+        } elseif (!empty($subEvent->manual_welcome_note)) {
+            $eventName = strip_tags(html_entity_decode($subEvent->manual_welcome_note));
+            $eventName = trim(preg_replace('/\s+/', ' ', $eventName));
+            $eventName = mb_substr($eventName, 0, 80);
+        }
+
+        $invoiceDate = !empty($order['created_at']) && strtotime($order['created_at']) !== false
+            ? date('d.m.Y', strtotime($order['created_at']))
+            : date('d.m.Y');
+
+        $companyInfo = $this->db->table('companies')
+            ->select('company_name, company_logo')
+            ->where('id', 1)
+            ->get()
+            ->getRowArray();
+
+        $invoiceData = [
+            'invoice_no'        => $order['order_number'] ?? ('ORD-' . $orderId),
+            'date'              => $invoiceDate,
+            'profile'           => $profile,
+            'items'             => $orderItems,
+            'subtotal'          => $order['subtotal'] ?? 0,
+            'cgst'              => $cgst,
+            'sgst'              => $sgst,
+            'igst'              => $igst,
+            'is_same_state'     => $isSameState,
+            'total'             => $order['total'] ?? 0,
+            'currency_symbol'   => $currencySymbol,
+            'currency_text'     => $currencyText,
+            'event_name'        => $eventName,
+
+            'company_name'      => $companyInfo['company_name'] ?? '',
+            'company_image'     => $companyInfo['company_logo'] ?? '',
+
+            'customer_name'     => $exhibitorInfo['organisation_name'] ?? 'M/s Services International',
+            'customer_gstin'    => $exhibitorInfo['gst_number'] ?? 'N/A',
+            'customer_address'  => $exhibitorInfo['address'] ?? '',
+            'exhibitor_type'    => $exhibitorInfo['exhibitor_type'] ?? null,
+
+            'payment_method'    => $order['payment_method'] ?? '',
+            'payment_reference' => $order['payment_reference'] ?? '',
+        ];
+
+        $html = $this->quotationInvoiceHtml2($invoiceData);
+
+        if (empty($html)) {
+            log_message('error', 'download_order_invoice: quotationInvoiceHtml2 returned empty HTML for order ' . $orderId);
+            throw new \RuntimeException('Invoice template returned no content.');
+        }
+
+        $tempDir = WRITEPATH . 'mpdf';
+        if (!is_dir($tempDir)) {
+            if (!mkdir($tempDir, 0775, true) && !is_dir($tempDir)) {
+                log_message('error', 'download_order_invoice: failed to create mpdf temp dir at ' . $tempDir);
+                throw new \RuntimeException('Unable to prepare PDF working directory.');
+            }
+        }
+        if (!is_writable($tempDir)) {
+            log_message('error', 'download_order_invoice: mpdf temp dir not writable at ' . $tempDir);
+            throw new \RuntimeException('PDF working directory is not writable.');
+        }
+
+        $mpdf = new Mpdf([
+            'mode'          => 'utf-8',
+            'format'        => 'A4',
+            'margin_left'   => 10,
+            'margin_right'  => 10,
+            'margin_top'    => 10,
+            'margin_bottom' => 10,
+            'default_font'  => 'dejavusans',
+            'tempDir'       => $tempDir,
+        ]);
+
+        $mpdf->WriteHTML($html);
+
+        $fileName = 'Invoice-' . str_replace('/', '-', (string) $invoiceData['invoice_no']) . '.pdf';
+        $pdfContent = $mpdf->Output($fileName, Destination::STRING_RETURN);
+
+        return $this->response
+            ->setStatusCode(200)
+            ->setHeader('Content-Type', 'application/pdf')
+            ->setHeader('Content-Disposition', 'attachment; filename="' . $fileName . '"')
+            ->setHeader('Content-Length', (string) strlen($pdfContent))
+            ->setBody($pdfContent);
+    } catch (\Throwable $e) {
+        log_message('error', 'download_order_invoice failed: ' . $e->getMessage() . ' | ' . $e->getFile() . ':' . $e->getLine() . "\n" . $e->getTraceAsString());
+
+        return $this->response
+            ->setStatusCode(500)
+            ->setJSON([
+                'status'  => false,
+                'code'    => 500,
+                'message' => 'Something went wrong while generating invoice PDF.',
+                'error'   => $e->getMessage(),
+                'data'    => null
+            ]);
     }
+}
 
     public function download_exhibitor_badge($encryptedId = null)
     {

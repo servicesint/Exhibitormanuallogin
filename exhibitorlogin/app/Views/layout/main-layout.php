@@ -814,8 +814,8 @@
             const eventName = String(profile?.event_name || '').trim();
             const exhibitorType = String(profile?.exhibitor_type || '').trim().toLowerCase();
 
-            const alwaysHiddenEvents = ['Drone Expo & Conference'];
-            const internationalRestrictedEvents = ['Fire India', 'Drone Expo & Conference', 'Secure Nation'];
+            const alwaysHiddenEvents = ['Drone Expo'];
+            const internationalRestrictedEvents = ['Fire India', 'Drone Expo', 'Secure Nation'];
 
             const isAlwaysHidden = alwaysHiddenEvents.includes(eventName);
             const isInternationalRestricted = internationalRestrictedEvents.includes(eventName) && exhibitorType === 'international';
@@ -830,8 +830,8 @@
             const eventName = String(profile?.event_name || '').trim();
             const exhibitorType = String(profile?.exhibitor_type || '').trim().toLowerCase();
 
-            const alwaysHiddenEvents = ['Drone Expo & Conference'];
-            const internationalRestrictedEvents = ['Fire India', 'Drone Expo & Conference', 'Secure Nation'];
+            const alwaysHiddenEvents = ['Drone Expo'];
+            const internationalRestrictedEvents = ['Fire India', 'Drone Expo', 'Secure Nation'];
 
             const isAlwaysHidden = alwaysHiddenEvents.includes(eventName);
             const isInternationalRestricted = internationalRestrictedEvents.includes(eventName) && exhibitorType === 'international';
@@ -905,7 +905,7 @@
 
             const token = getAuthToken();
             
-            const referralWebsite = localStorage.getItem('reference_website');
+            const referralWebsite = localStorage.getItem('referral_website');
             
             const logoutBtn = document.getElementById('logoutBtn');
             if (logoutBtn) {
