@@ -1376,6 +1376,7 @@
         const API_BASE_URL = '<?= env('API_BASE_URL') ?>';
         const UPLOAD_BASE_URL = '<?= env('UPLOAD_BASE_URL') ?>';
         const LOGIN_URL = '<?= base_url('login') ?>';
+        const APP_BASE_URL = '<?= rtrim(base_url(), '/') ?>';
         const ENDPOINTS = {
             furniture: `${API_BASE_URL}/v1/cart/furniture`,
             add: `${API_BASE_URL}/v1/cart/add`,
@@ -1680,8 +1681,8 @@
                     body: {
                         payment_method: 'razorpay',
                         order_id: orderId,
-                        success_url: '/payment/success',
-                        failed_url: '/payment/failed',
+                       success_url: APP_BASE_URL + '/payment/success',
+        failed_url: APP_BASE_URL + '/payment/failed',
                         callback_url: ORDER_ENDPOINTS.razorpayCallback
                     },
                 });
@@ -2293,8 +2294,8 @@
                 method: 'POST',
                 body: {
                     payment_method: 'razorpay',
-                    success_url:'/payment/success',
-                    failed_url: '/payment/failed',
+                    success_url: APP_BASE_URL + '/payment/success',
+        failed_url: APP_BASE_URL + '/payment/failed',
                     callback_url: ORDER_ENDPOINTS.razorpayCallback
                 },
             });
