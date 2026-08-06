@@ -245,69 +245,70 @@ class DashboardController extends BaseController
     }
 
     public function fascia()
-    {
-        $jwt = $this->getJwtContext();
-        $vendorId = $jwt['vendorId'];
-        $subEventId = $jwt['subEventId'];
-        $eventId = $jwt['eventId'];
-        if (!$vendorId) {
-            return $this->response
-                ->setStatusCode(401)
-                ->setJSON(['status' => false, 'code' => 401, 'message' => 'Unauthorized.', 'data' => null]);
-        }
-        $exhibitor = $this->db->table('exhibitor_contact_persons as ecp')
-            ->join('exhibitors as e', 'e.id = ecp.exhibitor_id', 'left')
-            ->join('stall_categories as sc', 'sc.exhibitor_id = ecp.exhibitor_id', 'left')
-            ->join('manual_setups as ms', 'ms.sub_event_id = sc.sub_event_id', 'left')
-            ->select('e.id as exhibitor_id, e.stall_type_id, sc.electricity_requirement, sc.stall_layout as fascia_design, sc.status as fascia_design_status, sc.stall_open_side, sc.fascia_board_text, sc.salutation, sc.first_name, sc.last_name, sc.fabricator_company_name, sc.mobile_number, sc.email, ms.manual_fascia_note')
-            ->where('ecp.id', $vendorId)
-            ->get()->getRowArray();
-
-        $exhibitorId = $exhibitor['exhibitor_id'] ?? null;
-        if (!$exhibitorId) {
-            return $this->response
-                ->setStatusCode(404)
-                ->setJSON(['status' => false, 'code' => 404, 'message' => 'Exhibitor not found.', 'data' => null]);
-        }
-        $builder = $this->db->table('stall_categories as sc')
-            ->where('sc.exhibitor_id', $exhibitorId);
-        if ($subEventId) {
-            $builder->where('sc.sub_event_id', $subEventId);
-        }
-        if ($eventId) {
-            $builder->where('sc.event_id', $eventId);
-        }
-        $row = $builder->get()->getRowArray();
-        $data = [];
-        if ($row) {
-            $data = [
-                'stall_type_id' => $exhibitor['stall_type_id'] ?? '',
-                'stall_open_side' => $exhibitor['stall_open_side'] ?? '',
-                'fascia_board_text' => $exhibitor['fascia_board_text'] ?? '',
-                'electricity_requirement' => $exhibitor['electricity_requirement'] ?? '',
-                'fascia_design' => $exhibitor['fascia_design'] ?? '',
-                'fascia_design_status' => $exhibitor['fascia_design_status'] ?? '',
-                'salutation' => $exhibitor['salutation'] ?? '',
-                'first_name' => $row['first_name'] ?? '',
-                'last_name' => $row['last_name'] ?? '',
-                'fabricator_company_name' => $row['fabricator_company_name'] ?? '',
-                'mobile_number' => $row['mobile_number'] ?? '',
-                'email' => $row['email'] ?? '',
-                'status' => $row['status'] ?? '',
-                'address' => $row['address'] ?? '',
-            ];
-        }
-
+{
+    $jwt = $this->getJwtContext();
+    $vendorId = $jwt['vendorId'];
+    $subEventId = $jwt['subEventId'];
+    $eventId = $jwt['eventId'];
+    if (!$vendorId) {
         return $this->response
-            ->setStatusCode(200)
-            ->setJSON([
-                'status' => true,
-                'code' => 200,
-                'message' => 'Fascia data fetched successfully.',
-                'data' => $data,
-                'raw_text'=> $exhibitor['manual_fascia_note'] ?? ''
-            ]);
+            ->setStatusCode(401)
+            ->setJSON(['status' => false, 'code' => 401, 'message' => 'Unauthorized.', 'data' => null]);
     }
+    $exhibitor = $this->db->table('exhibitor_contact_persons as ecp')
+        ->join('exhibitors as e', 'e.id = ecp.exhibitor_id', 'left')
+        ->join('stall_categories as sc', 'sc.exhibitor_id = ecp.exhibitor_id', 'left')
+        ->join('manual_setups as ms', 'ms.sub_event_id = sc.sub_event_id', 'left')
+        ->select('e.id as exhibitor_id, e.stall_type_id, sc.electricity_requirement, sc.stall_layout as fascia_design, sc.status as fascia_design_status, sc.stall_open_side, sc.fascia_board_text, sc.salutation, sc.first_name, sc.last_name, sc.fabricator_company_name, sc.mobile_number, sc.email, sc.reason, sc.other_reason, ms.manual_fascia_note')
+        ->where('ecp.id', $vendorId)
+        ->get()->getRowArray();
+    $exhibitorId = $exhibitor['exhibitor_id'] ?? null;
+    if (!$exhibitorId) {
+        return $this->response
+            ->setStatusCode(404)
+            ->setJSON(['status' => false, 'code' => 404, 'message' => 'Exhibitor not found.', 'data' => null]);
+    }
+    $builder = $this->db->table('stall_categories as sc')
+        ->where('sc.exhibitor_id', $exhibitorId);
+    if ($subEventId) {
+        $builder->where('sc.sub_event_id', $subEventId);
+    }
+    if ($eventId) {
+        $builder->where('sc.event_id', $eventId);
+    }
+    $row = $builder->get()->getRowArray();
+    $data = [];
+    if ($row) {
+        $data = [
+            'stall_type_id' => $exhibitor['stall_type_id'] ?? '',
+            'stall_open_side' => $exhibitor['stall_open_side'] ?? '',
+            'fascia_board_text' => $exhibitor['fascia_board_text'] ?? '',
+            'electricity_requirement' => $exhibitor['electricity_requirement'] ?? '',
+            'fascia_design' => $exhibitor['fascia_design'] ?? '',
+            'fascia_design_status' => $exhibitor['fascia_design_status'] ?? '',
+            'salutation' => $exhibitor['salutation'] ?? '',
+            'first_name' => $row['first_name'] ?? '',
+            'last_name' => $row['last_name'] ?? '',
+            'fabricator_company_name' => $row['fabricator_company_name'] ?? '',
+            'mobile_number' => $row['mobile_number'] ?? '',
+            'email' => $row['email'] ?? '',
+            'status' => $row['status'] ?? '',
+            'address' => $row['address'] ?? '',
+            'reason' => $row['reason'] ?? '',
+            'other_reason' => $row['other_reason'] ?? '',
+        ];
+    }
+
+    return $this->response
+        ->setStatusCode(200)
+        ->setJSON([
+            'status' => true,
+            'code' => 200,
+            'message' => 'Fascia data fetched successfully.',
+            'data' => $data,
+            'raw_text' => $exhibitor['manual_fascia_note'] ?? ''
+        ]);
+}
 
     public function saveFascia()
     {
@@ -2519,13 +2520,11 @@ class DashboardController extends BaseController
             ->getRow();
 
         $exhibitorInfo = $this->getExhibitorTaxInfo($vendorId);
-
         $taxAmount = is_numeric($order['tax'] ?? null) ? (float) $order['tax'] : 0.0;
         $gstBreakdown = $this->resolveGstBreakdown(
             $taxAmount,
-            $exhibitorInfo['name'] ?? null,
-            $subEvents->venue_state ?? null,
-            $isInternational
+            $exhibitorInfo['state_name'] ?? null,
+            $subEvents->venue_state ?? null
         );
         $cgst = $gstBreakdown['cgst'];
         $sgst = $gstBreakdown['sgst'];
@@ -2533,8 +2532,12 @@ class DashboardController extends BaseController
         $isSameState = $gstBreakdown['is_same_state'];
 
         $eventName = '';
-        if (!empty($subEvents->sub_event_name)) {
-            $eventName = $subEvents->sub_event_name;
+        if (!empty($subEvent->event_name)) {
+            $eventName = $subEvent->event_name;
+        } elseif (!empty($subEvent->manual_welcome_note)) {
+            $eventName = strip_tags(html_entity_decode($subEvent->manual_welcome_note));
+            $eventName = trim(preg_replace('/\s+/', ' ', $eventName));
+            $eventName = mb_substr($eventName, 0, 80);
         }
 
         $invoiceDate = !empty($order['created_at']) && strtotime($order['created_at']) !== false
@@ -2549,6 +2552,7 @@ class DashboardController extends BaseController
 
         $invoiceData = [
             'invoice_no'        => $order['order_number'] ?? ('ORD-' . $orderId),
+            'signature'         => $subEvent->signature ?? '',
             'date'              => $invoiceDate,
             'profile'           => $profile,
             'items'             => $orderItems,
@@ -2568,10 +2572,10 @@ class DashboardController extends BaseController
             'customer_name'     => $exhibitorInfo['organisation_name'] ?? 'M/s Services International',
             'customer_gstin'    => $exhibitorInfo['gst_number'] ?? 'N/A',
             'customer_address'  => $exhibitorInfo['address'] ?? '',
-            'exhibitor_type'    => $exhibitorInfo['exhibitor_type'] ?? null,
 
             'payment_method'    => $order['payment_method'] ?? '',
             'payment_reference' => $order['payment_reference'] ?? '',
+            'exhibitor_type'    => $exhibitorInfo['exhibitor_type'] ?? '',
         ];
 
         $html = $this->quotationInvoiceHtml2($invoiceData);
