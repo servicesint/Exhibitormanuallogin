@@ -231,12 +231,12 @@
                         <span id="status-visitor_ticket_requests" class="status-circle pending"><i class="bi bi-x-lg"></i></span>
                     </a>
                 </li>
-                <li class="nav-item">
+                <!-- <li class="nav-item">
                     <a class="nav-link" href="javascript:void(0);" onclick="downloadWelcomeLetter()">
                         <i class="bi bi-box-arrow-right"></i>
                         <span class="nav-text">Download Welcome Letter</span>
                     </a>
-                </li>
+                </li> -->
                  <!-- Participation Letter -->
                 <li class="nav-item">
                     <a class="nav-link" href="javascript:void(0);" onclick="downloadParticipationLetter()">

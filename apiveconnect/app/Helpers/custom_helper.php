@@ -476,4 +476,92 @@ if (!function_exists('getAuthContext')) {
             'subEventId' => (int) $subEventId,
         ];
     }
+
+    if (!function_exists('formatMobileWithCountryCode')) {
+    function formatMobileWithCountryCode(?string $country_code, ?string $mobile_number)
+    {
+        $mobile_number = ltrim(trim((string) $mobile_number), '0');
+        if (empty($mobile_number) || empty($country_code)) {
+            return $mobile_number;
+        }
+
+        return '+' . ltrim(trim($country_code), '+') . ' ' . $mobile_number;
+    }
+}
+
+if (!function_exists('normalizeTableBorders')) {
+    function normalizeTableBorders(string $html): string
+    {
+        if (stripos($html, '<table') === false) {
+            return $html;
+        }
+
+        $dom = new DOMDocument();
+        libxml_use_internal_errors(true);
+        $dom->loadHTML(
+            '<?xml encoding="utf-8" ?><div id="__root__">' . $html . '</div>',
+            LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD
+        );
+        libxml_clear_errors();
+
+        $changed = false;
+
+        $extractBorderColor = function (string $style): ?string {
+            if (preg_match('/(?<!-)border-color\s*:\s*([^;]+)/i', $style, $m)) {
+                return trim($m[1]);
+            }
+            return null;
+        };
+
+        $hasFullBorder = function (string $style): bool {
+            if (preg_match('/(?<!-)border\s*:/i', $style)) {
+                return true;
+            }
+            $hasStyle = (bool) preg_match('/border-style\s*:/i', $style);
+            $hasWidth = (bool) preg_match('/border-width\s*:/i', $style);
+            return $hasStyle && $hasWidth;
+        };
+
+        foreach (iterator_to_array($dom->getElementsByTagName('table')) as $table) {
+            $hasBorderAttr = $table->hasAttribute('border') && $table->getAttribute('border') !== '0';
+            $style = $table->getAttribute('style');
+
+            if (!$hasBorderAttr || $hasFullBorder($style)) {
+                continue;
+            }
+
+            $color = $extractBorderColor($style) ?? '#000';
+
+            if (stripos($style, 'border-collapse') === false) {
+                $style = rtrim(trim($style), '; ') . '; border-collapse: collapse;';
+                $table->setAttribute('style', trim($style, '; '));
+                $changed = true;
+            }
+
+            foreach (['td', 'th'] as $tag) {
+                foreach (iterator_to_array($table->getElementsByTagName($tag)) as $cell) {
+                    $cellStyle = $cell->getAttribute('style');
+                    if ($hasFullBorder($cellStyle)) {
+                        continue;
+                    }
+                    $cellColor = $extractBorderColor($cellStyle) ?? $color;
+                    $cellStyle = rtrim(trim($cellStyle), '; ') . "; border: 1px solid {$cellColor};";
+                    $cell->setAttribute('style', trim($cellStyle, '; '));
+                    $changed = true;
+                }
+            }
+        }
+
+        if (!$changed) {
+            return $html;
+        }
+
+        $root = $dom->getElementById('__root__');
+        $out = '';
+        foreach ($root->childNodes as $child) {
+            $out .= $dom->saveHTML($child);
+        }
+        return $out;
+    }
+}
 }
