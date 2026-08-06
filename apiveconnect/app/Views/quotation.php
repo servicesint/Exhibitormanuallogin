@@ -1,6 +1,7 @@
 <?php
 $uploadBaseUrl = rtrim(env('UPLOAD_BASE_URL'), '/');
 $companyLogo = !empty($company_image) ? $uploadBaseUrl . '/' . ltrim($company_image, '/') : '';
+$signature = !empty($signature) ? $uploadBaseUrl . '/' . ltrim($signature, '/') : '';
 
 $safe = function ($value) {
     return esc((string) ($value ?? ''));
@@ -161,6 +162,11 @@ $items = (isset($items) && is_array($items)) ? $items : [];
             font-size: 12px;
         }
 
+        .signature {
+            text-align: right;
+            padding-top: 20px;
+        }
+
         .note {
             margin-top: 25px;
             font-size: 11px;
@@ -190,6 +196,9 @@ $items = (isset($items) && is_array($items)) ? $items : [];
     </table>
 
     <div class="invoice-title"><?= $safe($invoiceTitle) ?></div>
+    <?php if (!empty($event_name)): ?>
+        <div class="invoice-subtitle"><?= $safe($event_name) ?></div>
+    <?php endif; ?>
 
     <table class="info-table">
         <tr>
@@ -286,8 +295,12 @@ $items = (isset($items) && is_array($items)) ? $items : [];
             <td style="width: 50%; text-align:left;">
                 Pan No. AABFS1981P
             </td>
-            <td style="width: 50%; text-align:right;">
-                For Services International
+            <td style="width: 50%; text-align:right;" class="signature">
+                For Services International<br><br>
+                <?php if (!empty($signature)): ?>
+                    <img src="<?= $safe($signature) ?>" width="100" style="max-width:100px; height:auto; object-fit:contain;"><br>
+                <?php endif; ?>
+                (Authorised Signature)
             </td>
         </tr>
     </table>

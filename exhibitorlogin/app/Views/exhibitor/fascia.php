@@ -517,6 +517,24 @@
         font-weight: 600;
     }
 
+    .rejection-reason-box {
+        margin-top: 10px;
+        padding: 10px 14px;
+        background: #fdf3f2;
+        border: 1px solid #f2c9c5;
+        border-radius: 10px;
+        color: #9c3a32;
+        font-size: 0.84rem;
+        line-height: 1.5;
+        display: none;
+    }
+
+    .rejection-reason-box strong {
+        display: block;
+        margin-bottom: 3px;
+        font-weight: 700;
+    }
+
     @media (max-width: 700px) {
 
         .fascia-card-head,
@@ -774,6 +792,7 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
                                 Uploaded Design Preview
                                 <span id="designStatus" class="badge status-badge"><?= esc(ucfirst(strtolower($saved['fascia_design_status'] ?? $saved['status'] ?? ''))) ?></span>
                             </label>
+                            <div id="designRejectionReason" class="rejection-reason-box"></div>
                             <div class="preview-wrap" id="fasciaPreviewContainer" style="<?= empty($saved['fascia_design']) ? 'display:none;' : '' ?>"></div>
                         </div>
                     </div>
@@ -830,10 +849,10 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
                         </div>
                     </div>
                     <div class="fascia-group" id="rawNotesBlock">
-    <div class="fascia-notes" id="fasciaNotesContent">
-        <!-- populated dynamically from API's raw_text -->
-    </div>
-</div>
+                        <div class="fascia-notes" id="fasciaNotesContent">
+                            <!-- populated dynamically from API's raw_text -->
+                        </div>
+                    </div>
                     <div class="fascia-actions">
                         <button type="submit" class="btn fascia-btn" id="rawSubmitBtn">Submit</button>
                     </div>
@@ -876,16 +895,16 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
         const API_BASE_URL = '<?= env('API_BASE_URL') ?>';
         const FASCIA_URL = `${API_BASE_URL}/v1/dashboard/fascia`;
         let isViewOnly = false;
+
         function renderFasciaNotes(rawText) {
-    const $notes = $('#fasciaNotesContent');
-    if (!rawText) {
-        $notes.empty();
-        return;
-    }
-    // raw_text may contain HTML from the admin-configured footer,
-    // so inject as-is rather than escaping
-    $notes.html(rawText);
-}
+            const $notes = $('#fasciaNotesContent');
+            if (!rawText) {
+                $notes.empty();
+                return;
+            }
+            $notes.html(rawText);
+        }
+
         function checkFasciaStatus() {
             let status = 'enabled_open';
             if (window.getFormStatus) {
@@ -1097,8 +1116,27 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
                 $statusEl.addClass('bg-danger');
             } else if (normalized === 'approved') {
                 $statusEl.addClass('bg-success');
+            } else if (normalized === 'rejected') {
+                $statusEl.addClass('bg-danger');
             } else {
                 $statusEl.addClass('bg-secondary');
+            }
+        }
+
+        function showRejectionReason(status, reason, otherReason) {
+            const $reasonBox = $('#designRejectionReason');
+            const normalized = String(status || '').trim().toLowerCase();
+
+            if (normalized !== 'rejected') {
+                $reasonBox.hide().empty();
+                return;
+            }
+
+            const finalReason = (otherReason && String(otherReason).trim()) || (reason && String(reason).trim()) || '';
+            if (finalReason) {
+                $reasonBox.html(`<strong>Rejection Reason:</strong>${finalReason}`).show();
+            } else {
+                $reasonBox.hide().empty();
             }
         }
 
@@ -1196,7 +1234,7 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
             revealSchemeSelectIfReady();
         }
 
-        // --- UPDATED: Hydrate DOM Inputs directly without page reload ---
+        // --- Hydrate DOM Inputs directly without page reload ---
         function hydrateSavedFascia(saved) {
             if (!saved) return;
             const category = parseInt(saved.stall_type_id, 10) || 0;
@@ -1212,7 +1250,9 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
             toggleForms();
 
             const fasciaDesign = saved.fascia_design || '';
-            applyDesignStatus(saved.fascia_design_status || saved.status);
+            const designStatus = saved.fascia_design_status || saved.status;
+            applyDesignStatus(designStatus);
+            showRejectionReason(designStatus, saved.reason, saved.other_reason);
             renderFasciaPreview(fasciaDesign);
 
             const $rawDesignField = $rawForm.find('[name="fascia_design"]');
@@ -1264,7 +1304,7 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
             });
         }
 
-        // --- UPDATED: Ajax Submission Logic ---
+        // --- Ajax Submission Logic ---
         function submitFasciaForm(form) {
             if (isViewOnly) {
                 Swal.fire({
@@ -1447,6 +1487,11 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
         $schemeType.on('change', toggleForms);
         toggleForms();
         applyDesignStatus('<?= esc($saved['fascia_design_status'] ?? $saved['status'] ?? '') ?>');
+        showRejectionReason(
+            '<?= esc($saved['fascia_design_status'] ?? $saved['status'] ?? '') ?>',
+            '<?= esc($saved['reason'] ?? '') ?>',
+            '<?= esc($saved['other_reason'] ?? '') ?>'
+        );
         renderFasciaPreview('<?= !empty($saved['fascia_design']) ? esc($saved['fascia_design']) : '' ?>');
         hydrateSavedFascia(<?= json_encode($saved) ?>);
 
