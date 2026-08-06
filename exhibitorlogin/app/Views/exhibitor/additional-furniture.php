@@ -1376,7 +1376,7 @@
         const API_BASE_URL = '<?= env('API_BASE_URL') ?>';
         const UPLOAD_BASE_URL = '<?= env('UPLOAD_BASE_URL') ?>';
         const LOGIN_URL = '<?= base_url('login') ?>';
-        const APP_BASE_URL = '<?= rtrim(base_url(), '/') ?>';
+        const APP_BASE_URL = window.location.origin;
         const ENDPOINTS = {
             furniture: `${API_BASE_URL}/v1/cart/furniture`,
             add: `${API_BASE_URL}/v1/cart/add`,
