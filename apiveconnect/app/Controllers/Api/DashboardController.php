@@ -1246,7 +1246,7 @@ class DashboardController extends BaseController
         return hash_equals($expectedSignature, $signature);
     }
 
-    public function checkout()
+   public function checkout()
     {
         $payload    = JwtPayload::get();
         $vendorId   = $payload->exhibitor_id ?? null;
@@ -1342,8 +1342,8 @@ class DashboardController extends BaseController
                 ]);
         }
 
-        $successUrl = $input['success_url'] ?? getenv('RAZORPAY_SUCCESS_URL');
-        $failedUrl = $input['failed_url'] ?? getenv('RAZORPAY_FAILED_URL');
+        $successUrl = $this->sanitizeRedirectUrl($input['success_url'] ?? getenv('RAZORPAY_SUCCESS_URL'));
+        $failedUrl = $this->sanitizeRedirectUrl($input['failed_url'] ?? getenv('RAZORPAY_FAILED_URL'));
         $callbackUrl = $input['callback_url'] ?? getenv('RAZORPAY_CALLBACK_URL');
 
         if (!$successUrl || !$failedUrl || !$callbackUrl) {
@@ -1457,6 +1457,21 @@ class DashboardController extends BaseController
                 ]);
         }
     }
+    private function sanitizeRedirectUrl(?string $url): ?string
+{
+    if (!$url) {
+        return $url;
+    }
+
+    $host = parse_url($url, PHP_URL_HOST);
+    if (!$host) {
+        return $url;
+    }
+
+    // Agar domain URL path mein doubled hai (e.g. host/host/...), to ek baar clean karo
+    $doubledPattern = '#(https?://' . preg_quote($host, '#') . ')/' . preg_quote($host, '#') . '#i';
+    return preg_replace($doubledPattern, '$1', $url);
+}
 
     public function past_orders()
     {
