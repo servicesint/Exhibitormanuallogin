@@ -247,9 +247,9 @@ $items = (isset($items) && is_array($items)) ? $items : [];
             ?>
             <tr>
                 <td><?= $safe($description) ?></td>
-                <td class="center"><?= $safe($currency_symbol) ?><?= number_format($price, 2) ?></td>
+                <td class="center"><?= $safe($currency_symbol) ?> <?= number_format($price, 2) ?></td>
                 <td class="center"><?= $quantity ?></td>
-                <td class="right"><?= $safe($currency_symbol) ?><?= number_format($lineTotal, 2) ?></td>
+                <td class="right"><?= $safe($currency_symbol) ?> <?= number_format($lineTotal, 2) ?></td>
             </tr>
         <?php endforeach; ?>
 
@@ -259,22 +259,22 @@ $items = (isset($items) && is_array($items)) ? $items : [];
 
         <tr class="summary-row">
             <td colspan="3"></td>
-            <td class="right"><?= $safe($currency_symbol) ?><?= number_format($subtotal, 2) ?></td>
+            <td class="right"><?= $safe($currency_symbol) ?> <?= number_format($subtotal, 2) ?></td>
         </tr>
 
         <?php if ($is_same_state): ?>
             <tr>
                 <td colspan="3">CGST(@ 9%)</td>
-                <td class="right"><?= $safe($currency_symbol) ?><?= number_format($cgst, 2) ?></td>
+                <td class="right"><?= $safe($currency_symbol) ?> <?= number_format($cgst, 2) ?></td>
             </tr>
             <tr>
                 <td colspan="3">SGST(@ 9%)</td>
-                <td class="right"><?= $safe($currency_symbol) ?><?= number_format($sgst, 2) ?></td>
+                <td class="right"><?= $safe($currency_symbol) ?> <?= number_format($sgst, 2) ?></td>
             </tr>
         <?php else: ?>
             <tr>
                 <td colspan="3">IGST(@ 18%)</td>
-                <td class="right"><?= $safe($currency_symbol) ?><?= number_format($igst, 2) ?></td>
+                <td class="right"><?= $safe($currency_symbol) ?> <?= number_format($igst, 2) ?></td>
             </tr>
         <?php endif; ?>
 
