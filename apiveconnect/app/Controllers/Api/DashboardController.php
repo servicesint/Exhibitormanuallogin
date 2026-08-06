@@ -2518,12 +2518,8 @@ class DashboardController extends BaseController
         $isSameState = $gstBreakdown['is_same_state'];
 
         $eventName = '';
-        if (!empty($subEvent->event_name)) {
-            $eventName = $subEvent->event_name;
-        } elseif (!empty($subEvent->manual_welcome_note)) {
-            $eventName = strip_tags(html_entity_decode($subEvent->manual_welcome_note));
-            $eventName = trim(preg_replace('/\s+/', ' ', $eventName));
-            $eventName = mb_substr($eventName, 0, 80);
+        if (!empty($subEvents->sub_event_name)) {
+            $eventName = $subEvents->sub_event_name;
         }
 
         $invoiceDate = !empty($order['created_at']) && strtotime($order['created_at']) !== false

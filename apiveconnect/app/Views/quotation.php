@@ -190,9 +190,6 @@ $items = (isset($items) && is_array($items)) ? $items : [];
     </table>
 
     <div class="invoice-title"><?= $safe($invoiceTitle) ?></div>
-    <?php if (!empty($event_name)): ?>
-        <div class="invoice-subtitle"><?= $safe($event_name) ?></div>
-    <?php endif; ?>
 
     <table class="info-table">
         <tr>
