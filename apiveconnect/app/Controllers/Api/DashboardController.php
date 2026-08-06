@@ -781,7 +781,7 @@ class DashboardController extends BaseController
         }
     }
 
-     public function generate_quotation()
+    public function generate_quotation()
     {
         try {
             $jwt = $this->getJwtContext();
@@ -824,33 +824,36 @@ class DashboardController extends BaseController
             }
             $subtotal = round($subtotal, 2);
             $tax      = round($subtotal * 0.18, 2);
+
             $subEvent = $this->db->table('manual_setups')
                 ->where('sub_event_id', $subEventId)
                 ->get()
                 ->getRow();
+
             $subEvents = $this->db->table('company_sub_events')
                 ->where('id', $subEventId)
                 ->get()
                 ->getRow();
+
             $exhibitorInfo = $this->getExhibitorTaxInfo($vendorId);
-            $companyStateId = (int) env('COMPANY_STATE_ID', 7);
-            $exhibitorInfo = $this->getExhibitorTaxInfo($vendorId);
+
             $gstBreakdown = $this->resolveGstBreakdown(
                 $tax,
                 $exhibitorInfo['name'] ?? null,
-                $subEvents->venue_state ?? null
+                $subEvents->venue_state ?? null,
+                $isInternational
             );
             $cgst = $gstBreakdown['cgst'];
             $sgst = $gstBreakdown['sgst'];
             $igst = $gstBreakdown['igst'];
             $isSameState = $gstBreakdown['is_same_state'];
             $total = round($subtotal + $cgst + $sgst + $igst, 2);
+
             $eventName = '';
             if (!empty($subEvents->sub_event_name)) {
                 $eventName = $subEvents->sub_event_name;
-            } else {
-                $eventName = '';
             }
+
             $yearStart = (int) date('y');
             if ((int) date('m') < 4) {
                 $yearStart--;
@@ -859,6 +862,7 @@ class DashboardController extends BaseController
             $qid       = rand(1000, 9999);
             $invoiceNo = 'SI/PI/' . sprintf('%02d-%02d', $yearStart, $yearEnd) . '/' . $qid;
             $date      = date('d.m.Y');
+
             $quoteData = [
                 'event_id'     => $subEventId,
                 'exhibitor_id' => $vendorId,
@@ -881,6 +885,7 @@ class DashboardController extends BaseController
                         'data'    => null
                     ]);
             }
+
             foreach ($items as $item) {
                 $detailData = [
                     'qid'           => $qid,
@@ -895,12 +900,15 @@ class DashboardController extends BaseController
                 ];
                 $this->db->table('quotes_details')->insert($detailData);
             }
+
             $cartModel->clearCart($vendorId, $subEventId);
+
             $companyInfo = $this->db->table('companies')
                 ->select('company_name, company_logo')
                 ->where('id', 1)
                 ->get()
                 ->getRowArray();
+
             $invoiceData = [
                 'invoice_no'       => $invoiceNo,
                 'signature'        => $subEvent->signature ?? '',
@@ -910,7 +918,7 @@ class DashboardController extends BaseController
                 'subtotal'         => $subtotal,
                 'company_name'     => $companyInfo['company_name'],
                 'company_image'    => $companyInfo['company_logo'],
-                'exhibitor_type'    => $exhibitorInfo['exhibitor_type'],
+                'exhibitor_type'   => $exhibitorInfo['exhibitor_type'],
                 'cgst'             => $cgst,
                 'sgst'             => $sgst,
                 'igst'             => $igst,
@@ -923,6 +931,7 @@ class DashboardController extends BaseController
                 'customer_gstin'   => $exhibitorInfo['gst_number'] ?? 'N/A',
                 'customer_address' => $exhibitorInfo['address'] ?? '',
             ];
+
             $html = $this->quotationInvoiceHtml($invoiceData);
             $tempDir = WRITEPATH . 'mpdf';
             if (!is_dir($tempDir)) {
@@ -941,6 +950,7 @@ class DashboardController extends BaseController
             $mpdf->WriteHTML($html);
             $fileName = 'Additional-Furniture-Quotation-' . str_replace('/', '-', $invoiceNo) . '.pdf';
             $pdfContent = $mpdf->Output($fileName, Destination::STRING_RETURN);
+
             return $this->response
                 ->setStatusCode(200)
                 ->setHeader('Content-Type', 'application/pdf')
@@ -981,8 +991,18 @@ class DashboardController extends BaseController
     private function resolveGstBreakdown(
         float $taxAmount,
         ?string $exhibitorStateName,
-        ?string $venueState
+        ?string $venueState,
+        bool $isInternational = false
     ): array {
+        if ($isInternational) {
+            return [
+                'cgst'          => 0.00,
+                'sgst'          => 0.00,
+                'igst'          => round($taxAmount, 2),
+                'is_same_state' => false,
+            ];
+        }
+
         $isSameState = $exhibitorStateName !== null
             && $venueState !== null
             && strtolower(trim($exhibitorStateName)) === strtolower(trim($venueState));
@@ -2942,7 +2962,7 @@ class DashboardController extends BaseController
             'data' => [
                 'page_id' => $page['page_id'],
                 'page_title' => $page['page_title'],
-                'page_content' => $page['page_content'],
+                'page_content' => normalizeTableBorders($page['page_content']),
             ],
         ]);
     }
