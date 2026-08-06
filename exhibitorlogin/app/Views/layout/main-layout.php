@@ -905,7 +905,7 @@
 
             const token = getAuthToken();
             
-            const referralWebsite = localStorage.getItem('reference_website');
+            const referralWebsite = localStorage.getItem('referral_website');
             
             const logoutBtn = document.getElementById('logoutBtn');
             if (logoutBtn) {
