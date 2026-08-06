@@ -339,7 +339,7 @@
         border: 1px solid #e2e8f1;
         border-radius: 12px;
         cursor: pointer;
-        max-width: 220px;
+        max-width: 290px;
         transition: border-color 0.15s ease;
     }
 
@@ -690,6 +690,39 @@
     .badge-date strong {
         font-weight: 700;
     }
+    .fascia-preview-block {
+    margin-top: 12px;
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.preview-wrap {
+    position: relative;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+.rejection-reason-box {
+    margin-top: 0;
+    padding: 10px 14px;
+    background: #fdf3f2;
+    border: 1px solid #f2c9c5;
+    border-radius: 10px;
+    color: #9c3a32;
+    font-size: 0.84rem;
+    line-height: 1.5;
+    display: none;
+    flex: 1 1 280px;
+    max-width: 320px;
+}
+
+.rejection-reason-box strong {
+    display: block;
+    margin-bottom: 3px;
+    font-weight: 700;
+}
 </style>
 
 <?php
@@ -698,6 +731,7 @@ $selectedScheme = (int) ($saved['stall_type_id'] ?? 0);
 if (!in_array($selectedScheme, [1, 2, 3], true)) {
     $selectedScheme = 1;
 }
+
 ?>
 
 <div class="content-area">
@@ -788,12 +822,12 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
                             <span class="fascia-file-name">No file chosen</span>
                         </div>
                         <div class="fascia-preview-block">
-                            <label class="fascia-section-label mb-2">
+                            <label class="fascia-section-label mb-2" style="width:100%;">
                                 Uploaded Design Preview
                                 <span id="designStatus" class="badge status-badge"><?= esc(ucfirst(strtolower($saved['fascia_design_status'] ?? $saved['status'] ?? ''))) ?></span>
                             </label>
-                            <div id="designRejectionReason" class="rejection-reason-box"></div>
                             <div class="preview-wrap" id="fasciaPreviewContainer" style="<?= empty($saved['fascia_design']) ? 'display:none;' : '' ?>"></div>
+                            <div id="designRejectionReason" class="rejection-reason-box"></div>
                         </div>
                     </div>
                     <div class="fascia-group">
