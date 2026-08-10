@@ -709,6 +709,13 @@
 
     .image-preview-box {
         pointer-events: auto;
+        width: 510px;
+        max-width: 90vw;
+        background: #fff;
+        border-radius: 14px;
+        padding: 16px 18px;
+        box-shadow: 0 20px 50px rgba(20, 40, 80, 0.25);
+        height: auto;
     }
 
     .modalImage-preview {
@@ -729,6 +736,10 @@
         color: #6b7891;
         font-size: 0.85rem;
         margin: 0;
+        line-height: 1.5;
+        max-height: 130px;
+        overflow-y: auto;
+        word-break: break-word;
     }
 
     /* ===== Order detail modal ===== */
@@ -1078,7 +1089,7 @@
             <div class="furn-header">
                 <h4>ADDITIONAL FURNITURE</h4>
                 <div class="furn-actions">
-                   
+
                     <button class="btn btn-light" onclick="showCart()">🛒 Cart <span id="cartCountBadge" class="badge bg-danger ms-1 d-none">0</span></button>
                     <button class="btn btn-warning" onclick="showPendingOrders()">
                         ⏳ Pending
@@ -1269,9 +1280,7 @@
             <div class="modal-header">
                 <h5 class="modal-title">Order Details</h5>
                 <div class="d-flex align-items-center">
-                    <button type="button" id="downloadInvoiceBtn" class="btn btn-sm btn-dark me-2 d-none">
-                        ⬇ Download Invoice
-                    </button>
+                   
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
             </div>
@@ -1372,11 +1381,13 @@
             }
             el.textContent = formatted;
         }
-        const baseUrl = window.location.origin + window.location.pathname.split('/').slice(0, -1).join('/');
+
         const API_BASE_URL = '<?= env('API_BASE_URL') ?>';
         const UPLOAD_BASE_URL = '<?= env('UPLOAD_BASE_URL') ?>';
         const LOGIN_URL = '<?= base_url('login') ?>';
         const APP_BASE_URL = window.location.origin;
+        // alert('API_BASE_URL: ' + API_BASE_URL);
+        // alert('APP_BASE_URL: ' + APP_BASE_URL);
         const ENDPOINTS = {
             furniture: `${API_BASE_URL}/v1/cart/furniture`,
             add: `${API_BASE_URL}/v1/cart/add`,
@@ -1412,7 +1423,7 @@
             dom.furnitureTableBody = document.getElementById('furnitureTableBody');
             dom.cartItemsContainer = document.getElementById('cartItemsContainer');
             dom.cartSummary = document.getElementById('cartSummary');
-           dom.checkoutButton = document.getElementById('checkoutButton');
+            dom.checkoutButton = document.getElementById('checkoutButton');
             dom.quotationButton = document.getElementById('quotationButton');
             dom.cartCountBadge = document.getElementById('cartCountBadge');
             dom.cartCountHeader = document.getElementById('cartCountHeader');
@@ -1681,8 +1692,8 @@
                     body: {
                         payment_method: 'razorpay',
                         order_id: orderId,
-                       success_url: APP_BASE_URL + '/payment/success',
-        failed_url: APP_BASE_URL + '/payment/failed',
+                        success_url: APP_BASE_URL + '/payment/success',
+                        failed_url: APP_BASE_URL + '/payment/failed',
                         callback_url: ORDER_ENDPOINTS.razorpayCallback
                     },
                 });
@@ -1886,9 +1897,9 @@
                     <td>
                         <div class="${imgWrapClass}">
                             <img src="${imageUrl}" alt="${escapeHtml(altText)}" class="view-img"
-                                data-img="${imageUrl}"
-                                data-title="${escapeHtml(item.item_name)}"
-                                data-desc="${escapeHtml(description)}">
+    data-img="${imageUrl}"
+    data-title="${escapeHtml(item.item_name)}"
+    data-desc="${escapeHtml(description)}">
                             ${outOfStockOverlay}
                         </div>
                         ${isOutOfStock ? '<div class="text-danger small mt-1 fw-bold text-center">This product is out of stock</div>' : ''}
@@ -2294,8 +2305,8 @@
                 method: 'POST',
                 body: {
                     payment_method: 'razorpay',
-                    success_url: APP_BASE_URL + '/payment/success',
-        failed_url: APP_BASE_URL + '/payment/failed',
+                    success_url: window.location.origin + '/payment/success',
+                    failed_url: window.location.origin + '/payment/failed',
                     callback_url: ORDER_ENDPOINTS.razorpayCallback
                 },
             });
@@ -2384,7 +2395,7 @@
                 '-';
             const invoiceButtonHtml = isInvoiceAvailable(order) ?
                 `<button type="button" class="btn btn-sm btn-outline-primary btn-download-invoice" data-enc-id="${getEncId(order) || ''}">
-                    ⬇ Invoice
+                    ⬇ Reciept
                 </button>` :
                 '';
             return `
@@ -2429,10 +2440,8 @@
 
         function renderOrdersPaginationControls(page, totalPages, totalItems, pageSize) {
             if (!dom.ordersPagination) return;
-
             const startItem = (page - 1) * pageSize + 1;
             const endItem = Math.min(page * pageSize, totalItems);
-
             const MAX_VISIBLE = 5;
             let pages = [];
             if (totalPages <= MAX_VISIBLE) {
@@ -2808,9 +2817,7 @@
 
         function bindEvents() {
             bindImageHoverEvents();
-
             dom.furnitureOptOutCheckbox?.addEventListener('change', handleFurnitureOptOutChange);
-
             document.addEventListener('click', (event) => {
                 const addBtn = event.target.closest('.btn-add');
                 if (addBtn) {
@@ -2827,13 +2834,11 @@
                     removeCartItem(removeBtn.dataset.cartId);
                     return;
                 }
-
                 const checkoutBtn = event.target.closest('#checkoutButton');
                 if (checkoutBtn) {
                     placeOrder();
                     return;
                 }
-
                 const quotationBtn = event.target.closest('#quotationButton');
                 if (quotationBtn) {
                     generateQuotation();
@@ -2917,6 +2922,11 @@
             loadCartItems();
             // Load pending orders count on page load
             await loadPendingOrders();
+
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('view') === 'cart' && !state.isOptedOut) {
+                showCart();
+            }
         });
 
         document.addEventListener('layoutConfigReady', function() {

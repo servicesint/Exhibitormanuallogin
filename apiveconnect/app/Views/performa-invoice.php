@@ -499,15 +499,6 @@ $isInternational = ($exhibitorType === 'international');
                 </div>
             </td>
         </tr>
-        <tr>
-            <td style="width: 50%; text-align:right;" class="signature">
-                For Services International<br><br>
-                <img src="<?= esc($signature) ?>"
-                    width="100"
-                    style="max-width:100px; height:auto; object-fit:contain;"><br>
-                (Authorised Signature)
-            </td>
-        </tr>
     </table>
     <div class="terms">
     </div>

@@ -110,48 +110,39 @@ $items = (isset($items) && is_array($items)) ? $items : [];
             font-weight: bold;
             color: #0b5ca8;
         }
-
         .info-right {
             text-align: right;
             font-weight: bold;
             color: #0b5ca8;
         }
-
         .items-table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 10px;
         }
-
         .items-table th,
         .items-table td {
             border: 1px solid #000;
             padding: 6px;
             font-size: 12px;
         }
-
         .items-table th {
             font-weight: bold;
             text-align: center;
         }
-
         .center {
             text-align: center;
         }
-
         .right {
             text-align: right;
         }
-
         .section-heading {
             font-weight: bold;
             text-align: center;
         }
-
         .summary-row td {
             font-weight: bold;
         }
-
         .footer-table {
             width: 100%;
             margin-top: 30px;
@@ -296,11 +287,7 @@ $items = (isset($items) && is_array($items)) ? $items : [];
                 Pan No. AABFS1981P
             </td>
             <td style="width: 50%; text-align:right;" class="signature">
-                For Services International<br><br>
-                <?php if (!empty($signature)): ?>
-                    <img src="<?= $safe($signature) ?>" width="100" style="max-width:100px; height:auto; object-fit:contain;"><br>
-                <?php endif; ?>
-                (Authorised Signature)
+                 Services International<br><br>
             </td>
         </tr>
     </table>

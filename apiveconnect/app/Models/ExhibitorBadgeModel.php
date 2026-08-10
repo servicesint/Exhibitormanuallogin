@@ -94,12 +94,10 @@ class ExhibitorBadgeModel extends Model
             return null;
         }
 
-        // Already a full URL -> fetch directly
         if (preg_match('/^https?:\/\//i', $backgroundPath)) {
             return $this->pathToBase64($backgroundPath);
         }
 
-        // Otherwise resolve against UPLOAD_BASE_URL, same as exhibitor_image
         $baseUrl = rtrim(env('UPLOAD_BASE_URL'), '/');
         $imageUrl = $baseUrl . '/' . ltrim($backgroundPath, '/');
         $imageContent = @file_get_contents($imageUrl);
@@ -121,8 +119,15 @@ class ExhibitorBadgeModel extends Model
         return 'data:' . $mime . ';base64,' . base64_encode($imageContent);
     }
 
-    public function getExhibitorCompanyName(int $exhibitorId): string
+    public function getExhibitorCompanyName(int $exhibitorId, ?array $badge = null): string
     {
+        if (!empty($badge['company_name'])) {
+            return $badge['company_name'];
+        }
+        if (!empty($badge['company'])) {
+            return $badge['company'];
+        }
+
         $row = $this->db
             ->table('exhibitors')
             ->where('id', $exhibitorId)
@@ -133,10 +138,7 @@ class ExhibitorBadgeModel extends Model
             return '';
         }
 
-        return
-            $row['company_name']
-            ?? $row['company']
-            ?? '';
+        return $row['organisation_name'] ?? '';
     }
 
     public function pathToBase64(?string $pathOrUrl): ?string
@@ -144,11 +146,8 @@ class ExhibitorBadgeModel extends Model
         if (empty($pathOrUrl)) {
             return null;
         }
-
         if (preg_match('/^https?:\/\//i', $pathOrUrl)) {
-
             $bytes = @file_get_contents($pathOrUrl);
-
             if ($bytes === false) {
                 log_message(
                     'error',
@@ -157,25 +156,21 @@ class ExhibitorBadgeModel extends Model
 
                 return null;
             }
-
             $mime =
                 $this->guessMimeFromBytes($bytes)
                 ?: 'image/jpeg';
-
             return
                 'data:' .
                 $mime .
                 ';base64,' .
                 base64_encode($bytes);
         }
-
         if (
             !is_file($pathOrUrl) ||
             !is_readable($pathOrUrl)
         ) {
             return null;
         }
-
         $mime =
             mime_content_type($pathOrUrl)
             ?: 'image/jpeg';
@@ -251,10 +246,48 @@ class ExhibitorBadgeModel extends Model
             size: $size,
             margin: 10
         );
-
         $result = $builder->build();
-
         return $result->getDataUri();
+    }
+
+    private function makeCircularPhotoBase64(string $imageContent, int $size = 400): ?string
+    {
+        if (!class_exists('Imagick')) {
+            return null;
+        }
+        try {
+            $imagick = new \Imagick();
+            $imagick->readImageBlob($imageContent);
+            $imagick->setImageFormat('png');
+            $imagick->trimImage(0.02 * \Imagick::getQuantum());
+            $imagick->setImagePage(0, 0, 0, 0);
+            $width = $imagick->getImageWidth();
+            $height = $imagick->getImageHeight();
+            $cropSize = min($width, $height);
+            $x = (int) (($width - $cropSize) / 2);
+            $y = (int) (($height - $cropSize) / 2);
+            $imagick->cropImage($cropSize, $cropSize, $x, $y);
+            $imagick->setImagePage(0, 0, 0, 0);
+            $imagick->resizeImage($size, $size, \Imagick::FILTER_LANCZOS, 1);
+            $mask = new \Imagick();
+            $mask->newImage($size, $size, new \ImagickPixel('transparent'));
+            $mask->setImageFormat('png');
+            $draw = new \ImagickDraw();
+            $draw->setFillColor(new \ImagickPixel('black'));
+            $draw->circle($size / 2, $size / 2, $size / 2, 0);
+            $mask->drawImage($draw);
+            $imagick->setImageMatte(true);
+            $imagick->compositeImage($mask, \Imagick::COMPOSITE_DSTIN, 0, 0);
+            $result = $imagick->getImageBlob();
+            $imagick->clear();
+            $imagick->destroy();
+            $mask->clear();
+            $mask->destroy();
+            return 'data:image/png;base64,' . base64_encode($result);
+        } catch (\Throwable $e) {
+            log_message('error', 'makeCircularPhotoBase64 failed: ' . $e->getMessage());
+            return null;
+        }
     }
 
     public function buildBadgeViewData(
@@ -282,26 +315,32 @@ class ExhibitorBadgeModel extends Model
             $imageUrl = $baseUrl . '/' . ltrim($badge['exhibitor_image'], '/');
             $imageContent = @file_get_contents($imageUrl);
             if ($imageContent !== false) {
-                $extension = strtolower(pathinfo($imageUrl, PATHINFO_EXTENSION));
-                $mime = match ($extension) {
-                    'png'  => 'image/png',
-                    'jpg', 'jpeg' => 'image/jpeg',
-                    'gif'  => 'image/gif',
-                    'webp' => 'image/webp',
-                    default => 'image/jpeg',
-                };
+                $photoBase64 = $this->makeCircularPhotoBase64($imageContent, 400);
 
-                $photoBase64 = 'data:' . $mime . ';base64,' . base64_encode($imageContent);
+                if (!$photoBase64) {
+                    $extension = strtolower(pathinfo($imageUrl, PATHINFO_EXTENSION));
+                    $mime = match ($extension) {
+                        'png'  => 'image/png',
+                        'jpg', 'jpeg' => 'image/jpeg',
+                        'gif'  => 'image/gif',
+                        'webp' => 'image/webp',
+                        default => 'image/jpeg',
+                    };
+                    $photoBase64 = 'data:' . $mime . ';base64,' . base64_encode($imageContent);
+                }
             }
         }
         if (
             !$photoBase64 &&
             !empty($fallbackPhotoPath)
         ) {
-            $photoBase64 =
-                $this->pathToBase64(
-                    $fallbackPhotoPath
-                );
+            $fallbackContent = @file_get_contents($fallbackPhotoPath);
+            if ($fallbackContent !== false) {
+                $photoBase64 = $this->makeCircularPhotoBase64($fallbackContent, 400);
+            }
+            if (!$photoBase64) {
+                $photoBase64 = $this->pathToBase64($fallbackPhotoPath);
+            }
         }
 
         $backgroundBase64 = $this->resolveBackgroundBase64($theme['background']);
@@ -319,7 +358,8 @@ class ExhibitorBadgeModel extends Model
         );
         $companyName =
             $this->getExhibitorCompanyName(
-                $exhibitorId
+                $exhibitorId,
+                $badge
             );
         return [
             'sub_event_name' => $eventName ?: 'EXHIBITOR EVENT',
@@ -350,25 +390,20 @@ class ExhibitorBadgeModel extends Model
             $subEventId,
             $fallbackPhotoPath
         );
-
         if (!$viewData) {
             return null;
         }
-
         $html = view(
             'exhibitor_badge_pdf',
             $viewData
         );
-
         $tempDir = WRITEPATH . 'mpdf';
-
         if (!is_dir($tempDir)) {
             mkdir($tempDir, 0775, true);
         }
-
         $mpdf = new Mpdf([
             'mode' => 'utf-8',
-            'format' => [100, 125],   // <-- FIXED: was [100, 150], must match template's @page size
+            'format' => [100, 125],
             'margin_left' => 0,
             'margin_right' => 0,
             'margin_top' => 0,
@@ -378,22 +413,17 @@ class ExhibitorBadgeModel extends Model
             'default_font' => 'dejavusans',
             'tempDir' => $tempDir
         ]);
-
         $mpdf->WriteHTML($html);
-
         $safeName = preg_replace(
             '/[^A-Za-z0-9_\-]/',
             '_',
             $viewData['full_name'] ?: 'exhibitor'
         );
-
         $fileName = 'Badge-' . $safeName . '.pdf';
-
         $content = $mpdf->Output(
             '',
             Destination::STRING_RETURN
         );
-
         return [
             'fileName' => $fileName,
             'content' => $content

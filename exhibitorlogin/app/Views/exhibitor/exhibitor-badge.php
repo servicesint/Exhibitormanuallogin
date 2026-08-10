@@ -461,6 +461,9 @@
             </div>
             <div>
                 <span class="badge-date"><i class="bi bi-calendar-event"></i> Due: &nbsp;<span id="exhibitorbadgeduedate">--</span></span>
+                <span class="badge-date" id="badgeCountDisplay" style="display:none;">
+                    <i class="bi bi-people"></i> <span id="badgeCountText">--</span>
+                </span>
                 <button type="button" id="addBadgeBtn" class="btn badge-add-btn ms-3">
                     <i class="bi bi-plus-lg"></i> Add Exhibitor
                 </button>
@@ -578,6 +581,7 @@
         const PROFILE_URL = '<?= env('API_BASE_URL') ?>/v1/profile';
         let deleteRecordId = null;
         let isViewOnly = false;
+
         function showToast(message, type = 'success') {
             const container = document.getElementById('toastContainer');
             if (!container || typeof bootstrap === 'undefined') {
@@ -751,6 +755,7 @@
         }
         const MIN_IMAGE_WIDTH = 300;
         const MAX_IMAGE_WIDTH = 1000;
+
         function validateImageDimensions(file) {
             return new Promise((resolve) => {
                 const img = new Image();
@@ -1011,12 +1016,15 @@
 
                 if (response.ok && (result.status || result.success)) {
                     renderBadges(result.data || []);
-
-                    // manual_setup (notes/colors/admin enable-disable) may still come from this endpoint
                     const manualSetup = result.manual_setup || (result.data && result.data.manual_setup) || null;
                     if (manualSetup) {
                         handleManualSetupData(manualSetup);
                     }
+                    // --- NEW ---
+                    if (result.badge_summary) {
+                        renderBadgeCount(result.badge_summary);
+                    }
+                    // --- END NEW ---
                 } else {
                     showToast(result.message || 'Unable to fetch badges.', 'danger');
                     renderBadges([]);
@@ -1025,6 +1033,31 @@
                 console.error(error);
                 showToast('Network error while fetching badges.', 'danger');
                 renderBadges([]);
+            }
+        }
+
+        // --- NEW ---
+        function renderBadgeCount(summary) {
+            const display = document.getElementById('badgeCountDisplay');
+            const text = document.getElementById('badgeCountText');
+            if (!display || !text) return;
+
+            const created = summary.badges_created ?? 0;
+
+            if (summary.is_unlimited) {
+                text.innerText = `${created} created`;
+            } else {
+                const limit = summary.badge_limit ?? 0;
+                const left = summary.badges_left ?? Math.max(0, limit - created);
+                text.innerText = `${created} of ${limit} created (${left} left)`;
+            }
+            display.style.display = 'inline-flex';
+
+            // Disable "Add Exhibitor" once the limit is reached (unless already view-only/disabled)
+            const addBtn = document.getElementById('addBadgeBtn');
+            if (!summary.is_unlimited && (summary.badges_left ?? 0) <= 0 && addBtn) {
+                addBtn.classList.add('disabled-btn');
+                addBtn.title = 'Badge limit reached';
             }
         }
 
