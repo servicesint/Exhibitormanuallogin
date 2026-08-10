@@ -8,7 +8,7 @@ $primary = $theme_primary ?? '#8b0000';
 if (!empty($badge_background)) {
     $backgroundCss = "
         background-image:url('" . $safe($badge_background) . "');
-        background-size:cover;
+        background-size:100% 100%;
         background-position:center center;
         background-repeat:no-repeat;
     ";
@@ -55,16 +55,8 @@ if (!empty($badge_background)) {
             border-spacing: 0;
         }
 
-        .event-name {
-            font-family: dejavuserif;
-            font-size: 18px;
-            font-weight: bold;
-            line-height: 1.15;
-            text-transform: uppercase;
-        }
-
         .exhibitor-name {
-            font-size: 11px;
+            font-size: 16px;
             font-weight: bold;
             text-transform: uppercase;
             line-height: 1.2;
@@ -72,16 +64,9 @@ if (!empty($badge_background)) {
 
         .company-name {
             font-family: dejavuserif;
-            font-size: 7px;
+            font-size: 8px;
             line-height: 1.2;
             text-transform: uppercase;
-        }
-
-        .label {
-            font-size: 8px;
-            font-weight: bold;
-            text-transform: uppercase;
-            line-height: 1;
         }
 
         .qr-wrapper {
@@ -98,33 +83,29 @@ if (!empty($badge_background)) {
     <div class="badge-wrap">
         <table class="badge-table" cellpadding="0" cellspacing="0" width="100%">
             <tr>
-                <td align="center" valign="middle" style="height:20mm;">
-                    <div class="event-name"><?= $safe($sub_event_name) ?></div>
-                </td>
+                <td style="height:26mm;">&nbsp;</td>
             </tr>
             <tr>
                 <td align="center" valign="middle" style="height:32mm;">
                     <?php if (!empty($photo)): ?>
-                        <img src="<?= $safe($photo) ?>"
-                            width="113" height="113"
-                            style="width:30mm;height:30mm;border-radius:50%;object-fit:cover;">
+                        <img src="<?= $safe($photo) ?>" width="113" height="113" style="width:30mm;height:30mm;">
                     <?php endif; ?>
                 </td>
             </tr>
             <tr>
-                <td align="center" valign="middle" style="height:12mm;">
+                <td align="center" valign="middle" style="height:12mm;color: white;">
                     <div class="exhibitor-name"><?= $safe($full_name) ?></div>
                 </td>
             </tr>
             <?php if (!empty($company_name)): ?>
                 <tr>
-                    <td align="center" valign="middle" style="height:9mm;">
+                    <td align="center" valign="middle" style="height:8mm;color: white;">
                         <div class="company-name">(<?= $safe($company_name) ?>)</div>
                     </td>
                 </tr>
             <?php endif; ?>
             <tr>
-                <td align="center" valign="middle" style="height:34mm;">
+                <td align="center" valign="middle" style="height:32mm;">
                     <?php if (!empty($qr)): ?>
                         <table cellpadding="4" cellspacing="0" align="center" class="qr-wrapper">
                             <tr>
@@ -139,13 +120,10 @@ if (!empty($badge_background)) {
                 </td>
             </tr>
             <tr>
-                <td align="center" valign="middle" style="height:18mm;">
-                    <div class="label">EXHIBITOR</div>
-                </td>
+                <td style="height:15mm;">&nbsp;</td>
             </tr>
         </table>
     </div>
 
 </body>
-
 </html>

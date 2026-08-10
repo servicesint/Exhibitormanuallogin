@@ -2,7 +2,6 @@
 <?= $this->section('content') ?>
 
 <style>
-    /* ===== READONLY MESSAGE ===== */
     .readonly-message {
         background: #fff3cd;
         border: 1px solid #ffc107;
@@ -223,6 +222,14 @@
         font-size: 0.8em;
         margin-top: 5px;
         display: block;
+    }
+
+    .electricity-price-note {
+        margin-top: 6px;
+        font-size: 0.84rem;
+        color: #4a72b8;
+        font-weight: 600;
+        display: none;
     }
 
     .fascia-upload {
@@ -690,39 +697,40 @@
     .badge-date strong {
         font-weight: 700;
     }
+
     .fascia-preview-block {
-    margin-top: 12px;
-    display: flex;
-    align-items: flex-start;
-    gap: 16px;
-    flex-wrap: wrap;
-}
+        margin-top: 12px;
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
 
-.preview-wrap {
-    position: relative;
-    display: inline-block;
-    flex-shrink: 0;
-}
+    .preview-wrap {
+        position: relative;
+        display: inline-block;
+        flex-shrink: 0;
+    }
 
-.rejection-reason-box {
-    margin-top: 0;
-    padding: 10px 14px;
-    background: #fdf3f2;
-    border: 1px solid #f2c9c5;
-    border-radius: 10px;
-    color: #9c3a32;
-    font-size: 0.84rem;
-    line-height: 1.5;
-    display: none;
-    flex: 1 1 280px;
-    max-width: 320px;
-}
+    .rejection-reason-box {
+        margin-top: 0;
+        padding: 10px 14px;
+        background: #fdf3f2;
+        border: 1px solid #f2c9c5;
+        border-radius: 10px;
+        color: #9c3a32;
+        font-size: 0.84rem;
+        line-height: 1.5;
+        display: none;
+        flex: 1 1 280px;
+        max-width: 320px;
+    }
 
-.rejection-reason-box strong {
-    display: block;
-    margin-bottom: 3px;
-    font-weight: 700;
-}
+    .rejection-reason-box strong {
+        display: block;
+        margin-bottom: 3px;
+        font-weight: 700;
+    }
 </style>
 
 <?php
@@ -740,38 +748,23 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
             <i class="bi bi-info-circle"></i>
             <span>Fascias form is currently closed. You can only view your existing submissions. New submissions are not allowed.</span>
         </div>
-
         <div class="fascia-card">
             <div class="fascia-card-head">
                 <div class="fascia-card-head-top">
                     <div>
                         <span class="fascia-kicker">Stand Setup</span>
-                        <h4 class="fascia-title">Fascia &amp; Stand Details</h4>
+                        <h4 class="fascia-title" id="fasciaTitle">Fascia &amp; Stand Details</h4>
                     </div>
                     <span class="badge-date">
                         <i class="bi bi-calendar-event"></i>
                         Due Date:&nbsp;<strong id="fasciaduedate">--</strong>
                     </span>
                 </div>
-                <p>Tell us how your stand will be built so we can prepare the right fascia board, layout, and approvals ahead of the event.</p>
+                <p id="fasciaSubtitle">Tell us how your stand will be built so we can prepare the right fascia board, layout, and approvals ahead of the event.</p>
             </div>
-
             <div class="fascia-form-layout">
-                <div class="fascia-group">
-                    <label class="fascia-section-label">Fascia Category</label>
-                    <div class="fascia-select-wrap">
-                        <i class="bi bi-diagram-3"></i>
-                        <select class="form-select scheme-select-pending" id="schemeType">
-                            <option value="" <?= empty($selectedScheme) ? 'selected' : '' ?>>Select</option>
-                            <option value="1" <?= $selectedScheme === 1 ? 'selected' : '' ?>>Pre Fabricated Shell</option>
-                            <option value="2" <?= $selectedScheme === 2 ? 'selected' : '' ?>>Raw Space</option>
-                            <option value="3" <?= $selectedScheme === 3 ? 'selected' : '' ?>>Shell Scheme</option>
-                        </select>
-                    </div>
-                </div>
                 <form id="shellForm" method="post" style="display:none;" enctype="multipart/form-data">
                     <input type="hidden" name="fascia_category" value="Shell Space">
-
                     <div class="fascia-group">
                         <label class="fascia-section-label">Precise wording to appear on Fascia Board (Stand Number &amp; Company Name/Brand Name)</label>
                         <div class="fascia-input-wrap">
@@ -780,7 +773,6 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
                         </div>
                         <small class="text-muted">Maximum 26 characters</small>
                     </div>
-
                     <div class="fascia-group">
                         <label class="fascia-section-label">Stand Layout Details (e.g. corner stand, 2 side walls / 3 side walls)</label>
                         <div class="fascia-input-wrap">
@@ -788,7 +780,6 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
                             <textarea class="form-control" name="stall_open_side"><?= esc($saved['stall_open_side'] ?? '') ?></textarea>
                         </div>
                     </div>
-
                     <div class="fascia-actions">
                         <button type="submit" class="btn fascia-btn" id="shellSubmitBtn">Submit</button>
                     </div>
@@ -804,10 +795,11 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
                                 class="form-control"
                                 name="electricity_requirement"
                                 id="electricityRequirement"
-                                inputmode="decimal"
+                                inputmode="numeric"
                                 maxlength="6"
-                                value="<?= !empty($saved['electricity_requirement']) ? esc($saved['electricity_requirement']) : '' ?>">
+                                value="<?= !empty($saved['electricity_requirement']) ? esc((int) $saved['electricity_requirement']) : '' ?>">
                         </div>
+                        <small class="electricity-price-note" id="electricityPriceNote"></small>
                     </div>
                     <div class="fascia-group">
                         <label class="fascia-section-label">Upload Design (.pdf, .jpg, .jpeg or .png — Max 2 MB)</label>
@@ -841,7 +833,17 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
                                     <label class="fab-label">Salutation</label>
                                     <div class="fab-input-wrap">
                                         <i class="bi bi-person"></i>
-                                        <input type="text" class="form-control" name="salutation" placeholder="Mr./Ms." value="<?= esc($saved['salutation'] ?? '') ?>">
+                                        <select class="form-control" name="salutation">
+                                            <option value="">Select</option>
+                                            <?php
+                                            $salutations = ['Mr.', 'Ms.'];
+                                            foreach ($salutations as $s):
+                                            ?>
+                                                <option value="<?= esc($s) ?>" <?= (($saved['salutation'] ?? '') === $s) ? 'selected' : '' ?>>
+                                                    <?= esc($s) ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
                                     </div>
                                 </div>
                                 <div class="fab-col-5">
@@ -883,9 +885,7 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
                         </div>
                     </div>
                     <div class="fascia-group" id="rawNotesBlock">
-                        <div class="fascia-notes" id="fasciaNotesContent">
-                            <!-- populated dynamically from API's raw_text -->
-                        </div>
+                        <div class="fascia-notes" id="fasciaNotesContent"></div>
                     </div>
                     <div class="fascia-actions">
                         <button type="submit" class="btn fascia-btn" id="rawSubmitBtn">Submit</button>
@@ -925,10 +925,21 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
         const $shellForm = $("#shellForm");
         const $rawForm = $("#rawForm");
         const $rawNotesBlock = $("#rawNotesBlock");
-        const $schemeType = $("#schemeType");
         const API_BASE_URL = '<?= env('API_BASE_URL') ?>';
         const FASCIA_URL = `${API_BASE_URL}/v1/dashboard/fascia`;
+        const ADD_TO_CART_URL = `${API_BASE_URL}/v1/cart/add`;
+        const ELECTRICITY_ITEM_URL = `${API_BASE_URL}/v1/dashboard/electricity-item`;
+        const CART_PAGE_PATH = '/additional-furniture';
+
+        // Dynamic electricity item state (fetched from DB, no more hardcoding)
+        let ELECTRICITY_ITEM_ID = null;
+        let ELECTRICITY_RATE_PER_KW = null;
+        let electricityItemLoaded = false;
+        let pendingElectricityQuantity = null;
+
         let isViewOnly = false;
+        let electricityDebounceTimer = null;
+        let lastElectricityQuantitySynced = null;
 
         function renderFasciaNotes(rawText) {
             const $notes = $('#fasciaNotesContent');
@@ -970,7 +981,6 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
                     }
                     msgDiv.style.display = 'block';
                 }
-                $schemeType.prop('disabled', true);
                 $shellForm.find('input, textarea, select').prop('disabled', true);
                 $rawForm.find('input, textarea, select').prop('disabled', true);
                 $('#shellSubmitBtn, #rawSubmitBtn').addClass('disabled-btn').prop('disabled', true);
@@ -987,7 +997,6 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
             return true;
         }
 
-        // ===== DUE DATE DISPLAY =====
         function renderFasciaDueDate() {
             const dueDate = window.onlineFormsDueDates && window.onlineFormsDueDates.fascia;
             const $dueDateEl = $('#fasciaduedate');
@@ -1011,6 +1020,157 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
             const $btn = $('#rawSubmitBtn');
             $btn.prop('disabled', disabled);
             $btn.toggleClass('disabled-btn', disabled);
+        }
+
+        function getAuthToken() {
+            return localStorage.getItem('api_token') || sessionStorage.getItem('api_token') || '';
+        }
+
+        /**
+         * FETCH: get the electricity item (id + rate) from the DB.
+         * Called once during init. Populates ELECTRICITY_ITEM_ID / ELECTRICITY_RATE_PER_KW.
+         */
+        function fetchElectricityItem() {
+            const token = getAuthToken();
+            return $.ajax({
+                url: ELECTRICITY_ITEM_URL,
+                type: 'GET',
+                headers: {
+                    Authorization: token ? `Bearer ${token}` : ''
+                },
+                dataType: 'json'
+            }).then(function(response) {
+                if (response && response.status && response.data) {
+                    ELECTRICITY_ITEM_ID = response.data.item_id;
+                    ELECTRICITY_RATE_PER_KW = parseFloat(response.data.rate_per_kw);
+                    electricityItemLoaded = true;
+                } else {
+                    electricityItemLoaded = false;
+                    if (window.showToast) {
+                        window.showToast((response && response.message) || 'Electricity item not configured.', 'error');
+                    }
+                }
+            }).catch(function() {
+                electricityItemLoaded = false;
+                if (window.showToast) window.showToast('Unable to load electricity pricing.', 'error');
+            }).always(function() {
+                // Process any quantity the user typed (or a saved value) while we were loading.
+                if (pendingElectricityQuantity) {
+                    const qty = pendingElectricityQuantity;
+                    pendingElectricityQuantity = null;
+                    handleElectricityInputChange(qty);
+                }
+            });
+        }
+
+        function updateElectricityPriceNote(quantity) {
+            const $note = $('#electricityPriceNote');
+            if (!quantity || quantity <= 0 || !electricityItemLoaded) {
+                $note.hide().text('');
+                return;
+            }
+            const price = quantity * ELECTRICITY_RATE_PER_KW;
+            $note.text(`${quantity} KW × ₹${ELECTRICITY_RATE_PER_KW} = ₹${price.toFixed(2)} — added to cart`).show();
+        }
+
+        function getCartPageUrl() {
+            const base = (window.BASE_URL || '').replace(/\/$/, '');
+            return `${base}${CART_PAGE_PATH}?view=cart`;
+        }
+
+        function notifyElectricityAddedToCart(quantity) {
+            const price = quantity * ELECTRICITY_RATE_PER_KW;
+            const message = `Electricity (${quantity} KW, ₹${price.toFixed(2)}) added to your cart. Please visit the cart page to complete payment.`;
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Added to Cart',
+                    text: message,
+                    toast: true,
+                    position: 'top-end',
+                    timer: 4000,
+                    timerProgressBar: true,
+                    showConfirmButton: false
+                });
+            } else if (window.showToast) {
+                window.showToast(message, 'success');
+            }
+        }
+
+        /**
+         * ADD TO CART: posts item_id (from DB) + quantity to the cart API.
+         */
+        function addElectricityToCart(quantity) {
+            if (!electricityItemLoaded || !ELECTRICITY_ITEM_ID) {
+                if (window.showToast) window.showToast('Electricity pricing not loaded yet. Please retry.', 'error');
+                return;
+            }
+            const token = getAuthToken();
+            if (!token) {
+                if (window.showToast) window.showToast('Login token missing. Please login again.', 'error');
+                return;
+            }
+            $.ajax({
+                url: ADD_TO_CART_URL,
+                type: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify({
+                    item_id: ELECTRICITY_ITEM_ID,
+                    quantity: quantity
+                }),
+                dataType: 'json',
+                success(response) {
+                    if (response && response.status) {
+                        lastElectricityQuantitySynced = quantity;
+                        updateElectricityPriceNote(quantity);
+                        window.dispatchEvent(new CustomEvent('cartUpdated', {
+                            detail: response.data || {}
+                        }));
+                        if (window.refreshCart) {
+                            window.refreshCart();
+                        }
+                        notifyElectricityAddedToCart(quantity);
+                    } else if (window.showToast) {
+                        window.showToast((response && response.message) || 'Unable to add electricity to cart.', 'error');
+                    }
+                },
+                error(xhr) {
+                    const msg = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Unable to add electricity to cart.';
+                    if (window.showToast) window.showToast(msg, 'error');
+                }
+            });
+        }
+
+        function handleElectricityInputChange(forcedQuantity) {
+            const raw = forcedQuantity !== undefined ? String(forcedQuantity) : $('#electricityRequirement').val();
+            const quantity = parseInt(raw, 10);
+
+            if (electricityDebounceTimer) {
+                clearTimeout(electricityDebounceTimer);
+            }
+
+            if (!raw || isNaN(quantity) || quantity <= 0) {
+                updateElectricityPriceNote(0);
+                return;
+            }
+
+            // Item pricing not loaded yet — queue and wait for fetchElectricityItem() to resolve.
+            if (!electricityItemLoaded) {
+                pendingElectricityQuantity = quantity;
+                return;
+            }
+
+            updateElectricityPriceNote(quantity);
+
+            electricityDebounceTimer = setTimeout(function() {
+                if (quantity === lastElectricityQuantitySynced) {
+                    return;
+                }
+                addElectricityToCart(quantity);
+            }, 600);
         }
 
         document.getElementById("fasciaDesignInput").addEventListener("change", function() {
@@ -1055,34 +1215,21 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
             fileNameEl.innerText = file.name;
             setRawSubmitDisabled(false);
         });
-
         $(document).on('input', '#electricityRequirement', function() {
-            let value = this.value.replace(/[^0-9.]/g, '');
-            const parts = value.split('.');
-            if (parts.length > 2) {
-                value = parts[0] + '.' + parts.slice(1).join('');
-            }
-            if (parts.length === 2 && parts[1].length > 2) {
-                value = parts[0] + '.' + parts[1].slice(0, 2);
-            }
-            this.value = value;
+            this.value = this.value.replace(/[^0-9]/g, '');
+            handleElectricityInputChange();
         });
-
         $(document).on('paste', '#electricityRequirement', function(e) {
             e.preventDefault();
             const pasted = (e.originalEvent.clipboardData || window.clipboardData).getData('text');
-            let digitsOnly = pasted.replace(/[^0-9.]/g, '');
-            const parts = digitsOnly.split('.');
-            if (parts.length > 2) {
-                digitsOnly = parts[0] + '.' + parts.slice(1).join('');
-            }
+            const digitsOnly = pasted.replace(/[^0-9]/g, '');
             document.execCommand('insertText', false, digitsOnly);
+            handleElectricityInputChange();
         });
 
         function isPdfUrl(url) {
             return /\.pdf(\?.*)?$/i.test(url || '');
         }
-
         const UPLOAD_BASE_URL = '<?= rtrim(env('UPLOAD_BASE_URL'), '/') ?>';
 
         function buildFileUrl(value) {
@@ -1186,24 +1333,7 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
             return null;
         }
         const urlScheme = getUrlScheme();
-        if (urlScheme) {
-            $schemeType.find('option').each(function() {
-                if ($(this).val() !== String(urlScheme)) {
-                    $(this).remove();
-                }
-            });
-            $schemeType.val(urlScheme);
-            $schemeType.prop('disabled', true);
-        }
-
-        function revealSchemeSelectIfReady() {
-            if ($schemeType.val()) {
-                $schemeType.removeClass('scheme-select-pending');
-            } else {
-                $schemeType.addClass('scheme-select-pending');
-            }
-        }
-        revealSchemeSelectIfReady();
+        let currentScheme = urlScheme || <?= (int) $selectedScheme ?>;
 
         $.validator.addMethod('fasciaFileType', function(value, element) {
             if (!element.files || element.files.length === 0) return true;
@@ -1217,7 +1347,6 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
             const maxBytes = 2 * 1024 * 1024;
             return element.files[0].size <= maxBytes;
         }, 'Maximum file size is 2 MB');
-
         const validatorDefaults = {
             errorClass: 'validation-error',
             errorElement: 'div',
@@ -1252,43 +1381,38 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
         }
 
         function toggleForms() {
-            const value = $schemeType.val();
             $shellForm.hide();
             $rawForm.hide();
             $rawNotesBlock.hide();
             resetForm($shellForm);
             resetForm($rawForm);
 
-            if (value === '3') {
+            if (currentScheme === 3) {
                 $shellForm.show();
-            } else if (value === '2') {
+            } else if (currentScheme === 2) {
                 $rawForm.show();
                 $rawNotesBlock.show();
             }
-            revealSchemeSelectIfReady();
         }
 
-        // --- Hydrate DOM Inputs directly without page reload ---
         function hydrateSavedFascia(saved) {
             if (!saved) return;
             const category = parseInt(saved.stall_type_id, 10) || 0;
             if (urlScheme) {
-                $schemeType.val(urlScheme);
+                currentScheme = urlScheme;
             } else if (category === 3) {
-                $schemeType.val(3);
+                currentScheme = 3;
             } else if (category === 2) {
-                $schemeType.val(2);
+                currentScheme = 2;
             } else {
-                $schemeType.val(1);
+                currentScheme = 1;
             }
             toggleForms();
-
             const fasciaDesign = saved.fascia_design || '';
             const designStatus = saved.fascia_design_status || saved.status;
             applyDesignStatus(designStatus);
             showRejectionReason(designStatus, saved.reason, saved.other_reason);
             renderFasciaPreview(fasciaDesign);
-
             const $rawDesignField = $rawForm.find('[name="fascia_design"]');
             if ($rawForm.data('validator')) {
                 if (fasciaDesign) {
@@ -1300,11 +1424,10 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
                 }
                 $rawForm.validate().element($rawDesignField);
             }
-
             const fieldMap = {
                 fascia_board_text: saved.fascia_board_text || '',
                 stall_open_side: saved.stall_open_side || '',
-                electricity_requirement: saved.electricity_requirement || '',
+                electricity_requirement: saved.electricity_requirement ? String(parseInt(saved.electricity_requirement, 10)) : '',
                 salutation: saved.salutation || '',
                 first_name: saved.first_name || '',
                 last_name: saved.last_name || '',
@@ -1317,10 +1440,21 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
                 $field($shellForm).val(value);
                 $field($rawForm).val(value);
             });
+            if (fieldMap.electricity_requirement) {
+                const initialQty = parseInt(fieldMap.electricity_requirement, 10);
+                if (!isNaN(initialQty) && initialQty > 0) {
+                    if (electricityItemLoaded) {
+                        lastElectricityQuantitySynced = initialQty;
+                        updateElectricityPriceNote(initialQty);
+                    } else {
+                        pendingElectricityQuantity = initialQty;
+                    }
+                }
+            }
         }
 
         function fetchSavedFascia() {
-            const token = localStorage.getItem('api_token') || sessionStorage.getItem('api_token') || '';
+            const token = getAuthToken();
             $.ajax({
                 url: FASCIA_URL,
                 type: 'GET',
@@ -1338,7 +1472,6 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
             });
         }
 
-        // --- Ajax Submission Logic ---
         function submitFasciaForm(form) {
             if (isViewOnly) {
                 Swal.fire({
@@ -1348,13 +1481,13 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
                 });
                 return false;
             }
-
             const $form = $(form);
             const $submitBtn = $form.find('button[type="submit"]');
+            const fasciaCategory = $form.find('[name="fascia_category"]').val();
+            const isRawSpaceSubmit = fasciaCategory === 'Raw Space';
             $submitBtn.prop('disabled', true).addClass('disabled-btn');
             const formData = new FormData(form);
-            const token = localStorage.getItem('api_token') || sessionStorage.getItem('api_token') || '';
-
+            const token = getAuthToken();
             $.ajax({
                 url: FASCIA_URL,
                 type: 'POST',
@@ -1368,25 +1501,40 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
                 success(response) {
                     const message = response.message || (response.status ? 'Submitted successfully' : 'Submission failed');
                     if (response.status || response.success) {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Success!',
-                            text: 'Your action was completed.',
-                            timer: 5000,
-                            timerProgressBar: true,
-                            showConfirmButton: false
-                        }).then(() => {
-                            location.reload();
-                        });
+                        if (isRawSpaceSubmit) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Details Submitted',
+                                text: 'Electricity charges have been added to your cart. Would you like to pay now or pay later?',
+                                showDenyButton: true,
+                                confirmButtonText: 'Pay Now',
+                                denyButtonText: 'Pay Later',
+                                allowOutsideClick: false,
+                                allowEscapeKey: false
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    window.location.href = getCartPageUrl();
+                                }
+                                // Pay Later: do nothing, stay on this page.
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Success!',
+                                text: 'Your action was completed.',
+                                timer: 5000,
+                                timerProgressBar: true,
+                                showConfirmButton: false
+                            }).then(() => {
+                                location.reload();
+                            });
+                        }
                         $('#fasciaDesignInput').val('');
                         $('.fascia-file-name').text('No file chosen');
                         if (response.data) {
                             hydrateSavedFascia(response.data);
                         } else {
                             fetchSavedFascia();
-                        }
-                        if (response.success) {
-                            window.location.reload();
                         }
                     } else {
                         Swal.fire({
@@ -1442,11 +1590,10 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
         const rawRules = {
             electricity_requirement: {
                 required: true,
-                number: true
+                digits: true
             },
             salutation: {
-                required: true,
-                minlength: 2
+                required: true
             },
             first_name: {
                 required: true,
@@ -1485,8 +1632,7 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
                 digits: 'Enter numbers only, no decimals'
             },
             salutation: {
-                required: 'Enter salutation',
-                minlength: 'Enter at least 2 characters'
+                required: 'Please select a salutation'
             },
             first_name: {
                 required: 'Enter first name',
@@ -1518,7 +1664,6 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
             }
         });
 
-        $schemeType.on('change', toggleForms);
         toggleForms();
         applyDesignStatus('<?= esc($saved['fascia_design_status'] ?? $saved['status'] ?? '') ?>');
         showRejectionReason(
@@ -1533,16 +1678,32 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
             fetchSavedFascia();
         }
 
+        // Load the electricity item (id + rate) from the DB up front.
+        fetchElectricityItem();
+
         function runOnLayoutReady() {
             checkFasciaStatus();
             renderFasciaDueDate();
         }
-
         setTimeout(runOnLayoutReady, 500);
         document.addEventListener('layoutConfigReady', runOnLayoutReady);
         if (window.__layoutConfigReady) {
             runOnLayoutReady();
         }
+
+        function updateFasciaHeaderText() {
+            const $title = $('#fasciaTitle');
+            const $subtitle = $('#fasciaSubtitle');
+            if (urlScheme === 2) {
+                $title.text('Raw Space & Stand Details');
+                $subtitle.text('Tell us how your raw space stand will be designed and constructed so we can review the layout, coordinate approvals, and ensure a smooth build-up before the event.');
+            } else {
+                $title.html('Fascia & Stand Details');
+                $subtitle.text('Tell us how your stand will be built so we can prepare the right fascia board, layout, and approvals ahead of the event.');
+            }
+        }
+
+        updateFasciaHeaderText();
     });
 </script>
 

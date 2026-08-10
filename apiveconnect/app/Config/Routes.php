@@ -11,7 +11,6 @@ $routes->group('api/auth/v1', function ($routes) {
     $routes->post('resend-otp', 'Api\AuthController::resendOtp');
 });
 $routes->get('api/v1/exhibitor-login/(:any)', '\App\Controllers\Api\AuthController::get_sub_events/$1');
-
 $routes->group('api/v1', function ($routes) {
     $routes->match(['get', 'post'], 'payment/razorpay/callback', '\App\Controllers\Api\DashboardController::razorpayCallback');
 });
@@ -55,6 +54,7 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'jwt
     $routes->post('dashboard/visitor-tickets/update', 'DashboardController::updateVisitorTicketRequest');
     $routes->get('dashboard/visitor-tickets/list', 'DashboardController::getVisitorTicketRequests');
     $routes->get('reference-image', 'DashboardController::getReferenceImage');
+    $routes->get('dashboard/electricity-item', 'DashboardController::getElectricityItem');
     $routes->post('dashboard/profile/save', 'DashboardController::saveProfile');
     $routes->post('product-categories', 'DashboardController::getproduct');
     $routes->get('product-categories', 'DashboardController::getproduct');
@@ -63,6 +63,7 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'jwt
     // $routes->get('dashboard/fascia-menu', 'DashboardController::fasciaMenu');
     $routes->get('dashboard/submission-status', 'DashboardController::getSubmissionStatus');
     $routes->get('exhibitor/exit-permit/pdf', 'DashboardController::exitPermit');
+    $routes->get('exhibitor/welcome-letter/pdf', 'DashboardController::welcomeLetter');
     $routes->get('exhibitor/participation-letter/pdf', 'DashboardController::participationLetters');
     $routes->post('dashboard/furniture-opt-out', 'DashboardController::furnitureOptOut');
     $routes->get('orders/pending', 'DashboardController::getPendingOrders');
