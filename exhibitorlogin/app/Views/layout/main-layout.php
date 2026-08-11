@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-
+ 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -22,12 +22,12 @@
             overflow-y: scroll;
             scrollbar-gutter: stable
         }
-
+ 
         .sidebar {
             overflow-y: auto;
             scrollbar-gutter: stable
         }
-
+ 
         .online-forms-status {
             display: flex;
             gap: 20px;
@@ -37,35 +37,35 @@
             margin-bottom: 15px;
             flex-wrap: wrap
         }
-
+ 
         .status-item {
             display: flex;
             align-items: center;
             gap: 8px
         }
-
+ 
         .status-badge {
             padding: 4px 12px;
             border-radius: 20px;
             font-size: 12px;
             font-weight: 500
         }
-
+ 
         .status-badge.enabled-open {
             background: #d4edda;
             color: #155724
         }
-
+ 
         .status-badge.enabled-closed {
             background: #fff3cd;
             color: #856404
         }
-
+ 
         .status-badge.disabled {
             background: #f8d7da;
             color: #721c24
         }
-
+ 
         .readonly-message {
             background: #fff3cd;
             border: 1px solid #ffc107;
@@ -74,17 +74,17 @@
             margin-bottom: 20px;
             display: none
         }
-
+ 
         .readonly-message i {
             color: #856404;
             margin-right: 10px
         }
-
+ 
         .form-readonly {
             opacity: .7;
             pointer-events: none
         }
-
+ 
         .form-readonly .btn-primary,
         .form-readonly .btn-success,
         .form-readonly .btn-danger,
@@ -93,18 +93,18 @@
             pointer-events: none;
             opacity: .5
         }
-
+ 
         .form-readonly input:not([readonly]),
         .form-readonly select:not([disabled]),
         .form-readonly textarea:not([readonly]) {
             pointer-events: none;
             background-color: #e9ecef
         }
-
+ 
         .nav-item-hidden {
             display: none !important
         }
-
+ 
         #additionalFurnitureNavItem.nav-item-hidden,
         #exhibitorBadgesNavItem.nav-item-hidden,
         #visitorInvitationNavItem.nav-item-hidden,
@@ -112,20 +112,20 @@
         #referenceImageNavItem.nav-item-hidden {
             display: none !important
         }
-
+ 
         .manual-list {
             list-style: none;
             padding: 0;
             margin: 0
         }
-
+ 
         .manual-list li {
             display: flex;
             align-items: center;
             justify-content: space-between;
             padding: 14px 20px
         }
-
+ 
         .manual-list li a {
             display: flex;
             align-items: center;
@@ -135,7 +135,7 @@
             font-family: 'Lora', serif;
             font-size: 1rem
         }
-
+ 
         .nav-link {
             display: flex;
             align-items: center;
@@ -143,11 +143,11 @@
             width: 100%;
             padding-right: 8px
         }
-
+ 
         .nav-link .nav-text {
             flex: 1
         }
-
+ 
         .status-circle {
             width: 22px;
             height: 22px;
@@ -161,22 +161,104 @@
             margin-left: 10px;
             flex-shrink: 0
         }
-
+ 
         .status-circle.completed {
             background-color: #1fae74
         }
-
+ 
         .status-circle.pending {
             background-color: #e54848
         }
-
+ 
         .status-circle i {
             line-height: 1
         }
+ 
+        /* ============================================
+           REFERRAL THEMING
+           Brand colors are driven by CSS variables so
+           every page under this layout (and any page
+           that defines its own colors using these vars)
+           automatically re-skins per referral source.
+           ============================================ */
+        :root {
+            --brand-primary: #4a72b8;
+            --brand-primary-dark: #3d5f9c;
+            --brand-accent-bg: #eaf0fb;
+            --brand-gradient: linear-gradient(to left, #4a72b8, #3d5f9c);
+            --brand-sidebar-bg: #1c2b3a;
+            --brand-sidebar-active-bg: #24374a;
+        }
+ 
+        body.theme-fireindia {
+            --brand-primary: #ed4037;
+            --brand-primary-dark: #f47634;
+            --brand-accent-bg: #F27900;
+            --brand-gradient: linear-gradient(to left, #ed4037, #f47634);
+        }
+ 
+        body.theme-drone {
+            --brand-primary: #105489;
+            --brand-primary-dark: #1478c7;
+            --brand-accent-bg: #e8eff5;
+            --brand-gradient: linear-gradient(to left, #105489, #1478c7);
+        }
+ 
+        /* Apply the variables to the existing shell elements */
+        .sidebar {
+            background-image: var(--brand-gradient);
+        }
+ 
+        .top-navbar {
+            background-image: var(--brand-gradient);
+        }
+ 
+        .nav-link.active,
+        .nav-link:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+ 
+        .status-circle.completed {
+            background-color: var(--brand-primary);
+        }
     </style>
 </head>
-
-<body>
+ 
+<?php
+$referralTheme = 'default';
+ 
+$eventLogos = [
+    'drone'     => 'https://www.droneexpo.in/mailer/FI-1730695201.webp',
+    'fireindia' => 'https://www.droneexpo.in/mailer/FI-1730695201.webp',
+    'default'   => 'https://www.droneexpo.in/mailer/FI-1730695201.webp',
+];
+$themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
+?>
+ 
+<body class="theme-<?= esc($referralTheme) ?>">
+    <script>
+        (function() {
+            // Theme is driven entirely by the `referral_website` value in
+            // localStorage (set when the exhibitor arrives via /drone/ or
+            // /fireindia/). Applied here, first thing in <body>, so it's
+            // set before anything else paints.
+            function detectTheme(value) {
+                var v = String(value || '').toLowerCase();
+                if (v.indexOf('drone') !== -1) return 'drone';
+                if (v.indexOf('fireindia') !== -1) return 'fireindia';
+                return 'default';
+            }
+            try {
+                var stored = localStorage.getItem('referral_website');
+                var theme = detectTheme(stored);
+                var body = document.body;
+                body.classList.remove('theme-drone', 'theme-fireindia', 'theme-default');
+                body.classList.add('theme-' + theme);
+            } catch (e) {
+                // localStorage unavailable (privacy mode etc.) - keep default.
+            }
+        })();
+    </script>
     <div class="wrapper">
         <div id="sidebar" class="sidebar d-flex flex-column">
             <ul class="nav flex-column">
@@ -739,7 +821,7 @@
         async function handleLogout(e) {
             e.preventDefault();
             const token = getAuthToken();
-            const referralWebsite = localStorage.getItem('reference_website');
+            const referralWebsite = localStorage.getItem('referral_website');
             const logoutBtn = document.getElementById('logoutBtn');
             if (logoutBtn) {
                 logoutBtn.classList.add('disabled');

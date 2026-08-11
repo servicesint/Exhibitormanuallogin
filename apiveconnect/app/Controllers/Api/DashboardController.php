@@ -3419,50 +3419,93 @@ class DashboardController extends BaseController
 
     public function getReferenceImage()
     {
-        $jwt = $this->getJwtContext();
-        $subEventId = $jwt['subEventId'];
-        $exhibitorId = $jwt['vendorId'];
-        if (!$subEventId || !$exhibitorId) {
-            return $this->response->setStatusCode(401)->setJSON([
+        try {
+            $jwt = $this->getJwtContext();
+            $subEventId = $jwt['subEventId'] ?? null;
+            $exhibitorId = $jwt['payload']->exhibitor_id ?? null;
+            
+            if (!$subEventId || !$exhibitorId) {
+                return $this->response->setStatusCode(401)->setJSON([
+                    'status' => false,
+                    'code' => 401,
+                    'message' => 'Unauthorized. Invalid or missing authentication token.',
+                    'data' => null,
+                ]);
+            }
+        
+            $exhibitor = $this->db->table('exhibitor_contact_persons as ecp')
+                ->join('exhibitors as e', 'ecp.exhibitor_id = e.id', 'left')
+                ->select('e.stall_type_id')
+                ->where('ecp.id', $exhibitorId)
+                ->where('ecp.sub_event_id', $subEventId)
+                ->where('ecp.is_deleted', 0)
+                ->get()
+                ->getRowArray();
+          
+            if (empty($exhibitor)) {
+                return $this->response->setStatusCode(404)->setJSON([
+                    'status' => false,
+                    'code' => 404,
+                    'message' => 'Exhibitor not found.',
+                    'data' => null,
+                ]);
+            }
+            $fasciaCategory = (int) ($exhibitor['stall_type_id'] ?? 0);
+            if ($fasciaCategory !== 2) {
+                return $this->response->setStatusCode(403)->setJSON([
+                    'status' => false,
+                    'code' => 403,
+                    'message' => 'You do not have access to this page. This feature is only available for Shell Space exhibitors.',
+                    'data' => null,
+                ]);
+            }
+            
+            $manualSetup = $this->db->table('manual_setups')
+                ->select('shell_space_reference_img')
+                ->where('sub_event_id', $subEventId)
+                ->where('is_deleted', 0)
+                ->get()
+                ->getRowArray();
+            
+            if (empty($manualSetup) || empty($manualSetup['shell_space_reference_img'])) {
+                return $this->response->setStatusCode(404)->setJSON([
+                    'status' => false,
+                    'code' => 404,
+                    'message' => 'Reference image not available for this event.',
+                    'data' => null,
+                ]);
+            }
+            
+            $uploadBaseUrl = env('UPLOAD_BASE_URL', '');
+            $imagePath = $manualSetup['shell_space_reference_img'];
+            
+            if (filter_var($imagePath, FILTER_VALIDATE_URL)) {
+                $imageUrl = $imagePath;
+            } else {
+                $imagePath = ltrim($imagePath, '/');
+                $imageUrl = rtrim($uploadBaseUrl, '/') . '/' . $imagePath;
+            }
+            
+            return $this->response->setStatusCode(200)->setJSON([
+                'status' => true,
+                'code' => 200,
+                'message' => 'Reference image fetched successfully.',
+                'data' => [
+                    'image_url' => $imageUrl,
+                    'image_path' => $imagePath,
+                ],
+            ]);
+            
+        } catch (\Exception $e) {
+            log_message('error', '[getReferenceImage] Exception: ' . $e->getMessage());
+            
+            return $this->response->setStatusCode(500)->setJSON([
                 'status' => false,
-                'code' => 401,
-                'message' => 'Unauthorized.',
+                'code' => 500,
+                'message' => 'An error occurred while fetching the reference image.',
                 'data' => null,
             ]);
         }
-        $exhibitor = $this->db->table('exhibitor_contact_persons as ecp')
-            ->join('exhibitors as e', 'ecp.exhibitor_id = e.id', 'left')
-            ->select('e.fascia_category')
-            ->where('ecp.id', $exhibitorId)
-            ->where('e.sub_event_id', $subEventId)
-            ->get()->getRowArray();
-        $fasciaCategory = (int) ($exhibitor['fascia_category'] ?? 0);
-        if ($fasciaCategory !== 3) {
-            return $this->response->setStatusCode(403)->setJSON([
-                'status' => false,
-                'code' => 403,
-                'message' => 'You do not have access to this page.',
-                'data' => null,
-            ]);
-        }
-
-        $imageUrl = base_url('uploads/reference_images.jpeg');
-        if (!$imageUrl) {
-            return $this->response->setStatusCode(404)->setJSON([
-                'status' => false,
-                'code' => 404,
-                'message' => 'Reference image not available.',
-                'data' => null,
-            ]);
-        }
-        return $this->response->setStatusCode(200)->setJSON([
-            'status' => true,
-            'code' => 200,
-            'message' => 'Reference image fetched successfully.',
-            'data' => [
-                'image_url' => $imageUrl,
-            ],
-        ]);
     }
     public function getElectricityItem()
     {
