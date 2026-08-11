@@ -122,10 +122,11 @@ function send_sms_remote($mobile, $otp, $portal)
 if (!function_exists('send_sms_otp')) {
     function send_sms_otp($mobile, $otp)
     {
+        // ✅ FIX: Add your actual SMS gateway credentials here
         $params = [
-            'user'        => '20090418',
-            'pwd'         => 'Globe@2020',
-            'senderid'    => 'SIEVNT',
+            'user'        => '20090418',      // ← Replace with actual username
+            'pwd'         => 'Globe@2020',       // ← Replace with actual password
+            'senderid'    => 'SIEVNT',      // ← Replace with actual sender ID
             'CountryCode' => '91',
             'mobileno'    => preg_replace('/\D/', '', $mobile),
             'msgtext'     => "Your Exhibitor Login OTP Code is {$otp}. This code is valid for 15 minutes. Exhibition Managed by Services International",
@@ -136,6 +137,8 @@ if (!function_exists('send_sms_otp')) {
 
         $url = "http://www.mshastra.com/sendurl.aspx?" . http_build_query($params);
 
+        log_message('info', "[send_sms_otp] Sending SMS to: {$mobile}, URL: {$url}");
+
         $ch = curl_init();
 
         curl_setopt_array($ch, [
@@ -143,23 +146,32 @@ if (!function_exists('send_sms_otp')) {
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT        => 30,
             CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_SSL_VERIFYPEER => false,
         ]);
 
         $response = curl_exec($ch);
-        log_message('info', "[send_sms_otp] Response: {$response}");
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $errorNo  = curl_errno($ch);
+        $errorMsg = curl_error($ch);
 
         curl_close($ch);
 
+        log_message('info', "[send_sms_otp] Response: {$response}, HTTP Code: {$httpCode}, Error No: {$errorNo}, Error Msg: {$errorMsg}");
+
         if ($errorNo != 0) {
-            log_message('error', "[send_sms_otp] cURL error number: {$errorNo}");
+            log_message('error', "[send_sms_otp] cURL error number: {$errorNo}, Message: {$errorMsg}");
             return false;
         }
 
         if ($httpCode == 200 && !empty($response)) {
-            log_message('info', "[send_sms_otp] SMS sent successfully to {$mobile}");
-            return true;
+            // Check if response contains success indicators
+            if (strpos($response, 'SUCCESS') !== false || strpos($response, 'success') !== false || strpos($response, '1') !== false) {
+                log_message('info', "[send_sms_otp] SMS sent successfully to {$mobile}");
+                return true;
+            } else {
+                log_message('error', "[send_sms_otp] SMS API returned error: {$response}");
+                return false;
+            }
         }
 
         log_message('error', "[send_sms_otp] Failed to send SMS to {$mobile}. HTTP Code: {$httpCode}. Response: {$response}");
@@ -321,12 +333,12 @@ if (!function_exists('sendOtpMessage')) {
     ): bool {
         $branding = resolvePortalBranding($referralWebsite);
         
+        // ✅ FIX: Check if user is international based on exhibitor_type
         $isInternational = false;
         
         if (isset($user->exhibitor_type) && !empty($user->exhibitor_type)) {
-            $internationalCodes = ['International'];
-            
-            if (!in_array($user->exhibitor_type, $internationalCodes)) {
+            // If exhibitor_type is 'International', then it's international
+            if (strtolower($user->exhibitor_type) === 'international') {
                 $isInternational = true;
             }
         }
@@ -375,15 +387,21 @@ if (!function_exists('sendOtpMessage')) {
                 );
                 
                 $results['email'] = $emailResult;
+                log_message('info', "[sendOtpMessage] Email OTP sent to: {$email}, Result: " . ($emailResult ? 'Success' : 'Failed'));
             }
         }
         
         if ($channel === 'mobile' || $channel === 'both') {
+            // ✅ FIX: Only send SMS if NOT international
             if (!$isInternational && !empty($mobile)) {
                 $mobileResult = send_sms_otp($mobile, $otp);
                 $results['mobile'] = $mobileResult;
+                log_message('info', "[sendOtpMessage] SMS OTP sent to: {$mobile}, Result: " . ($mobileResult ? 'Success' : 'Failed'));
             } else if ($isInternational) {
-                log_message('info', "[sendOtpMessage] International user - SMS skipped for mobile: {$mobile}");
+                log_message('info', "[sendOtpMessage] International exhibitor - SMS skipped for mobile: {$mobile}");
+                $results['mobile'] = false;
+            } else {
+                log_message('info', "[sendOtpMessage] No mobile number found for SMS");
                 $results['mobile'] = false;
             }
         }
@@ -668,9 +686,8 @@ if (!function_exists('getInternationalStatus')) {
     function getInternationalStatus($user): bool
     {
         if (isset($user->exhibitor_type) && !empty($user->exhibitor_type)) {
-            $internationalCodes = ['international'];
-            
-            if (!in_array($user->exhibitor_type, $internationalCodes)) {
+            // ✅ FIX: If exhibitor_type is 'International', return true
+            if (strtolower($user->exhibitor_type) === 'international') {
                 return true;
             }
         }
@@ -728,6 +745,7 @@ if (!function_exists('sendOtpViaMobile')) {
         $mobile = $user->mobile ?? $user->mobile_number ?? '';
         
         if (empty($mobile)) {
+            log_message('error', '[sendOtpViaMobile] No mobile number found for user');
             return false;
         }
         
