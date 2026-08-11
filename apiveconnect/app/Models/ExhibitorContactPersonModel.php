@@ -48,6 +48,7 @@ class ExhibitorContactPersonModel extends Model
                     ecp.otp,
                     ecp.otp_expire_at,
                     ecp.otp_last_sent_at,
+                    e.exhibitor_type,
                     ecp.otp_resend_count,
                     ecp.otp_verified
                     ')

@@ -82,7 +82,6 @@ if (!function_exists('getManualSidebar')) {
 function send_sms_remote($mobile, $otp, $portal)
 {
     $ch = curl_init();
-    
     curl_setopt_array($ch, [
         CURLOPT_URL            => 'https://securenationexpo.com/SmsGateway/sendOtp',
         CURLOPT_RETURNTRANSFER => true,
@@ -97,13 +96,11 @@ function send_sms_remote($mobile, $otp, $portal)
         CURLOPT_TIMEOUT        => 15,
         CURLOPT_CONNECTTIMEOUT => 10,
     ]);
-    
     $response = curl_exec($ch);
     $error    = curl_error($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    
+    log_message('info', "[send_sms_remote] Response: {$response}, HTTP Code: {$httpCode}, Error: {$error}");
     curl_close($ch);
-    
     if ($error) {
         log_message('error', "[send_sms_remote] cURL error: {$error}");
         return false;
@@ -113,9 +110,7 @@ function send_sms_remote($mobile, $otp, $portal)
         log_message('error', "[send_sms_remote] HTTP {$httpCode} for mobile={$mobile}");
         return false;
     }
-    
     $result = json_decode($response, true);
-    
     if (json_last_error() !== JSON_ERROR_NONE) {
         log_message('error', '[send_sms_remote] Invalid JSON: ' . $response);
         return false;
@@ -128,9 +123,9 @@ if (!function_exists('send_sms_otp')) {
     function send_sms_otp($mobile, $otp)
     {
         $params = [
-            'user'        => '',
-            'pwd'         => '',
-            'senderid'    => '',
+            'user'        => '20090418',
+            'pwd'         => 'Globe@2020',
+            'senderid'    => 'SIEVNT',
             'CountryCode' => '91',
             'mobileno'    => preg_replace('/\D/', '', $mobile),
             'msgtext'     => "Your Exhibitor Login OTP Code is {$otp}. This code is valid for 15 minutes. Exhibition Managed by Services International",
@@ -151,6 +146,7 @@ if (!function_exists('send_sms_otp')) {
         ]);
 
         $response = curl_exec($ch);
+        log_message('info', "[send_sms_otp] Response: {$response}");
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $errorNo  = curl_errno($ch);
 
@@ -327,10 +323,10 @@ if (!function_exists('sendOtpMessage')) {
         
         $isInternational = false;
         
-        if (isset($user->country_code) && !empty($user->country_code)) {
-            $internationalCodes = ['+1', '+44', '+61', '+91'];
+        if (isset($user->exhibitor_type) && !empty($user->exhibitor_type)) {
+            $internationalCodes = ['International'];
             
-            if (!in_array($user->country_code, $internationalCodes)) {
+            if (!in_array($user->exhibitor_type, $internationalCodes)) {
                 $isInternational = true;
             }
         }
@@ -671,10 +667,10 @@ if (!function_exists('normalizeTableBorders')) {
 if (!function_exists('getInternationalStatus')) {
     function getInternationalStatus($user): bool
     {
-        if (isset($user->country_code) && !empty($user->country_code)) {
-            $internationalCodes = ['+1', '+44', '+61', '+91'];
+        if (isset($user->exhibitor_type) && !empty($user->exhibitor_type)) {
+            $internationalCodes = ['international'];
             
-            if (!in_array($user->country_code, $internationalCodes)) {
+            if (!in_array($user->exhibitor_type, $internationalCodes)) {
                 return true;
             }
         }
