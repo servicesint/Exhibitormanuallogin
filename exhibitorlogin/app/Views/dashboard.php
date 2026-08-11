@@ -3,7 +3,6 @@
 <div class="content-area">
         <div class="welcome-wrapper">
                 <div class="welcome-card">
-                        <p class="welcome-greeting">Dear <span id="headerUserNames"></span>,</p>
                          <?= $welcome_note ?>
                 </div>
         </div>

@@ -390,30 +390,37 @@
         }
 
         function applyFasciaNavItem(fasciaCategory) {
-            const navItem = document.getElementById('fasciaNavItem');
-            const navLink = document.getElementById('fasciaNavLink');
-            const navText = document.getElementById('fasciaNavText');
-            const referenceImageNavItem = document.getElementById('referenceImageNavItem');
-            if (!navItem || !navLink || !navText) return;
-            const category = parseInt(fasciaCategory, 10);
-            // if (referenceImageNavItem) {
-            //     referenceImageNavItem.style.display = 'none';
-            // }
+        const navItem = document.getElementById('fasciaNavItem');
+        const navLink = document.getElementById('fasciaNavLink');
+        const navText = document.getElementById('fasciaNavText');
+        const referenceImageNavItem = document.getElementById('referenceImageNavItem');
+
+        if (!navItem || !navLink || !navText) return;
+
+        const category = parseInt(fasciaCategory, 10);
+
+        if (category === 2) {
+            navText.textContent = 'Upload Stall Design';
+            navLink.href = `${BASE_URL}/fascia`;
+            navItem.style.display = '';
+        } 
+        else if (category === 1 || category === 3) {
+            navText.textContent = 'Fascia';
+            navLink.href = `${BASE_URL}/upload-stand-design`;
+            navItem.style.display = '';
+        } 
+        else {
+            navItem.style.display = 'none';
+        }
+        // alert(category);
+        // if (referenceImageNavItem) {
             if (category === 2) {
-                navText.textContent = 'Upload Stall Design';
-                navLink.href = `${BASE_URL}/fascia`;
-                navItem.style.display = '';
-            } else if (category === 1 || category === 3) {
-                navText.textContent = 'Fascia';
-                navLink.href = `${BASE_URL}/upload-stand-design`;
-                navItem.style.display = '';
+                referenceImageNavItem.style.display = 'none';
             } else {
-                navItem.style.display = 'none';
-            }
-            if (category === 3 && referenceImageNavItem) {
                 referenceImageNavItem.style.display = '';
             }
-        }
+        // }
+    }
         const FORM_LABELS = {
             fascia: 'Fascias',
             exhibitor_badges: 'Exhibitor Badges',
