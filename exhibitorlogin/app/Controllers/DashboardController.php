@@ -26,17 +26,25 @@ class DashboardController extends BaseController
     public function exhibitor_dashboard()
     {
         $token = $_COOKIE['api_token'] ?? '';
+
         try {
-            $parts   = explode('.', $token);
+            $parts = explode('.', $token);
+
             if (count($parts) !== 3) {
                 return redirect()->to('login');
             }
-            $payload = json_decode(base64_decode(str_pad(
-                strtr($parts[1], '-_', '+/'),
-                strlen($parts[1]) % 4,
-                '=',
-                STR_PAD_RIGHT
-            )), true);
+
+            $payload = json_decode(
+                base64_decode(
+                    str_pad(
+                        strtr($parts[1], '-_', '+/'),
+                        strlen($parts[1]) % 4,
+                        '=',
+                        STR_PAD_RIGHT
+                    )
+                ),
+                true
+            );
 
             if (!$payload || empty($payload['sub_event_id'])) {
                 return redirect()->to('login');
@@ -47,12 +55,102 @@ class DashboardController extends BaseController
         }
 
         $subEventId = (int) $payload['sub_event_id'];
-        $model = new ExhibitorModel();
-        $event = $model->getById('manual_setups', ['sub_event_id' => $subEventId], 'manual_welcome_note');
+
+        $db = \Config\Database::connect();
+
+        $sql = "
+            SELECT
+                ms.manual_welcome_note,
+                c.company_name,
+                c.company_logo,
+                cse.sub_event_name,
+                cse.venue,
+                cse.venue_city,
+                cse.full_date,
+                cse.start_date,
+                cse.end_date,
+                ce.event_name,
+                e.organisation_name,
+                e.stall_number
+            FROM manual_setups AS ms
+            LEFT JOIN company_sub_events AS cse
+                ON cse.id = ms.sub_event_id
+            LEFT JOIN company_events AS ce
+                ON ce.id = cse.event_id
+            LEFT JOIN companies AS c
+                ON c.id = cse.company_id
+            LEFT JOIN exhibitors AS e
+                ON e.sub_event_id = cse.id
+            WHERE ms.sub_event_id = ?
+            LIMIT 1
+        ";
+
+        $template = $db->query($sql, [$subEventId])->getRowArray();
+
+        if (!$template) {
+            return redirect()->to('login');
+        }
+
+        $fullDate = $template['full_date'] ?? '';
+
+        if (empty($fullDate) && !empty($template['start_date'])) {
+            if (
+                !empty($template['end_date']) &&
+                $template['start_date'] != $template['end_date']
+            ) {
+                $start = new \DateTime($template['start_date']);
+                $end = new \DateTime($template['end_date']);
+
+                if ($start->format('F Y') === $end->format('F Y')) {
+                    $fullDate = strtoupper($start->format('jS')) . ' - ' .
+                        strtoupper($end->format('jS')) . ' ' .
+                        $end->format('F Y');
+                } else {
+                    $fullDate = strtoupper($start->format('jS')) . ' ' .
+                        $start->format('F') . ' - ' .
+                        strtoupper($end->format('jS')) . ' ' .
+                        $end->format('F Y');
+                }
+            } else {
+                $fullDate = date(
+                    'jS F Y',
+                    strtotime($template['start_date'])
+                );
+            }
+        }
+
+        $uploadBaseUrl = rtrim(
+            env('UPLOAD_BASE_URL', getenv('UPLOAD_BASE_URL')),
+            '/'
+        );
+
+        $companyLogo = !empty($template['company_logo'])
+            ? $uploadBaseUrl . '/' . ltrim($template['company_logo'], '/')
+            : '';
+
+        $placeholders = [
+            '{{company_name}}' => $template['company_name'] ?? '',
+            '{{company_logo}}' => $companyLogo,
+            '{{event_name}}' => $template['event_name'] ?? '',
+            '{{sub_event_name}}' => $template['sub_event_name'] ?? '',
+            '{{venue}}' => $template['venue'] ?? '',
+            '{{venue_city}}' => $template['venue_city'] ?? '',
+            '{{full_date}}' => $fullDate,
+            '{{exhibitor_company}}' => $template['organisation_name'] ?? '',
+            '{{stall_number}}' => $template['stall_number'] ?? '',
+            '{{date}}' => date('jS M Y'),
+        ];
+
+        $welcomeNote = str_replace(
+            array_keys($placeholders),
+            array_values($placeholders),
+            $template['manual_welcome_note'] ?? ''
+        );
+
         return view('dashboard', [
-            'welcome_note' => $event->manual_welcome_note ?? '',
+            'welcome_note' => $welcomeNote,
             'sub_event_id' => $subEventId,
-            'token'        => $token,
+            'token' => $token,
         ]);
     }
 

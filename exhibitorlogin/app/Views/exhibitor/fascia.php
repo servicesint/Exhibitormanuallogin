@@ -542,6 +542,96 @@
         font-weight: 700;
     }
 
+    .guidelines-content {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        padding: 4px 0;
+    }
+
+    .guideline-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 14px;
+        padding: 12px 16px;
+        background: #f8f9fc;
+        border-radius: 10px;
+        border-left: 3px solid #4a72b8;
+    }
+
+    .guideline-item i {
+        font-size: 1.2rem;
+        margin-top: 2px;
+        flex-shrink: 0;
+        color: #4a72b8;
+    }
+
+    .guideline-item i.text-warning {
+        color: #ffc107;
+    }
+
+    .guideline-item i.text-danger {
+        color: #dc3545;
+    }
+
+    .guideline-item strong {
+        display: block;
+        color: #253345;
+        font-size: 0.9rem;
+        margin-bottom: 2px;
+    }
+
+    .guideline-item p {
+        margin: 0;
+        color: #6b7891;
+        font-size: 0.85rem;
+        line-height: 1.5;
+    }
+
+    #designGuidelinesModal .modal-content {
+        border: none;
+        border-radius: 18px;
+        overflow: hidden;
+        box-shadow: 0 20px 50px rgba(20, 40, 80, 0.18);
+    }
+
+    #designGuidelinesModal .modal-header {
+        background: #f8f9fc;
+        padding: 18px 24px;
+        border-bottom: 1px solid #eef2f8;
+    }
+
+    #designGuidelinesModal .modal-title {
+        color: #253345;
+        font-weight: 700;
+        font-size: 1.05rem;
+        display: flex;
+        align-items: center;
+    }
+
+    #designGuidelinesModal .modal-body {
+        padding: 24px;
+        background: #fff;
+    }
+
+    #designGuidelinesModal .modal-footer {
+        border-top: 1px solid #eef2f8;
+        padding: 14px 24px;
+        background: #fff;
+    }
+
+    #designGuidelinesModal .btn-primary {
+        border-radius: 999px;
+        padding: 10px 28px;
+        font-weight: 600;
+        background: #4a72b8;
+        border: none;
+    }
+
+    #designGuidelinesModal .btn-primary:hover {
+        background: #3d5f9c;
+    }
+
     @media (max-width: 700px) {
 
         .fascia-card-head,
@@ -629,6 +719,8 @@
     #designPreviewModalImg {
         display: none;
         border-radius: 8px;
+        max-width: 100%;
+        max-height: 65vh;
     }
 
     #designPreviewModalPdf {
@@ -802,7 +894,7 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
                         <small class="electricity-price-note" id="electricityPriceNote"></small>
                     </div>
                     <div class="fascia-group">
-                        <label class="fascia-section-label">Upload Design (.pdf, .jpg, .jpeg or .png — Max 2 MB)</label>
+                        <label class="fascia-section-label">Upload the stall 3D design/render. (.pdf, .jpg, .jpeg or .png — Max 2 MB)</label>
                         <div class="fascia-upload">
                             <input type="file" id="fasciaDesignInput" name="fascia_design" accept=".pdf,.jpg,.jpeg,.png">
                             <div class="fascia-upload-icon"><i class="bi bi-cloud-arrow-up"></i></div>
@@ -815,7 +907,7 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
                         </div>
                         <div class="fascia-preview-block">
                             <label class="fascia-section-label mb-2" style="width:100%;">
-                                Uploaded Design Preview
+                                Design Preview
                                 <span id="designStatus" class="badge status-badge"><?= esc(ucfirst(strtolower($saved['fascia_design_status'] ?? $saved['status'] ?? ''))) ?></span>
                             </label>
                             <div class="preview-wrap" id="fasciaPreviewContainer" style="<?= empty($saved['fascia_design']) ? 'display:none;' : '' ?>"></div>
@@ -904,7 +996,7 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
                     </div>
                     <div class="modal-body">
                         <div class="preview-modal-image-wrap">
-                            <img id="designPreviewModalImg" src="" alt="Design preview" style="max-width:100%; max-height:65vh;">
+                            <img id="designPreviewModalImg" src="" alt="Design preview">
                             <iframe id="designPreviewModalPdf" src=""></iframe>
                         </div>
                     </div>
@@ -916,12 +1008,127 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
                 </div>
             </div>
         </div>
+        <div class="modal fade" id="designGuidelinesModal" tabindex="-1" aria-labelledby="designGuidelinesModalLabel" aria-hidden="true" data-bs-backdrop="static">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="designGuidelinesModalLabel">
+                            <i class="bi bi-info-circle-fill text-primary me-2"></i>Design Upload Guidelines
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="guidelinesCloseBtn"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="guidelines-content">
+                            <div class="guideline-item">
+                                <i class="bi bi-rulers"></i>
+                                <div>
+                                    <strong>Stall Dimensions</strong>
+                                    <p>Mention stall dimensions clearly (Width × Depth × Height).</p>
+                                </div>
+                            </div>
+                            <div class="guideline-item">
+                                <i class="bi bi-box"></i>
+                                <div>
+                                    <strong>3D Design/Render</strong>
+                                    <p>Upload the stall 3D design/render.</p>
+                                </div>
+                            </div>
+                            <div class="guideline-item">
+                                <i class="bi bi-layout-three-columns"></i>
+                                <div>
+                                    <strong>Open Side(s)</strong>
+                                    <p>Mark the open side(s) in the layout.</p>
+                                </div>
+                            </div>
+                            <div class="guideline-item">
+                                <i class="bi bi-arrow-up-circle"></i>
+                                <div>
+                                    <strong>Height Limit</strong>
+                                    <p>Ensure the stall height is within the permissible limit.</p>
+                                </div>
+                            </div>
+                            <div class="guideline-item">
+                                <i class="bi bi-lightning-charge text-warning"></i>
+                                <div>
+                                    <strong>Electricity Load</strong>
+                                    <p>Order and pay for the required electricity load.</p>
+                                </div>
+                            </div>
+                            <div class="guideline-item">
+                                <i class="bi bi-exclamation-triangle text-danger"></i>
+                                <div>
+                                    <strong>Important Note</strong>
+                                    <p>Enter the electricity load accurately; excess consumption during the event will be charged additionally.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" id="guidelinesOkBtn">
+                            <i class="bi bi-check-circle me-1"></i> OK, I Understand
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 <script src="https://cdn.jsdelivr.net/jquery.validation/1.19.5/jquery.validate.min.js"></script>
 <script>
     $(function() {
+        var guidelinesShown = false;
+        var fileInputTriggered = false;
+
+        function showGuidelinesModal() {
+            if (guidelinesShown) {
+                return true;
+            }
+            var modal = new bootstrap.Modal(document.getElementById('designGuidelinesModal'));
+            modal.show();
+            return false;
+        }
+
+        $('#uploadBtnLabel').on('click', function(e) {
+            if (isViewOnly) {
+                e.preventDefault();
+                return;
+            }
+            if (!guidelinesShown) {
+                e.preventDefault();
+                var modal = new bootstrap.Modal(document.getElementById('designGuidelinesModal'));
+                modal.show();
+            }
+        });
+
+        $('#guidelinesOkBtn, #guidelinesCloseBtn').on('click', function() {
+            guidelinesShown = true;
+            var modal = bootstrap.Modal.getInstance(document.getElementById('designGuidelinesModal'));
+            if (modal) {
+                modal.hide();
+            }
+            setTimeout(function() {
+                document.getElementById('fasciaDesignInput').click();
+            }, 300);
+        });
+
+        $('#designGuidelinesModal').on('hidden.bs.modal', function() {
+            if (!guidelinesShown) {
+                guidelinesShown = true;
+                setTimeout(function() {
+                    document.getElementById('fasciaDesignInput').click();
+                }, 300);
+            }
+        });
+
+        $('#fasciaDesignInput').on('click', function(e) {
+            if (!guidelinesShown && !isViewOnly) {
+                e.preventDefault();
+                var modal = new bootstrap.Modal(document.getElementById('designGuidelinesModal'));
+                modal.show();
+            }
+        });
+
         const $shellForm = $("#shellForm");
         const $rawForm = $("#rawForm");
         const $rawNotesBlock = $("#rawNotesBlock");
@@ -931,7 +1138,6 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
         const ELECTRICITY_ITEM_URL = `${API_BASE_URL}/v1/dashboard/electricity-item`;
         const CART_PAGE_PATH = '/additional-furniture';
 
-        // Dynamic electricity item state (fetched from DB, no more hardcoding)
         let ELECTRICITY_ITEM_ID = null;
         let ELECTRICITY_RATE_PER_KW = null;
         let electricityItemLoaded = false;
@@ -1026,10 +1232,6 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
             return localStorage.getItem('api_token') || sessionStorage.getItem('api_token') || '';
         }
 
-        /**
-         * FETCH: get the electricity item (id + rate) from the DB.
-         * Called once during init. Populates ELECTRICITY_ITEM_ID / ELECTRICITY_RATE_PER_KW.
-         */
         function fetchElectricityItem() {
             const token = getAuthToken();
             return $.ajax({
@@ -1054,7 +1256,6 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
                 electricityItemLoaded = false;
                 if (window.showToast) window.showToast('Unable to load electricity pricing.', 'error');
             }).always(function() {
-                // Process any quantity the user typed (or a saved value) while we were loading.
                 if (pendingElectricityQuantity) {
                     const qty = pendingElectricityQuantity;
                     pendingElectricityQuantity = null;
@@ -1097,9 +1298,6 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
             }
         }
 
-        /**
-         * ADD TO CART: posts item_id (from DB) + quantity to the cart API.
-         */
         function addElectricityToCart(quantity) {
             if (!electricityItemLoaded || !ELECTRICITY_ITEM_ID) {
                 if (window.showToast) window.showToast('Electricity pricing not loaded yet. Please retry.', 'error');
@@ -1169,9 +1367,6 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
                 return;
             }
 
-            // IMPORTANT:
-            // Electricity is NOT added to cart while typing.
-            // It will be added only after the Raw Space form is successfully submitted.
             if (!electricityItemLoaded) {
                 pendingElectricityQuantity = quantity;
                 return;
@@ -1514,8 +1709,6 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
                                 10
                             );
 
-                            // Add electricity to cart ONLY after the fascia/raw-space
-                            // submission has been successfully saved.
                             if (!electricityQuantity || electricityQuantity <= 0) {
                                 Swal.fire({
                                     icon: 'error',
@@ -1553,7 +1746,7 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
                                         if (result.isConfirmed) {
                                             window.location.href = getCartPageUrl();
                                         }
-                                        // Pay Later: stay on this page.
+                                        location.reload();
                                     });
                                 } else {
                                     Swal.fire({
@@ -1733,7 +1926,6 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
             fetchSavedFascia();
         }
 
-        // Load the electricity item (id + rate) from the DB up front.
         fetchElectricityItem();
 
         function runOnLayoutReady() {

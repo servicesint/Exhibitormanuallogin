@@ -4319,7 +4319,7 @@ class DashboardController extends BaseController
             }
 
             $template = $this->db->table('letters as l')
-                ->select('l.letter_name, l.content, cse.sub_event_name, cse.venue, cse.full_date, cse.start_date, cse.end_date, l.stamp, c.company_logo, e.organisation_name,e.stall_number')
+                ->select('l.letter_name, l.content, cse.sub_event_name,c.company_name, cse.venue, cse.full_date, cse.start_date, cse.end_date, l.stamp, c.company_logo, e.organisation_name,e.stall_number')
                 ->join('company_sub_events as cse', 'cse.id = l.sub_event_id', 'left')
                 ->join('companies as c', 'c.id = cse.company_id', 'left')
                 ->join('exhibitors as e', 'e.sub_event_id = cse.id', 'left')
@@ -4346,6 +4346,7 @@ class DashboardController extends BaseController
                     : '',
                 '{{date}}'              => date('jS M Y'),
                 '{{exhibitor_company}}' => $template['organisation_name'],
+                '{{company_name}}' => $template['company_name'],
                 '{{sub_event_name}}'    => $template['sub_event_name'],
                 '{{venue}}'             => $template['venue'],
                 '{{full_date}}'         => $template['full_date'],
