@@ -720,10 +720,10 @@
 
     .modalImage-preview {
         max-width: 100%;
-        max-height: 220px;
-        object-fit: contain;
-        border-radius: 12px;
-        margin-bottom: 12px;
+        /* max-height: 235px; */
+        /* object-fit: contain; */
+        /* border-radius: 12px; */
+        /* margin-bottom: 12px; */
     }
 
     .image-preview-title {

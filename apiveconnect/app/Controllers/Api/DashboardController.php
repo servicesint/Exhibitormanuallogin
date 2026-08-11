@@ -2178,12 +2178,19 @@ class DashboardController extends BaseController
 
     private function getFormStatus($enabled, $open)
     {
-        if ($enabled === 0) {
+        $enabled = (int) $enabled;
+        $open    = (int) $open;
+
+        // 1 = disabled, 0 = enabled
+        if ($enabled === 1) {
             return 'disabled';
         }
-        if ($open === 1) {
+
+        // 0 = open, 1 = closed/view-only
+        if ($open === 0) {
             return 'enabled_open';
         }
+
         return 'enabled_closed';
     }
 

@@ -18,7 +18,7 @@ class AuthController extends BaseController
         $this->jwtService = new JwtService();
     }
 
-    public function sendOtp() 
+    public function sendOtp()
     {
         $identifier = trim((string) $this->request->getVar('identifier'));
         $enc_sub_event_id = $this->request->getVar('enc_sub_event_id');
@@ -37,12 +37,12 @@ class AuthController extends BaseController
         if (!$isEmail && !$isMobile) {
             return $this->response->setJSON(['status' => false, 'message' => 'Enter a valid email address or mobile number.']);
         }
-       
+
         $user = $this->contactModel->findContactPersonByIdentifierAndSubEvent(
             $identifier,
             $subEventId
         );
-        
+
         if (!$user) {
             return $this->response->setJSON([
                 'status' => false,
@@ -62,17 +62,16 @@ class AuthController extends BaseController
         );
         $channel = $isEmail ? 'email' : 'mobile';
         $referralWebsite = (string) ($this->request->getVar('referreral_website') ?? $this->request->getVar('referral_website') ?? '');
-        // $otpSent = sendOtpMessage($user, $otp, $channel, $referralWebsite, $subEventId);
-        // print_r($otpSent); die;
-        // if (!$otpSent) {
-        //     return $this->response->setJSON([
-        //         'status' => false,
-        //         'message' => 'OTP could not be sent'
-        //     ]);
-        // }
+        $otpSent = sendOtpMessage($user, $otp, $channel, $referralWebsite, $subEventId);
+        if (!$otpSent) {
+            return $this->response->setJSON([
+                'status' => false,
+                'message' => 'OTP could not be sent'
+            ]);
+        }
         return $this->response->setJSON([
             'status' => 'success',
-            'message' => 'OTP sent successfully:-' . $otp,
+            'message' => 'OTP sent successfully.',
             'channel' => $channel,
             'debug_otp' => (ENVIRONMENT === 'development') ? $otp : null,
         ]);
@@ -105,34 +104,41 @@ class AuthController extends BaseController
                 'message' => 'User not found'
             ]);
         }
-        // if (empty($user->otp) || $user->otp !== '123456') {
-        // if ($user->otp !== '') {
-        //     return $this->response->setJSON([
-        //         'status' => false,
-        //         'message' => 'Invalid OTP'
-        //     ]);
-        // }
-        $expiresAt = empty($user->otp_expire_at) ? false : strtotime($user->otp_expire_at);
-        if (!$expiresAt || $expiresAt < time()) {
+        if (empty($user->otp)) {
+            if ($user->otp !== '') {
+                return $this->response->setJSON([
+                    'status' => false,
+                    'message' => 'Invalid OTP'
+                ]);
+            }
+            if ($user->otp !== $otp) {
+                return $this->response->setJSON([
+                    'status' => false,
+                    'message' => 'Invalid OTP'
+                ]);
+            }
+            $expiresAt = empty($user->otp_expire_at) ? false : strtotime($user->otp_expire_at);
+            if (!$expiresAt || $expiresAt < time()) {
+                return $this->response->setJSON([
+                    'status' => false,
+                    'message' => 'OTP expired'
+                ]);
+            }
+            $token = $this->jwtService->generateToken(['uid' => $user->id, 'exhibitor_id' => $user->exhibitor_id, 'email' => $user->email]);
+            $this->contactModel->update(
+                $user->id,
+                [
+                    'otp_verified' => 1,
+                    'otp' => null
+                ]
+            );
             return $this->response->setJSON([
-                'status' => false,
-                'message' => 'OTP expired'
+                'status'  => 'success',
+                'message' => 'OTP verified.',
+                'token'   => generateJwt($user, $subEventId),
+                'expires_in' => 86400,
             ]);
         }
-        $token = $this->jwtService->generateToken(['uid' => $user->id, 'exhibitor_id' => $user->exhibitor_id, 'email' => $user->email]);
-        $this->contactModel->update(
-            $user->id,
-            [
-                'otp_verified' => 1,
-                'otp' => null
-            ]
-        );
-        return $this->response->setJSON([
-            'status'  => 'success',
-            'message' => 'OTP verified.',
-            'token'   => generateJwt($user, $subEventId),
-            'expires_in' => 86400,
-        ]);
     }
 
     public function resendOtp()

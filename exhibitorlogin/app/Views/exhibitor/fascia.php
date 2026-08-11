@@ -1110,7 +1110,7 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
                 if (window.showToast) window.showToast('Login token missing. Please login again.', 'error');
                 return;
             }
-            $.ajax({
+            return $.ajax({
                 url: ADD_TO_CART_URL,
                 type: 'POST',
                 headers: {
@@ -1121,35 +1121,47 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
                     item_id: ELECTRICITY_ITEM_ID,
                     quantity: quantity
                 }),
-                dataType: 'json',
-                success(response) {
-                    if (response && response.status) {
-                        lastElectricityQuantitySynced = quantity;
-                        updateElectricityPriceNote(quantity);
-                        window.dispatchEvent(new CustomEvent('cartUpdated', {
-                            detail: response.data || {}
-                        }));
-                        if (window.refreshCart) {
-                            window.refreshCart();
-                        }
-                        notifyElectricityAddedToCart(quantity);
-                    } else if (window.showToast) {
-                        window.showToast((response && response.message) || 'Unable to add electricity to cart.', 'error');
+                dataType: 'json'
+            }).then(function(response) {
+                if (response && response.status) {
+                    lastElectricityQuantitySynced = quantity;
+                    updateElectricityPriceNote(quantity);
+
+                    window.dispatchEvent(new CustomEvent('cartUpdated', {
+                        detail: response.data || {}
+                    }));
+
+                    if (window.refreshCart) {
+                        window.refreshCart();
                     }
-                },
-                error(xhr) {
-                    const msg = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Unable to add electricity to cart.';
-                    if (window.showToast) window.showToast(msg, 'error');
+
+                    notifyElectricityAddedToCart(quantity);
+                    return response;
                 }
+
+                throw new Error(
+                    (response && response.message) ||
+                    'Unable to add electricity to cart.'
+                );
+            }).catch(function(xhr) {
+                const msg = xhr?.responseJSON?.message ||
+                    xhr?.message ||
+                    'Unable to add electricity to cart.';
+
+                throw new Error(msg);
             });
         }
 
         function handleElectricityInputChange(forcedQuantity) {
-            const raw = forcedQuantity !== undefined ? String(forcedQuantity) : $('#electricityRequirement').val();
+            const raw = forcedQuantity !== undefined
+                ? String(forcedQuantity)
+                : $('#electricityRequirement').val();
+
             const quantity = parseInt(raw, 10);
 
             if (electricityDebounceTimer) {
                 clearTimeout(electricityDebounceTimer);
+                electricityDebounceTimer = null;
             }
 
             if (!raw || isNaN(quantity) || quantity <= 0) {
@@ -1157,20 +1169,15 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
                 return;
             }
 
-            // Item pricing not loaded yet — queue and wait for fetchElectricityItem() to resolve.
+            // IMPORTANT:
+            // Electricity is NOT added to cart while typing.
+            // It will be added only after the Raw Space form is successfully submitted.
             if (!electricityItemLoaded) {
                 pendingElectricityQuantity = quantity;
                 return;
             }
 
             updateElectricityPriceNote(quantity);
-
-            electricityDebounceTimer = setTimeout(function() {
-                if (quantity === lastElectricityQuantitySynced) {
-                    return;
-                }
-                addElectricityToCart(quantity);
-            }, 600);
         }
 
         document.getElementById("fasciaDesignInput").addEventListener("change", function() {
@@ -1502,20 +1509,68 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
                     const message = response.message || (response.status ? 'Submitted successfully' : 'Submission failed');
                     if (response.status || response.success) {
                         if (isRawSpaceSubmit) {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Details Submitted',
-                                text: 'Electricity charges have been added to your cart. Would you like to pay now or pay later?',
-                                showDenyButton: true,
-                                confirmButtonText: 'Pay Now',
-                                denyButtonText: 'Pay Later',
-                                allowOutsideClick: false,
-                                allowEscapeKey: false
-                            }).then((result) => {
-                                if (result.isConfirmed) {
-                                    window.location.href = getCartPageUrl();
+                            const electricityQuantity = parseInt(
+                                $form.find('[name="electricity_requirement"]').val(),
+                                10
+                            );
+
+                            // Add electricity to cart ONLY after the fascia/raw-space
+                            // submission has been successfully saved.
+                            if (!electricityQuantity || electricityQuantity <= 0) {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Electricity quantity missing',
+                                    text: 'Please enter a valid electricity requirement.'
+                                });
+                                return;
+                            }
+
+                            const addToCartAfterSubmit = function() {
+                                return addElectricityToCart(electricityQuantity);
+                            };
+
+                            const cartRequest = electricityItemLoaded
+                                ? addToCartAfterSubmit()
+                                : fetchElectricityItem().then(function() {
+                                    if (!electricityItemLoaded || !ELECTRICITY_ITEM_ID) {
+                                        throw new Error('Electricity item is not configured.');
+                                    }
+                                    return addToCartAfterSubmit();
+                                });
+
+                            cartRequest.then(function(cartResponse) {
+                                if (cartResponse && cartResponse.status) {
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'Details Submitted',
+                                        text: 'Electricity charges have been added to your cart. Would you like to pay now or pay later?',
+                                        showDenyButton: true,
+                                        confirmButtonText: 'Pay Now',
+                                        denyButtonText: 'Pay Later',
+                                        allowOutsideClick: false,
+                                        allowEscapeKey: false
+                                    }).then((result) => {
+                                        if (result.isConfirmed) {
+                                            window.location.href = getCartPageUrl();
+                                        }
+                                        // Pay Later: stay on this page.
+                                    });
+                                } else {
+                                    Swal.fire({
+                                        icon: 'warning',
+                                        title: 'Details Submitted',
+                                        text: (cartResponse && cartResponse.message)
+                                            ? 'Details were submitted, but electricity could not be added to the cart: ' + cartResponse.message
+                                            : 'Details were submitted, but electricity could not be added to the cart.'
+                                    });
                                 }
-                                // Pay Later: do nothing, stay on this page.
+                            }).catch(function(error) {
+                                Swal.fire({
+                                    icon: 'warning',
+                                    title: 'Details Submitted',
+                                    text: error?.message ||
+                                        'Details were submitted, but electricity could not be added to the cart.'
+                                });
                             });
                         } else {
                             Swal.fire({
