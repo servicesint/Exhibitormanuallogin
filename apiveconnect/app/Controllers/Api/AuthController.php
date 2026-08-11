@@ -104,7 +104,7 @@ class AuthController extends BaseController
                 'message' => 'User not found'
             ]);
         }
-        if (empty($user->otp)) {
+        if (!empty($user->otp)) {
             if ($user->otp !== '') {
                 return $this->response->setJSON([
                     'status' => false,
