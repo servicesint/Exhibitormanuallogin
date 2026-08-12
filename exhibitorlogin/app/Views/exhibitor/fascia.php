@@ -1023,42 +1023,42 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
                                 <i class="bi bi-rulers"></i>
                                 <div>
                                     <strong>Stall Dimensions</strong>
-                                    <p>Mention stall dimensions clearly (Width × Depth × Height).</p>
+                                    <p>Mention the stall dimensions clearly in Feet (ft) or Meters (m) (Width × Depth × Height).</p>
                                 </div>
                             </div>
                             <div class="guideline-item">
                                 <i class="bi bi-box"></i>
                                 <div>
                                     <strong>3D Design/Render</strong>
-                                    <p>Upload the stall 3D design/render.</p>
+                                    <p>Upload the 3D design/render of the booth for approval.</p>
                                 </div>
                             </div>
                             <div class="guideline-item">
                                 <i class="bi bi-layout-three-columns"></i>
                                 <div>
                                     <strong>Open Side(s)</strong>
-                                    <p>Mark the open side(s) in the layout.</p>
+                                    <p>Clearly mark the open side(s) in the layout plan.</p>
                                 </div>
                             </div>
                             <div class="guideline-item">
                                 <i class="bi bi-arrow-up-circle"></i>
                                 <div>
                                     <strong>Height Limit</strong>
-                                    <p>Ensure the stall height is within the permissible limit.</p>
+                                    <p>Ensure the overall stall height, including the platform, does not exceed the permissible limit of 4.5 meters.</p>
                                 </div>
                             </div>
                             <div class="guideline-item">
                                 <i class="bi bi-lightning-charge text-warning"></i>
                                 <div>
                                     <strong>Electricity Load</strong>
-                                    <p>Order and pay for the required electricity load.</p>
+                                    <p>Order and complete payment for the required electricity load to facilitate design approval.</p>
                                 </div>
                             </div>
                             <div class="guideline-item">
                                 <i class="bi bi-exclamation-triangle text-danger"></i>
                                 <div>
                                     <strong>Important Note</strong>
-                                    <p>Enter the electricity load accurately; excess consumption during the event will be charged additionally.</p>
+                                    <p>Provide the electricity load requirement accurately. Any excess electricity consumption during the event will be charged separately at the applicable on-site rates, which may be higher than the standard advance booking charges.</p>
                                 </div>
                             </div>
                         </div>

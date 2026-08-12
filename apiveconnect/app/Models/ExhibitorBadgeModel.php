@@ -70,9 +70,7 @@ class ExhibitorBadgeModel extends Model
     $row = $this->db
         ->table('manual_setups')
         ->select(
-            'exhibitor_badge_color,
-             exhibitor_badge_background,
-             ex_bg_type,
+            'ex_bg_type,
              exhibitor_bg_image,
              ex_gradient_start,
              ex_gradient_end,
@@ -82,8 +80,8 @@ class ExhibitorBadgeModel extends Model
         ->get()
         ->getRowArray();
 
-    $color = trim($row['exhibitor_badge_color'] ?? '');
-    $background = trim($row['exhibitor_badge_background'] ?? '');
+    $color = trim($row['ex_gradient_start'] ?? '');
+    $background = trim($row['ex_gradient_end'] ?? '');
 
     return [
         'primary' => $color ?: '#1a1a2e',

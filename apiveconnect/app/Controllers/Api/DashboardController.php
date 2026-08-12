@@ -2040,6 +2040,7 @@ class DashboardController extends BaseController
 
     public function list()
     {
+
         try {
             $authHeader = $this->request->getHeaderLine('Authorization');
             if (!$authHeader || !preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
@@ -2075,7 +2076,7 @@ class DashboardController extends BaseController
             // --- END NEW ---
 
             $manualSetup = $this->db->table('manual_setups')
-                ->select('online_forms_enable_disable, online_forms_open_close, manual_badges_note, exhibitor_badge_color, vendor_badge_color, exhibitor_badge_background, vendor_badge_background')
+                ->select('online_forms_enable_disable, online_forms_open_close, manual_badges_note')
                 ->where('sub_event_id', $subEventId)
                 ->where('is_deleted', 0)
                 ->get()
@@ -2095,10 +2096,8 @@ class DashboardController extends BaseController
                     ? json_decode($manualSetup['online_forms_open_close'], true)
                     : [];
                 $badgesNote = $manualSetup['manual_badges_note'] ?? '';
-                $exhibitorBadgeColor = $manualSetup['exhibitor_badge_color'] ?? '';
-                $vendorBadgeColor = $manualSetup['vendor_badge_color'] ?? '';
-                $exhibitorBadgeBackground = $manualSetup['exhibitor_badge_background'] ?? '';
-                $vendorBadgeBackground = $manualSetup['vendor_badge_background'] ?? '';
+                
+                
             }
             $badgesEnabled = isset($enableDisable['exhibitor_badges']) ? (int) $enableDisable['exhibitor_badges'] : 1;
             $badgesOpen = isset($openClose['exhibitor_badges']) ? (int) $openClose['exhibitor_badges'] : 1;
@@ -2110,68 +2109,72 @@ class DashboardController extends BaseController
                 ->get()
                 ->getResultArray();
 
-        $uploadBaseUrl = rtrim(env('UPLOAD_BASE_URL', ''), '/');
+            $uploadBaseUrl = rtrim(env('UPLOAD_BASE_URL', ''), '/');
 
-        $data = [];
-        foreach ($badges as $row) {
-            $photoUrl = '';
-            if (!empty($row['exhibitor_image'])) {
-                if (filter_var($row['exhibitor_image'], FILTER_VALIDATE_URL)) {
-                    $photoUrl = $row['exhibitor_image'];
-                } else {
-                    $photoUrl = $uploadBaseUrl . '/' . ltrim($row['exhibitor_image'], '/');
+            $data = [];
+            foreach ($badges as $row) {
+                $photoUrl = '';
+                if (!empty($row['exhibitor_image'])) {
+                    if (filter_var($row['exhibitor_image'], FILTER_VALIDATE_URL)) {
+                        $photoUrl = $row['exhibitor_image'];
+                    } else {
+                        $photoUrl = $uploadBaseUrl . '/' . ltrim($row['exhibitor_image'], '/');
+                    }
                 }
+                $data[] = [
+                    'encrypted_id'  => encryptData($row['id']),
+                    'salutation'    => $row['salutation'] ?? '',
+                    'fname'         => $row['first_name'] ?? '',
+                    'lname'         => $row['last_name'] ?? '',
+                    'full_name'     => trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? '')),
+                    'email'         => $row['email'] ?? '',
+                    'country_code'  => $row['country_code'] ?? '',
+                    'mobile'        => $row['mobile_number'] ?? '',
+                    'photo_url'     => $photoUrl,
+                ];
             }
-            $data[] = [
-                'encrypted_id'  => encryptData($row['id']),
-                'salutation'    => $row['salutation'] ?? '',
-                'fname'         => $row['first_name'] ?? '',
-                'lname'         => $row['last_name'] ?? '',
-                'full_name'     => trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? '')),
-                'email'         => $row['email'] ?? '',
-                'country_code'  => $row['country_code'] ?? '',
-                'mobile'        => $row['mobile_number'] ?? '',
-                'photo_url'     => $photoUrl,
-            ];
-        }
 
-        // --- NEW: badge summary block ---
-        $badgesCreated = count($data);
-        $badgesLeft = $badgeLimit > 0 ? max(0, $badgeLimit - $badgesCreated) : null; // null = unlimited
-        // --- END NEW ---
+            // --- NEW: badge summary block ---
+            $badgesCreated = count($data);
+            $badgesLeft = $badgeLimit > 0 ? max(0, $badgeLimit - $badgesCreated) : null; // null = unlimited
+            // --- END NEW ---
 
-        return $this->response->setJSON([
-            'status'  => true,
-            'success' => true,
-            'message' => 'Badges fetched successfully.',
-            'data'    => $data,
-            'badge_summary' => [
-                'badge_limit'    => $badgeLimit,
-                'badges_created' => $badgesCreated,
-                'badges_left'    => $badgesLeft,
-                'is_unlimited'   => $badgeLimit <= 0,
-            ],
-            'manual_setup' => [
-                'enable_disable' => $enableDisable,
-                'open_close' => $openClose,
-                'badges_enabled' => ($badgesEnabled === 1),
-                'badges_open' => ($badgesOpen === 1),
-                'badges_note' => $badgesNote,
-                // ✅ REMOVED: exhibitor_badge_color, vendor_badge_color, exhibitor_badge_background, vendor_badge_background
-                'form_status' => $this->getFormStatus($badgesEnabled, $badgesOpen)
-            ]
-        ]);
-    } catch (\Throwable $e) {
-        log_message('error', 'exhibitor badge list failed: ' . $e->getMessage());
-        return $this->response
-            ->setStatusCode(500)
-            ->setJSON([
-                'status'  => false,
-                'success' => false,
-                'message' => 'Something went wrong while fetching badges.'
+            return $this->response->setJSON([
+                'status'  => true,
+                'success' => true,
+                'message' => 'Badges fetched successfully.',
+                'data'    => $data,
+                'badge_summary' => [ // --- NEW ---
+                    'badge_limit'    => $badgeLimit,
+                    'badges_created' => $badgesCreated,
+                    'badges_left'    => $badgesLeft,
+                    'is_unlimited'   => $badgeLimit <= 0,
+                ],
+                'manual_setup' => [
+                    'enable_disable' => $enableDisable,
+                    'open_close' => $openClose,
+                    'badges_enabled' => ($badgesEnabled === 1),
+                    'badges_open' => ($badgesOpen === 1),
+                    'badges_note' => $badgesNote,
+                   
+                    'vendor_badge_color' => $vendorBadgeColor,
+                    'exhibitor_badge_background' => $exhibitorBadgeBackground,
+                    'vendor_badge_background' => $vendorBadgeBackground,
+                    'form_status' => $this->getFormStatus($badgesEnabled, $badgesOpen)
+                ]
             ]);
+        } catch (\Throwable $e) {
+            log_message('error', 'exhibitor badge list failed: ' . $e->getMessage());
+            return $this->response
+                ->setStatusCode(500)
+                ->setJSON([
+                    'status'  => false,
+                    'success' => false,
+                    'message' => 'Something went wrong while fetching badges.',
+                    'debug' => $e->getMessage()
+                ]);
+        }
     }
-}
 
     private function getFormStatus($enabled, $open)
     {
