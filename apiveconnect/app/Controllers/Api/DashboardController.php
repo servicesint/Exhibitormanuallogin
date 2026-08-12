@@ -3622,7 +3622,7 @@ class DashboardController extends BaseController
                 ]);
             }
             $fasciaCategory = (int) ($exhibitor['stall_type_id'] ?? 0);
-            if ($fasciaCategory !== 2) {
+            if ($fasciaCategory == 2) {
                 return $this->response->setStatusCode(403)->setJSON([
                     'status' => false,
                     'code' => 403,

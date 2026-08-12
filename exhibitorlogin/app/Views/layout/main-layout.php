@@ -834,8 +834,8 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
         function isVisitorInvitationAllowed(profile) {
             const eventName = String(profile?.event_name || '').trim();
             const exhibitorType = String(profile?.exhibitor_type || '').trim().toLowerCase();
-            const alwaysHiddenEvents = ['Drone Expo & Conference'];
-            const internationalRestrictedEvents = ['Fire India', 'Drone Expo & Conference', 'Secure Nation'];
+            const alwaysHiddenEvents = ['Drone Expo'];
+            const internationalRestrictedEvents = ['Fire India', 'Drone Expo', 'Secure Nation'];
             const isAlwaysHidden = alwaysHiddenEvents.includes(eventName);
             const isInternationalRestricted = internationalRestrictedEvents.includes(eventName) && exhibitorType === 'international';
             return !(isAlwaysHidden || isInternationalRestricted);
@@ -846,8 +846,8 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
             if (!navItem) return;
             const eventName = String(profile?.event_name || '').trim();
             const exhibitorType = String(profile?.exhibitor_type || '').trim().toLowerCase();
-            const alwaysHiddenEvents = ['Drone Expo & Conference'];
-            const internationalRestrictedEvents = ['Fire India', 'Drone Expo & Conference', 'Secure Nation'];
+            const alwaysHiddenEvents = ['Drone Expo'];
+            const internationalRestrictedEvents = ['Fire India', 'Drone Expo', 'Secure Nation'];
             const isAlwaysHidden = alwaysHiddenEvents.includes(eventName);
             const isInternationalRestricted = internationalRestrictedEvents.includes(eventName) && exhibitorType === 'international';
 
