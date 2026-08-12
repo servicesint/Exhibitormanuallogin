@@ -37,12 +37,12 @@ class AuthController extends BaseController
         if (!$isEmail && !$isMobile) {
             return $this->response->setJSON(['status' => false, 'message' => 'Enter a valid email address or mobile number.']);
         }
-
+       
         $user = $this->contactModel->findContactPersonByIdentifierAndSubEvent(
             $identifier,
             $subEventId
         );
-
+        
         if (!$user) {
             return $this->response->setJSON([
                 'status' => false,

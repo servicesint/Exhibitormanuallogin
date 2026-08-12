@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
- 
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -56,19 +56,24 @@
             color: #155724
         }
  
-        .status-badge.enabled-closed {
-            background: #fff3cd;
-            color: #856404
+        .status-badge.readonly {
+            background: #cce5ff;
+            color: #004085
         }
  
-        .status-badge.disabled {
+        .status-badge.hidden {
             background: #f8d7da;
             color: #721c24
         }
  
+        .status-badge.fully-hidden {
+            background: #e2e3e5;
+            color: #383d41
+        }
+
         .readonly-message {
-            background: #fff3cd;
-            border: 1px solid #ffc107;
+            background: #cce5ff;
+            border: 1px solid #004085;
             border-radius: 8px;
             padding: 15px 20px;
             margin-bottom: 20px;
@@ -76,7 +81,7 @@
         }
  
         .readonly-message i {
-            color: #856404;
+            color: #004085;
             margin-right: 10px
         }
  
@@ -147,40 +152,44 @@
         .nav-link .nav-text {
             flex: 1
         }
- 
         .status-circle {
             width: 22px;
             height: 22px;
             min-width: 22px;
             border-radius: 50%;
-            display: flex;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
             color: #fff;
             font-size: 12px;
             margin-left: 10px;
-            flex-shrink: 0
+            flex-shrink: 0;
+            transition: all 0.3s ease;
         }
- 
+
         .status-circle.completed {
-            background-color: #1fae74
+            background-color: #28a745 !important; /* Green */
+            color: #fff;
         }
- 
+
+        .status-circle.completed i {
+            color: #fff;
+        }
+
         .status-circle.pending {
-            background-color: #e54848
+            background-color: #dc3545 !important; /* Red */
+            color: #fff;
         }
- 
+
+        .status-circle.pending i {
+            color: #fff;
+        }
+
         .status-circle i {
-            line-height: 1
+            line-height: 1;
+            font-size: 12px;
         }
- 
-        /* ============================================
-           REFERRAL THEMING
-           Brand colors are driven by CSS variables so
-           every page under this layout (and any page
-           that defines its own colors using these vars)
-           automatically re-skins per referral source.
-           ============================================ */
+
         :root {
             --brand-primary: #4a72b8;
             --brand-primary-dark: #3d5f9c;
@@ -204,7 +213,6 @@
             --brand-gradient: linear-gradient(to left, #105489, #1478c7);
         }
  
-        /* Apply the variables to the existing shell elements */
         .sidebar {
             background-image: var(--brand-gradient);
         }
@@ -220,6 +228,51 @@
  
         .status-circle.completed {
             background-color: var(--brand-primary);
+        }
+
+        .form-closed-message {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 70vh;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .form-closed-message .icon {
+            font-size: 48px;
+            color: #dc3545;
+        }
+
+        .form-closed-message h3 {
+            margin-top: 15px;
+        }
+
+        .form-closed-message .text-muted {
+            color: #6c757d;
+        }
+
+        /* Disabled button styles */
+        button[type="submit"]:disabled,
+        input[type="submit"]:disabled,
+        .btn-submit.disabled,
+        .submit-btn.disabled,
+        .save-btn.disabled,
+        .update-btn.disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .form-readonly button[type="submit"],
+        .form-readonly input[type="submit"],
+        .form-readonly .btn-submit,
+        .form-readonly .submit-btn,
+        .form-readonly .save-btn,
+        .form-readonly .update-btn {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
         }
     </style>
 </head>
@@ -322,6 +375,17 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
 
         function getAuthToken() {
             return localStorage.getItem('api_token') || sessionStorage.getItem('api_token') || '';
+        }
+
+        function redirectToDashboard() {
+            const token = getAuthToken();
+            const dashboardUrl = `${BASE_URL}/dashboard`;
+            if (token) {
+                document.cookie = `api_token=${token}; path=/; SameSite=Strict`;
+                window.location.href = `${dashboardUrl}?token=${encodeURIComponent(token)}`;
+                return;
+            }
+            window.location.href = dashboardUrl;
         }
 
         function escapeHtml(value) {
@@ -472,37 +536,50 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
         }
 
         function applyFasciaNavItem(fasciaCategory) {
-        const navItem = document.getElementById('fasciaNavItem');
-        const navLink = document.getElementById('fasciaNavLink');
-        const navText = document.getElementById('fasciaNavText');
-        const referenceImageNavItem = document.getElementById('referenceImageNavItem');
+            const navItem = document.getElementById('fasciaNavItem');
+            const navLink = document.getElementById('fasciaNavLink');
+            const navText = document.getElementById('fasciaNavText');
+            const referenceImageNavItem = document.getElementById('referenceImageNavItem');
 
-        if (!navItem || !navLink || !navText) return;
+            if (!navItem || !navLink || !navText) return;
 
-        const category = parseInt(fasciaCategory, 10);
-
-        if (category === 2) {
-            navText.textContent = 'Upload Stall Design';
-            navLink.href = `${BASE_URL}/fascia`;
-            navItem.style.display = '';
-        } 
-        else if (category === 1 || category === 3) {
-            navText.textContent = 'Fascia';
-            navLink.href = `${BASE_URL}/upload-stand-design`;
-            navItem.style.display = '';
-        } 
-        else {
-            navItem.style.display = 'none';
-        }
-        // alert(category);
-        // if (referenceImageNavItem) {
-            if (category === 2) {
-                referenceImageNavItem.style.display = 'none';
-            } else {
-                referenceImageNavItem.style.display = '';
+            if (!isFormMenuVisible('fascia')) {
+                navItem.classList.add('nav-item-hidden');
+                navItem.style.display = 'none';
+                if (referenceImageNavItem) {
+                    referenceImageNavItem.classList.add('nav-item-hidden');
+                    referenceImageNavItem.style.display = 'none';
+                }
+                return;
             }
-        // }
-    }
+
+            navItem.classList.remove('nav-item-hidden');
+            if (referenceImageNavItem) {
+                referenceImageNavItem.classList.remove('nav-item-hidden');
+            }
+
+            const category = parseInt(fasciaCategory, 10);
+
+            if (category === 2) {
+                navText.textContent = 'Upload Stall Design';
+                navLink.href = `${BASE_URL}/fascia`;
+                navItem.style.display = '';
+            } else if (category === 1 || category === 3) {
+                navText.textContent = 'Fascia';
+                navLink.href = `${BASE_URL}/upload-stand-design`;
+                navItem.style.display = '';
+            } else {
+                navItem.style.display = 'none';
+            }
+
+            if (referenceImageNavItem) {
+                if (category === 2) {
+                    referenceImageNavItem.style.display = 'none';
+                } else {
+                    referenceImageNavItem.style.display = '';
+                }
+            }
+        }
         const FORM_LABELS = {
             fascia: 'Fascias',
             exhibitor_badges: 'Exhibitor Badges',
@@ -569,23 +646,20 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
         }
 
         function applyOnlineFormsOverride() {
-            const enableDisable = window.onlineFormsEnableDisable;
-            if (!enableDisable) return;
+            if (!window.onlineFormsOpenClose) return;
             Object.keys(ONLINE_FORMS_NAV_MAP).forEach(key => {
-                const isVisible = parseInt(enableDisable[key], 10) === 0;
+                const isVisible = isFormMenuVisible(key);
                 ONLINE_FORMS_NAV_MAP[key].forEach(navId => {
                     const el = document.getElementById(navId);
                     if (!el) return;
                     if (isVisible) {
                         el.classList.remove('nav-item-hidden');
-                        if (el.style.display === 'none') {
-                            if (navId !== 'fasciaNavItem' && navId !== 'referenceImageNavItem') {
-                                el.style.display = '';
-                            }
-                        }
                     } else {
                         el.classList.add('nav-item-hidden');
                         el.style.display = 'none';
+                    }
+                    if (isVisible && navId !== 'fasciaNavItem' && navId !== 'referenceImageNavItem') {
+                        el.style.display = '';
                     }
                 });
             });
@@ -611,22 +685,20 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
             Object.keys(formNames).forEach(key => {
                 const badge = document.getElementById(formNames[key]);
                 if (!badge) return;
-                const isVisible = parseInt(enableDisable[key], 10) === 0;
-                const isNonEditable = parseInt(openClose[key], 10) === 1;
-                const expired = isDueDatePassed(key);
+                const status = getFormStatus(key);
 
-                if (!isVisible) {
-                    badge.textContent = 'Disabled';
-                    badge.className = 'status-badge disabled';
-                } else if (expired) {
+                if (status === 'disabled') {
+                    badge.textContent = 'Hidden';
+                    badge.className = 'status-badge hidden';
+                } else if (status === 'expired') {
                     badge.textContent = 'Closed (View Only - Due Date Passed)';
-                    badge.className = 'status-badge enabled-closed';
-                } else if (!isNonEditable) {
+                    badge.className = 'status-badge readonly';
+                } else if (status === 'enabled_open') {
                     badge.textContent = 'Open (Can Purchase)';
                     badge.className = 'status-badge enabled-open';
                 } else {
-                    badge.textContent = 'Closed (View Only)';
-                    badge.className = 'status-badge enabled-closed';
+                    badge.textContent = 'Disabled (Read Only)';
+                    badge.className = 'status-badge readonly';
                 }
             });
         }
@@ -637,11 +709,16 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
             if (!enableDisable || !openClose) {
                 return isDueDatePassed(formName) ? 'expired' : 'enabled_open';
             }
-            const isHidden = parseInt(enableDisable[formName], 10) === 1;
-            if (isHidden) return 'disabled';
+            const isEnabled = parseInt(enableDisable[formName], 10) === 1;
+            const isOpen = parseInt(openClose[formName], 10) === 1;
+            if (!isOpen) return 'disabled';
             if (isDueDatePassed(formName)) return 'expired';
-            const isNonEditable = parseInt(openClose[formName], 10) === 1;
-            return isNonEditable ? 'enabled_closed' : 'enabled_open';
+            return isEnabled ? 'enabled_open' : 'enabled_closed';
+        }
+
+        function isFormMenuVisible(formName) {
+            const openClose = window.onlineFormsOpenClose;
+            return !openClose || parseInt(openClose[formName], 10) === 1;
         }
 
         function canPurchase(formName) {
@@ -669,7 +746,7 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
             if (status === 'disabled') {
                 if (window.location.pathname.includes(formName.replace('_', '-')) || window.location.pathname.includes(formName)) {
                     showToast('This form is currently disabled.', 'error');
-                    setTimeout(() => window.location.href = BASE_URL + '/dashboard', 1500);
+                    setTimeout(redirectToDashboard, 1500);
                 }
                 return status;
             }
@@ -684,11 +761,25 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
             if (status === 'enabled_closed') {
                 if (formContainer) formContainer.classList.add('form-readonly');
                 if (messageDiv) {
-                    messageDiv.innerHTML = `<i class="bi bi-info-circle"></i><strong>${FORM_LABELS[formName]||formName}</strong> is currently closed for new submissions. You can only view your existing records.`;
+                    messageDiv.innerHTML = `<i class="bi bi-info-circle"></i><strong>${FORM_LABELS[formName]||formName}</strong> is disabled. You can only view your existing records.`;
                     messageDiv.style.display = 'block';
                 }
             }
             return status;
+        }
+
+        function applyCurrentFormAccess() {
+            const path = window.location.pathname.replace(/\/+$/, '');
+            const formRoutes = {
+                fascia: ['/fascia', '/upload-stand-design'],
+                exhibitor_badges: ['/exhibitor-badges'],
+                additional_furniture: ['/additional-furniture']
+            };
+            Object.entries(formRoutes).some(([formName, routes]) => {
+                if (!routes.some(route => path.endsWith(route))) return false;
+                applyFormAccess(formName);
+                return true;
+            });
         }
 
         async function loadHeaderProfile() {
@@ -753,11 +844,6 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
         function applyVisitorInvitationVisibility(profile) {
             const navItem = document.getElementById('visitorInvitationNavItem');
             if (!navItem) return;
-            const enableDisable = window.onlineFormsEnableDisable;
-            const configSaysHidden = enableDisable ?
-                parseInt(enableDisable['invitation_tickets'], 10) === 1 :
-                false;
-
             const eventName = String(profile?.event_name || '').trim();
             const exhibitorType = String(profile?.exhibitor_type || '').trim().toLowerCase();
             const alwaysHiddenEvents = ['Drone Expo & Conference'];
@@ -765,7 +851,7 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
             const isAlwaysHidden = alwaysHiddenEvents.includes(eventName);
             const isInternationalRestricted = internationalRestrictedEvents.includes(eventName) && exhibitorType === 'international';
 
-            if (isAlwaysHidden || isInternationalRestricted || configSaysHidden) {
+            if (isAlwaysHidden || isInternationalRestricted || !isFormMenuVisible('invitation_tickets')) {
                 navItem.classList.add('nav-item-hidden');
                 navItem.style.display = 'none';
             } else {
@@ -782,7 +868,7 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
                 if (main) {
                     main.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:70vh;text-align:center;padding:20px;"><div><i class="bi bi-shield-lock" style="font-size:48px;color:#dc3545;"></i><h3 style="margin-top:15px;">You are not authorised to access this page.</h3><p class="text-muted">Redirecting you to the dashboard...</p></div></div>`;
                 }
-                setTimeout(() => window.location.href = BASE_URL + '/dashboard', 2000);
+                setTimeout(redirectToDashboard, 2000);
                 return;
             }
             if (isFormDisabled('invitation_tickets')) {
@@ -790,7 +876,7 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
                 if (main) {
                     main.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:70vh;text-align:center;padding:20px;"><div><i class="bi bi-shield-lock" style="font-size:48px;color:#dc3545;"></i><h3 style="margin-top:15px;">This section is currently disabled.</h3><p class="text-muted">Redirecting you to the dashboard...</p></div></div>`;
                 }
-                setTimeout(() => window.location.href = BASE_URL + '/dashboard', 2000);
+                setTimeout(redirectToDashboard, 2000);
             }
         }
 
@@ -869,6 +955,7 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
                     applyVisitorInvitationVisibility(profile);
                     guardVisitorInvitationPage(profile);
                 }
+                applyCurrentFormAccess();
                 await loadSubmissionStatus();
                 const logoutBtn = document.getElementById('logoutBtn');
                 if (logoutBtn) {
@@ -894,6 +981,7 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
         window.isDueDatePassed = isDueDatePassed;
         window.showToast = showToast;
         window.BASE_URL = BASE_URL;
+        window.redirectToDashboard = redirectToDashboard;
         window.loadSubmissionStatus = loadSubmissionStatus;
         window.isVisitorInvitationAllowed = isVisitorInvitationAllowed;
         window.guardVisitorInvitationPage = guardVisitorInvitationPage;

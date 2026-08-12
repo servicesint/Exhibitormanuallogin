@@ -25,36 +25,43 @@ class DashboardController extends BaseController
 
     public function exhibitor_dashboard()
     {
-        $token = $_COOKIE['api_token'] ?? '';
+        $token = $this->request->getGet('token') ?? $_COOKIE['api_token'] ?? '';
+        $subEventId = (int) session()->get('sub_event_id');
 
-        try {
-            $parts = explode('.', $token);
+        if ($token !== '') {
+            try {
+                $parts = explode('.', $token);
 
-            if (count($parts) !== 3) {
+                if (count($parts) !== 3) {
+                    return redirect()->to('login');
+                }
+
+                $payload = json_decode(
+                    base64_decode(
+                        str_pad(
+                            strtr($parts[1], '-_', '+/'),
+                            strlen($parts[1]) % 4,
+                            '=',
+                            STR_PAD_RIGHT
+                        )
+                    ),
+                    true
+                );
+
+                if (!$payload || empty($payload['sub_event_id'])) {
+                    return redirect()->to('login');
+                }
+
+                $subEventId = (int) $payload['sub_event_id'];
+            } catch (\Exception $e) {
+                log_message('error', '[dashboard] Token decode failed: ' . $e->getMessage());
                 return redirect()->to('login');
             }
-
-            $payload = json_decode(
-                base64_decode(
-                    str_pad(
-                        strtr($parts[1], '-_', '+/'),
-                        strlen($parts[1]) % 4,
-                        '=',
-                        STR_PAD_RIGHT
-                    )
-                ),
-                true
-            );
-
-            if (!$payload || empty($payload['sub_event_id'])) {
-                return redirect()->to('login');
-            }
-        } catch (\Exception $e) {
-            log_message('error', '[dashboard] Token decode failed: ' . $e->getMessage());
-            return redirect()->to('login');
         }
 
-        $subEventId = (int) $payload['sub_event_id'];
+        if (!$subEventId) {
+            return redirect()->to('login');
+        }
 
         $db = \Config\Database::connect();
 

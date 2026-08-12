@@ -1076,6 +1076,22 @@
         padding: 1px 6px;
         border-radius: 10px;
     }
+
+    .btn-download-receipt {
+        border-radius: 999px !important;
+        padding: 4px 14px !important;
+        font-size: 0.8rem !important;
+        font-weight: 600 !important;
+        background: #4a72b8 !important;
+        border: none !important;
+        color: #fff !important;
+        margin-top: 8px;
+    }
+
+    .btn-download-receipt:hover {
+        background: #3d5f9c !important;
+        color: #fff !important;
+    }
 </style>
 
 <div class="content-area">
@@ -1303,8 +1319,8 @@
             } else if (window.onlineFormsEnableDisable) {
                 const enabled = parseInt(window.onlineFormsEnableDisable.additional_furniture, 10) === 1;
                 const open = parseInt(window.onlineFormsOpenClose.additional_furniture, 10) === 1;
-                if (!enabled) status = 'disabled';
-                else if (!open) status = 'enabled_closed';
+                if (!open) status = 'disabled';
+                else if (!enabled) status = 'enabled_closed';
             }
 
             console.log('Additional Furniture Status:', status);
@@ -1315,7 +1331,11 @@
                     alert('Additional Furniture form is currently disabled.');
                 }
                 setTimeout(function() {
-                    window.location.href = window.BASE_URL || '/dashboard';
+                    if (window.redirectToDashboard) {
+                        window.redirectToDashboard();
+                    } else {
+                        window.location.href = (window.BASE_URL || '') + '/dashboard';
+                    }
                 }, 1500);
                 return false;
             }
@@ -1398,6 +1418,7 @@
             saveNeft: `${API_BASE_URL}/v1/dashboard/save_neft_transfer`,
             furnitureOptOut: `${API_BASE_URL}/v1/dashboard/furniture-opt-out`,
             pendingOrders: `${API_BASE_URL}/v1/orders/pending`,
+            downloadQuotation: (qid) => `${API_BASE_URL}/v1/dashboard/download_quotation/${qid}`,
         };
         const PLACEHOLDER_IMG = 'https://via.placeholder.com/80';
         const state = {
@@ -1639,6 +1660,11 @@
             const itemsCount = order.items_count || items.length;
             const amount = order.amount ?? order.q_amount ?? 0;
 
+            const pendingQid = order.qid ?? order.id ?? null;
+            const receiptButtonHtml = pendingQid ?
+                `<button type="button" class="btn btn-download-receipt btn-download-receipt-pending" data-qid="${pendingQid}">⬇ Receipt</button>` :
+                '';
+
             let itemsHtml = '';
             if (items.length) {
                 itemsHtml = `
@@ -1676,6 +1702,7 @@
                 </div>
                 <div class="text-end">
                     <div class="order-total">${money(amount)}</div>
+                    ${receiptButtonHtml}
                 </div>
             </div>
             ${itemsHtml}
@@ -2627,6 +2654,19 @@
             );
         }
 
+        async function downloadQuotationByQid(qid, btn, originalLabel) {
+            if (!qid) {
+                showToast('Missing quotation reference for this order.', 'danger');
+                return;
+            }
+            await downloadPdf(
+                ENDPOINTS.downloadQuotation(qid),
+                `Pending-Invoice.pdf`,
+                btn,
+                originalLabel
+            );
+        }
+
         function buildOrderDetailHtml(order) {
             const currencySym = order.currency === 'USD' ? '$' : '₹';
             const itemsRows = (order.items || []).map(item => {
@@ -2855,6 +2895,13 @@
                 if (downloadInvoiceRowBtn) {
                     const originalLabel = downloadInvoiceRowBtn.innerHTML;
                     downloadOrderInvoice(downloadInvoiceRowBtn.dataset.encId, downloadInvoiceRowBtn, originalLabel);
+                    return;
+                }
+
+                const downloadReceiptBtn = event.target.closest('.btn-download-receipt-pending');
+                if (downloadReceiptBtn) {
+                    const originalLabel = downloadReceiptBtn.innerHTML;
+                    downloadQuotationByQid(downloadReceiptBtn.dataset.qid, downloadReceiptBtn, originalLabel);
                     return;
                 }
 
