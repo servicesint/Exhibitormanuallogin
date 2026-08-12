@@ -10,6 +10,10 @@ class AuthFilter implements FilterInterface
 {
     public function before(RequestInterface $request, $arguments = null)
     {
+        if (session()->get('logged_in') && session()->get('sub_event_id')) {
+            return null;
+        }
+
         // Get token from query string (first load) or Authorization header (AJAX)
         $token = $request->getGet('token')
             ?? $this->getBearerToken($request)

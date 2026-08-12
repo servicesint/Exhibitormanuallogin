@@ -597,8 +597,8 @@
                 const openClose = window.manualSetup.online_forms_open_close || {};
                 const enabled = parseInt(enableDisable.invitation_tickets, 10) === 1;
                 const open = parseInt(openClose.invitation_tickets, 10) === 1;
-                if (!enabled) return 'disabled';
-                return open ? 'enabled_open' : 'enabled_closed';
+                if (!open) return 'disabled';
+                return enabled ? 'enabled_open' : 'enabled_closed';
             }
             return 'enabled_open';
         }
@@ -644,7 +644,11 @@
                     alert('This form is currently disabled.');
                 }
                 setTimeout(() => {
-                    window.location.href = window.BASE_URL || '/dashboard';
+                    if (window.redirectToDashboard) {
+                        window.redirectToDashboard();
+                    } else {
+                        window.location.href = (window.BASE_URL || '') + '/dashboard';
+                    }
                 }, 1500);
                 return false;
             }

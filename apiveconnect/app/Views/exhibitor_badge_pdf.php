@@ -7,7 +7,7 @@ $primary = $theme_primary ?? '#8b0000';
 
 if (!empty($badge_background)) {
     $backgroundCss = "
-        background-image:url('" . $safe($badge_background) . "');
+        background:{$badge_background};
         background-size:100% 100%;
         background-position:center center;
         background-repeat:no-repeat;

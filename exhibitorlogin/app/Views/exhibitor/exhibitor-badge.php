@@ -1149,50 +1149,61 @@
 
         // Now only handles notes/colors/admin enable-disable -- NOT the due date
         function handleManualSetupData(manualSetup) {
-            const noteText = document.getElementById('badgesNoteText');
-            if (noteText && manualSetup.badges_note) {
-                noteText.innerHTML = manualSetup.badges_note;
-            } else if (noteText) {
-                noteText.innerHTML = 'No note available.';
-            }
+    const noteText = document.getElementById('badgesNoteText');
+    if (noteText && manualSetup.badges_note) {
+        noteText.innerHTML = manualSetup.badges_note;
+    } else if (noteText) {
+        noteText.innerHTML = 'No note available.';
+    }
 
-            if (manualSetup.exhibitor_badge_color) {
-                document.documentElement.style.setProperty('--exhibitor-badge-color', manualSetup.exhibitor_badge_color);
-            }
-            if (manualSetup.vendor_badge_color) {
-                document.documentElement.style.setProperty('--vendor-badge-color', manualSetup.vendor_badge_color);
-            }
-            if (manualSetup.exhibitor_badge_background) {
-                document.documentElement.style.setProperty('--exhibitor-badge-bg', manualSetup.exhibitor_badge_background);
-            }
-            if (manualSetup.vendor_badge_background) {
-                document.documentElement.style.setProperty('--vendor-badge-bg', manualSetup.vendor_badge_background);
-            }
+    // ✅ REMOVED: exhibitor_badge_color, vendor_badge_color, etc.
+    // These are now handled by the model/buildBadgeViewData method
 
-            const status = manualSetup.form_status || 'enabled_open';
-            if (status === 'disabled') {
-                showToast('This form is currently disabled.', 'error');
-                setTimeout(() => {
-                    window.location.href = window.BASE_URL + '/dashboard';
-                }, 1500);
-                return;
-            }
-            if (status === 'enabled_closed') {
-                isViewOnly = true;
-                document.getElementById('readonlyMessage').style.display = 'block';
-                document.getElementById('addBadgeBtn').classList.add('disabled-btn');
-                document.querySelectorAll('#badgeForm input, #badgeForm select, #badgeForm textarea').forEach(el => {
-                    el.setAttribute('readonly', true);
-                    el.setAttribute('disabled', true);
-                });
-                const submitBtn = document.getElementById('badgeSubmitBtn');
-                if (submitBtn) {
-                    submitBtn.setAttribute('disabled', true);
-                    submitBtn.style.opacity = '0.5';
-                    submitBtn.style.cursor = 'not-allowed';
-                }
-            }
+    const status = manualSetup.form_status || 'enabled_open';
+    if (status === 'disabled') {
+        isViewOnly = true;
+        document.getElementById('readonlyMessage').style.display = 'block';
+        document.getElementById('readonlyMessage').innerHTML = 
+            '<i class="bi bi-info-circle"></i> This form is currently disabled. You can view existing badges but cannot add, edit, or delete.';
+        
+        const addBtn = document.getElementById('addBadgeBtn');
+        if (addBtn) {
+            addBtn.classList.add('disabled-btn');
+            addBtn.title = 'Form is disabled';
         }
+        
+        document.querySelectorAll('#badgeForm input, #badgeForm select, #badgeForm textarea').forEach(el => {
+            el.setAttribute('readonly', true);
+            el.setAttribute('disabled', true);
+        });
+        
+        const submitBtn = document.getElementById('badgeSubmitBtn');
+        if (submitBtn) {
+            submitBtn.setAttribute('disabled', true);
+            submitBtn.style.opacity = '0.5';
+            submitBtn.style.cursor = 'not-allowed';
+        }
+        
+        showToast('This form is currently disabled.', 'warning');
+        return;
+    }
+    
+    if (status === 'enabled_closed') {
+        isViewOnly = true;
+        document.getElementById('readonlyMessage').style.display = 'block';
+        document.getElementById('addBadgeBtn').classList.add('disabled-btn');
+        document.querySelectorAll('#badgeForm input, #badgeForm select, #badgeForm textarea').forEach(el => {
+            el.setAttribute('readonly', true);
+            el.setAttribute('disabled', true);
+        });
+        const submitBtn = document.getElementById('badgeSubmitBtn');
+        if (submitBtn) {
+            submitBtn.setAttribute('disabled', true);
+            submitBtn.style.opacity = '0.5';
+            submitBtn.style.cursor = 'not-allowed';
+        }
+    }
+}
 
         function formatDueDate(dateStr) {
             if (!dateStr) return '--';

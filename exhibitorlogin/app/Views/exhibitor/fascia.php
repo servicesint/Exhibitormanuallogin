@@ -1163,8 +1163,8 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
             } else if (window.onlineFormsEnableDisable) {
                 const enabled = parseInt(window.onlineFormsEnableDisable.fascia, 10) === 1;
                 const open = parseInt(window.onlineFormsOpenClose.fascia, 10) === 1;
-                if (!enabled) status = 'disabled';
-                else if (!open) status = 'enabled_closed';
+                if (!open) status = 'disabled';
+                else if (!enabled) status = 'enabled_closed';
             }
             if (status === 'disabled') {
                 if (window.showToast) {
@@ -1173,7 +1173,11 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
                     alert('Fascias form is currently disabled.');
                 }
                 setTimeout(function() {
-                    window.location.href = window.BASE_URL || '/dashboard';
+                    if (window.redirectToDashboard) {
+                        window.redirectToDashboard();
+                    } else {
+                        window.location.href = (window.BASE_URL || '') + '/dashboard';
+                    }
                 }, 1500);
                 return false;
             }

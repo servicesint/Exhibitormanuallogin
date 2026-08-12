@@ -67,4 +67,5 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'jwt
     $routes->get('exhibitor/participation-letter/pdf', 'DashboardController::participationLetters');
     $routes->post('dashboard/furniture-opt-out', 'DashboardController::furnitureOptOut');
     $routes->get('orders/pending', 'DashboardController::getPendingOrders');
+    $routes->get('dashboard/download_quotation/(:segment)', 'DashboardController::download_quotation/$1');
 });

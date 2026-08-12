@@ -66,27 +66,37 @@ class ExhibitorBadgeModel extends Model
     }
 
     public function getEventTheme(int $subEventId): array
-    {
-        $row = $this->db
-            ->table('manual_setups')
-            ->select(
-                'exhibitor_badge_color,
-             exhibitor_badge_background'
-            )
-            ->where('sub_event_id', $subEventId)
-            ->get()
-            ->getRowArray();
+{
+    $row = $this->db
+        ->table('manual_setups')
+        ->select(
+            'exhibitor_badge_color,
+             exhibitor_badge_background,
+             ex_bg_type,
+             exhibitor_bg_image,
+             ex_gradient_start,
+             ex_gradient_end,
+             ex_bg_gradient_direction'
+        )
+        ->where('sub_event_id', $subEventId)
+        ->get()
+        ->getRowArray();
 
-        $color = trim($row['exhibitor_badge_color'] ?? '');
-        $background = trim($row['exhibitor_badge_background'] ?? '');
+    $color = trim($row['exhibitor_badge_color'] ?? '');
+    $background = trim($row['exhibitor_badge_background'] ?? '');
 
-        return [
-            'primary' => $color ?: '#1a1a2e',
-            'secondary' => $color ?: '#1a1a2e',
-            'color' => $color,
-            'background' => $background,
-        ];
-    }
+    return [
+        'primary' => $color ?: '#1a1a2e',
+        'secondary' => $color ?: '#1a1a2e',
+        'color' => $color,
+        'background' => $background,
+        'bg_type' => trim($row['ex_bg_type'] ?? ''),
+        'bg_image' => trim($row['exhibitor_bg_image'] ?? ''),
+        'gradient_start' => trim($row['ex_gradient_start'] ?? ''),
+        'gradient_end' => trim($row['ex_gradient_end'] ?? ''),
+        'gradient_direction' => trim($row['ex_bg_gradient_direction'] ?? ''),
+    ];
+}
 
     private function resolveBackgroundBase64(?string $backgroundPath): ?string
     {
@@ -117,6 +127,59 @@ class ExhibitorBadgeModel extends Model
         };
 
         return 'data:' . $mime . ';base64,' . base64_encode($imageContent);
+    }
+
+    /**
+     * Maps the admin-panel direction label to a valid CSS linear-gradient direction.
+     */
+    private function mapGradientDirection(?string $direction): string
+    {
+        $map = [
+            'Left To Right' => 'to right',
+            'Right To Left' => 'to left',
+            'Top To Bottom' => 'to bottom',
+            'Bottom To Top' => 'to top',
+        ];
+
+        return $map[$direction] ?? 'to right';
+    }
+
+    /**
+     * Resolves the final CSS `background` value for the exhibitor badge.
+     *
+     * Priority order (gradient ALWAYS wins when configured, regardless of ex_bg_type):
+     *   1. Gradient  -> linear-gradient(direction, start, end)
+     *   2. Image     -> url('data:...;base64,...')
+     *   3. Legacy single background field (fallback for older records)
+     */
+    private function resolveExhibitorBadgeBackground(array $theme): string
+    {
+        if (!empty($theme['gradient_start']) && !empty($theme['gradient_end'])) {
+            $direction = $this->mapGradientDirection($theme['gradient_direction']);
+
+            return sprintf(
+                'linear-gradient(%s, %s, %s)',
+                $direction,
+                $theme['gradient_start'],
+                $theme['gradient_end']
+            );
+        }
+
+        if (!empty($theme['bg_image'])) {
+            $base64 = $this->resolveBackgroundBase64($theme['bg_image']);
+            if ($base64) {
+                return "url('{$base64}')";
+            }
+        }
+
+        if (!empty($theme['background'])) {
+            $base64 = $this->resolveBackgroundBase64($theme['background']);
+            if ($base64) {
+                return "url('{$base64}')";
+            }
+        }
+
+        return '';
     }
 
     public function getExhibitorCompanyName(int $exhibitorId, ?array $badge = null): string
@@ -343,7 +406,8 @@ class ExhibitorBadgeModel extends Model
             }
         }
 
-        $backgroundBase64 = $this->resolveBackgroundBase64($theme['background']);
+        // Gradient always takes priority over image (see resolveExhibitorBadgeBackground()).
+        $backgroundBase64 = $this->resolveExhibitorBadgeBackground($theme);
 
         $uniqueValue = 'EXBTR_' . (string) $badge['id'];
         $qrBase64 = $this->generateQrBase64(
