@@ -259,7 +259,7 @@ class DashboardController extends BaseController
             ->join('exhibitors as e', 'e.id = ecp.exhibitor_id', 'left')
             ->join('stall_categories as sc', 'sc.exhibitor_id = ecp.exhibitor_id', 'left')
             ->join('manual_setups as ms', 'ms.sub_event_id = sc.sub_event_id', 'left')
-            ->select('e.id as exhibitor_id, e.stall_type_id, sc.electricity_requirement, sc.stall_layout as fascia_design, sc.status as fascia_design_status, sc.stall_open_side, sc.fascia_board_text, sc.salutation, sc.first_name, sc.last_name, sc.fabricator_company_name, sc.mobile_number, sc.email, sc.reason, sc.other_reason, ms.manual_fascia_note')
+            ->select('e.id as exhibitor_id, e.stall_type_id, e.exhibitor_type, sc.electricity_requirement, sc.stall_layout as fascia_design, sc.status as fascia_design_status, sc.stall_open_side, sc.fascia_board_text, sc.salutation, sc.first_name, sc.last_name, sc.fabricator_company_name, sc.mobile_number, sc.email, sc.reason, sc.other_reason, ms.manual_fascia_note')
             ->where('ecp.id', $vendorId)
             ->get()->getRowArray();
         $exhibitorId = $exhibitor['exhibitor_id'] ?? null;
@@ -286,6 +286,7 @@ class DashboardController extends BaseController
                 'electricity_requirement' => $exhibitor['electricity_requirement'] ?? '',
                 'fascia_design' => $exhibitor['fascia_design'] ?? '',
                 'fascia_design_status' => $exhibitor['fascia_design_status'] ?? '',
+                'exhibitor_type' => $exhibitor['exhibitor_type'] ?? '',
                 'salutation' => $exhibitor['salutation'] ?? '',
                 'first_name' => $row['first_name'] ?? '',
                 'last_name' => $row['last_name'] ?? '',
