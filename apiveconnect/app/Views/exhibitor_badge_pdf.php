@@ -64,7 +64,8 @@ if (!empty($badge_background)) {
 
         .company-name {
             font-family: dejavuserif;
-            font-size: 8px;
+            font-size: 9px;
+            font-weight: bold;
             line-height: 1.2;
             text-transform: uppercase;
         }
