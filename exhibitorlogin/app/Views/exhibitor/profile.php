@@ -500,6 +500,7 @@
         const PROFILE_URL = '<?= env('API_BASE_URL') ?>/v1/profile';
         const PROFILE_SAVE_URL = '<?= env('API_BASE_URL') ?>/v1/dashboard/profile/save';
         const PRODUCT_CATEGORIES_URL = '<?= env('API_BASE_URL') ?>/v1/product-categories';
+        const EDIT_PROFILE_REQUEST_URL = '<?= env('API_BASE_URL') ?>/v1/dashboard/profile/edit-request';
         const resolveUrl = v => v ? `${UPLOAD_BASE_URL}/${v}` : '';
 
         let current = 0;
@@ -729,6 +730,7 @@
                 showToast(result.message || 'Unable to fetch profile.', 'error');
                 return null;
             } catch (error) {
+                console.error(error);
                 showToast('Network error while fetching profile.', 'error');
                 return null;
             }
@@ -765,13 +767,13 @@
                 const allChildrenSelected = children.length > 0 && children.every(child => child.selected === true);
 
                 rowsHtml += `
-                        <div class="pdi-parent-row">
-                            <label class="pdi-checkbox-label pdi-parent-label">
-                                <input type="checkbox" class="pdi-parent-checkbox" data-parent-id="${parent.id}" ${allChildrenSelected ? 'checked' : ''}>
-                                <strong>${escapeHtml(parent.name)}</strong>
-                            </label>
-                            <div class="pdi-children-list">
-                    `;
+                <div class="pdi-parent-row">
+                    <label class="pdi-checkbox-label pdi-parent-label">
+                        <input type="checkbox" class="pdi-parent-checkbox" data-parent-id="${parent.id}" ${allChildrenSelected ? 'checked' : ''}>
+                        <strong>${escapeHtml(parent.name)}</strong>
+                    </label>
+                    <div class="pdi-children-list">
+            `;
 
                 children.forEach(child => {
                     const checked = child.selected ? 'checked' : '';
@@ -1491,16 +1493,55 @@
         }
         document.querySelector('.profile-edit-btn')?.addEventListener('click', () => toggleEditModal(true));
         editModal?.querySelectorAll('.modal-close-btn').forEach(btn => btn.addEventListener('click', () => toggleEditModal(false)));
-        sendEditBtn?.addEventListener('click', () => {
+
+        /* ----- FIXED: Edit Profile Request now actually calls the backend ----- */
+        sendEditBtn?.addEventListener('click', async () => {
             const detail = editTA?.value.trim();
             if (!detail) {
                 showToast('Please enter the details to edit profile.', 'error');
                 return;
             }
-            showToast('Profile edit request sent.', 'success');
-            if (editTA) editTA.value = '';
-            toggleEditModal(false);
+
+            const token = getAuthToken();
+            if (!token) {
+                showToast('Login token missing. Please login again.', 'error');
+                return;
+            }
+
+            sendEditBtn.disabled = true;
+            const originalHtml = sendEditBtn.innerHTML;
+            sendEditBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Sending…';
+
+            try {
+                const res = await fetch(EDIT_PROFILE_REQUEST_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({ detail })
+                });
+
+                const data = await res.json().catch(() => null);
+
+                if (!res.ok || (data && data.status === false)) {
+                    showToast((data && data.message) || 'Unable to send edit request.', 'error');
+                    return;
+                }
+
+                showToast((data && data.message) || 'Profile edit request sent successfully.', 'success');
+                if (editTA) editTA.value = '';
+                toggleEditModal(false);
+            } catch (err) {
+                showToast(err.message || 'Network error while sending request.', 'error');
+            } finally {
+                sendEditBtn.disabled = false;
+                sendEditBtn.innerHTML = originalHtml;
+            }
         });
+        /* ----- END FIX ----- */
 
         async function init() {
             const profile = await fetchProfile();

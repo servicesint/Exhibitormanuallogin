@@ -384,6 +384,9 @@ class DashboardController extends BaseController
         }
         $existing = $builder->get()->getRowArray();
         $file = $this->request->getFile('fascia_design');
+
+        $isNewFileUploaded = false;
+
         if ($file && $file->isValid() && !$file->hasMoved()) {
             if (!empty($existing['stall_layout'])) {
                 UploadHelper::delete($existing['stall_layout'], 'fascias');
@@ -391,6 +394,7 @@ class DashboardController extends BaseController
             // SAVE THE FILE PATH TEMPORARILY
             $post['stall_layout'] = UploadHelper::upload($file, 'fascias', 'fascia_design');
             $post['fascia_design_status'] = '1';
+            $isNewFileUploaded = true;
         }
 
         $category = $post['fascia_category'] ?? '';
@@ -425,6 +429,13 @@ class DashboardController extends BaseController
         if ($eventId) {
             $extraData['event_id'] = $eventId;
         }
+
+        // Har naye file upload par status ko 'pending' pe reset karo,
+        // taaki admin ko dubara review karna pade
+        if ($isNewFileUploaded) {
+            $extraData['status'] = 'pending';
+        }
+
         $data = $this->getFasciaTableData($post, $extraData, $tableName);
         if (isset($post['stall_layout'])) {
             $data['stall_layout'] = $post['stall_layout'];
@@ -4819,6 +4830,590 @@ class DashboardController extends BaseController
         }
     }
 
+    public function pending_payments()
+    {
+        $payload    = JwtPayload::get();
+        $vendorId   = $payload->exhibitor_id ?? null;
+        $subEventId = $payload->sub_event_id ?? null;
+
+        if (!$vendorId || !$subEventId) {
+            return $this->response
+                ->setStatusCode(401)
+                ->setJSON([
+                    'status'  => false,
+                    'code'    => 401,
+                    'message' => 'Unauthorized.',
+                    'data'    => null
+                ]);
+        }
+
+        $isInternational = $this->resolveIsInternational($vendorId);
+        $currencySymbol  = $isInternational ? '$' : '₹';
+
+        $fascia = $this->db->table('stall_categories')
+            ->where('exhibitor_id', $vendorId)
+            ->where('sub_event_id', $subEventId)
+            ->orderBy('id', 'DESC')
+            ->get()
+            ->getRow();
+
+        $stallTypeId = (int) ($fascia->stall_type_id ?? 0);
+
+        $isRawSpace   = ($stallTypeId === 2);
+        $isShellSpace = ($stallTypeId === 3);
+
+        if (!$isRawSpace && !$isShellSpace) {
+
+            $hasElectricityInQuotes = $this->db->table('quotes_details qd')
+                ->select('qd.id')
+                ->join('quotes q', 'q.qid = qd.qid')
+                ->join('items i', 'i.id = qd.item_id', 'left')
+                ->where('q.exhibitor_id', $vendorId)
+                ->where('q.event_id', $subEventId)
+                ->where('q.status', 0)
+                ->where('i.is_electricity', 1)
+                ->get()
+                ->getRow();
+
+            $hasElectricityInCart = $this->db->table('cart c')
+                ->select('c.id')
+                ->join('items i', 'i.id = c.item_id', 'left')
+                ->where('c.vendor_id', $vendorId)
+                ->where('c.sub_event_id', $subEventId)
+                ->where('c.is_deleted', 0)
+                ->where('i.is_electricity', 1)
+                ->get()
+                ->getRow();
+
+            $hasFurnitureInQuotes = $this->db->table('quotes_details qd')
+                ->select('qd.id')
+                ->join('quotes q', 'q.qid = qd.qid')
+                ->join('items i', 'i.id = qd.item_id', 'left')
+                ->where('q.exhibitor_id', $vendorId)
+                ->where('q.event_id', $subEventId)
+                ->where('q.status', 0)
+                ->groupStart()
+                ->where('i.is_electricity', null)
+                ->orWhere('i.is_electricity', 0)
+                ->groupEnd()
+                ->get()
+                ->getRow();
+
+            $hasFurnitureInCart = $this->db->table('cart c')
+                ->select('c.id')
+                ->join('items i', 'i.id = c.item_id', 'left')
+                ->where('c.vendor_id', $vendorId)
+                ->where('c.sub_event_id', $subEventId)
+                ->where('c.is_deleted', 0)
+                ->groupStart()
+                ->where('i.is_electricity', null)
+                ->orWhere('i.is_electricity', 0)
+                ->groupEnd()
+                ->get()
+                ->getRow();
+
+            if ($hasElectricityInQuotes || $hasElectricityInCart) {
+                $isRawSpace   = true;
+                $isShellSpace = false;
+            } elseif ($hasFurnitureInQuotes || $hasFurnitureInCart) {
+                $isRawSpace   = false;
+                $isShellSpace = true;
+            }
+        }
+
+        $payments = [
+            'furniture'   => null,
+            'electricity' => null,
+        ];
+
+        $pendingQuotes = $this->db->table('quotes q')
+            ->select('q.id, q.qid, q.currency, q.q_amount, q.amount, q.status, q.ref_no, q.remarks')
+            ->where('q.exhibitor_id', $vendorId)
+            ->where('q.event_id', $subEventId)
+            ->where('q.status', 0)
+            ->orderBy('q.id', 'DESC')
+            ->get()
+            ->getResultArray();
+
+        $furnitureQuote   = null;
+        $electricityQuote = null;
+
+        foreach ($pendingQuotes as $quote) {
+
+            $details = $this->db->table('quotes_details qd')
+                ->select('
+                qd.id,
+                qd.qid,
+                qd.item_id,
+                qd.item_name,
+                qd.quantity,
+                qd.unit_price,
+                qd.sale_price,
+                qd.line_total,
+                qd.is_early_bird,
+                qd.added_date,
+                qd.updated_date,
+                i.item_name AS master_item_name,
+                i.item_image,
+                i.is_electricity
+            ')
+                ->join('items i', 'i.id = qd.item_id', 'left')
+                ->where('qd.qid', $quote['qid'])
+                ->orderBy('qd.id', 'ASC')
+                ->get()
+                ->getResultArray();
+
+            if (empty($details)) {
+                continue;
+            }
+
+            $furnitureItems   = [];
+            $electricityItems = [];
+
+            foreach ($details as $item) {
+
+                $isElectricity = $item['is_electricity'] !== null
+                    && (int) $item['is_electricity'] === 1;
+
+                $item['item_name'] = !empty($item['item_name'])
+                    ? $item['item_name']
+                    : $item['master_item_name'];
+
+                if ($isElectricity) {
+                    $electricityItems[] = $item;
+                } else {
+                    $furnitureItems[] = $item;
+                }
+            }
+
+            if (!empty($electricityItems) && $electricityQuote === null) {
+                $electricityQuote = [
+                    'qid'   => $quote['qid'],
+                    'items' => $electricityItems
+                ];
+            }
+
+            if (!empty($furnitureItems) && $furnitureQuote === null) {
+                $furnitureQuote = [
+                    'qid'   => $quote['qid'],
+                    'items' => $furnitureItems
+                ];
+            }
+
+            if ($furnitureQuote !== null && (!$isRawSpace || $electricityQuote !== null)) {
+                break;
+            }
+        }
+
+        if ($isShellSpace) {
+            $electricityQuote = null;
+        }
+
+        if ($furnitureQuote !== null) {
+
+            $furnitureItems = $furnitureQuote['items'];
+
+            if ($isShellSpace && !empty($furnitureItems)) {
+                $furnitureItems = [end($furnitureItems)];
+            }
+
+            $furnitureSubtotal = 0;
+
+            foreach ($furnitureItems as &$item) {
+
+                $quantity = (int) ($item['quantity'] ?? 1);
+                if ($quantity <= 0) {
+                    $quantity = 1;
+                }
+
+                $unitPrice = (float) ($item['unit_price'] ?? 0);
+                $lineTotal = round($unitPrice * $quantity, 2);
+
+                $item['item_id']        = (int) $item['item_id'];
+                $item['item_name']      = $item['item_name'];
+                $item['quantity']       = $quantity;
+                $item['unit_price']     = $unitPrice;
+                $item['sale_price']     = (float) ($item['sale_price'] ?? $unitPrice);
+                $item['line_total']     = $lineTotal;
+                $item['is_electricity'] = 0;
+
+                $furnitureSubtotal += $lineTotal;
+            }
+            unset($item);
+
+            $payments['furniture'] = [
+                'source'          => 'quotation',
+                'qid'             => $furnitureQuote['qid'],
+                'items'           => array_values($furnitureItems),
+                'subtotal'        => number_format($furnitureSubtotal, 2, '.', ''),
+                'tax'             => number_format($furnitureSubtotal * 0.18, 2, '.', ''),
+                'total'           => number_format($furnitureSubtotal * 1.18, 2, '.', ''),
+                'currency_symbol' => $currencySymbol,
+                'status'          => 'pending'
+            ];
+        }
+
+        if ($isRawSpace && $electricityQuote !== null) {
+
+            $electricityItems = $electricityQuote['items'];
+
+            $electricitySubtotal = 0;
+
+            foreach ($electricityItems as &$item) {
+
+                $quantity = (int) ($item['quantity'] ?? 1);
+                if ($quantity <= 0) {
+                    $quantity = 1;
+                }
+
+                $unitPrice = (float) ($item['unit_price'] ?? 0);
+                $lineTotal = round($unitPrice * $quantity, 2);
+
+                $item['item_id']        = (int) $item['item_id'];
+                $item['item_name']      = $item['item_name'];
+                $item['quantity']       = $quantity;
+                $item['unit_price']     = $unitPrice;
+                $item['sale_price']     = (float) ($item['sale_price'] ?? $unitPrice);
+                $item['line_total']     = $lineTotal;
+                $item['is_electricity'] = 1;
+
+                $electricitySubtotal += $lineTotal;
+            }
+            unset($item);
+
+            $payments['electricity'] = [
+                'source'          => 'quotation',
+                'qid'             => $electricityQuote['qid'],
+                'items'           => array_values($electricityItems),
+                'subtotal'        => number_format($electricitySubtotal, 2, '.', ''),
+                'tax'             => number_format($electricitySubtotal * 0.18, 2, '.', ''),
+                'total'           => number_format($electricitySubtotal * 1.18, 2, '.', ''),
+                'currency_symbol' => $currencySymbol,
+                'status'          => 'pending'
+            ];
+        }
+
+        $needFurnitureFromCart   = ($payments['furniture'] === null);
+        $needElectricityFromCart = ($isRawSpace && $payments['electricity'] === null);
+
+        if ($needFurnitureFromCart || $needElectricityFromCart) {
+
+            $cartItems = $this->db->table('cart c')
+                ->select('
+                c.id,
+                c.item_id,
+                c.quantity,
+                c.price,
+                c.original_price,
+                c.is_early_bird,
+                i.item_name,
+                i.item_image,
+                i.is_electricity
+            ')
+                ->join('items i', 'i.id = c.item_id', 'left')
+                ->where('c.vendor_id', $vendorId)
+                ->where('c.sub_event_id', $subEventId)
+                ->where('c.is_deleted', 0)
+                ->where('i.is_deleted', 0)
+                ->orderBy('c.id', 'ASC')
+                ->get()
+                ->getResultArray();
+
+            $furnitureItems   = [];
+            $electricityItems = [];
+
+            foreach ($cartItems as $item) {
+                if ($item['is_electricity'] !== null && (int) $item['is_electricity'] === 1) {
+                    $electricityItems[] = $item;
+                } else {
+                    $furnitureItems[] = $item;
+                }
+            }
+
+            if ($isShellSpace) {
+                $electricityItems = [];
+                if (!empty($furnitureItems)) {
+                    $furnitureItems = [end($furnitureItems)];
+                }
+            }
+
+            if ($needFurnitureFromCart && !empty($furnitureItems)) {
+
+                $subtotal = 0;
+
+                foreach ($furnitureItems as &$item) {
+                    $quantity = (int) ($item['quantity'] ?? 1);
+                    $price    = (float) ($item['price'] ?? 0);
+
+                    $item['item_id']        = (int) $item['item_id'];
+                    $item['quantity']       = $quantity;
+                    $item['unit_price']     = $price;
+                    $item['sale_price']     = (float) ($item['original_price'] ?? $price);
+                    $item['is_electricity'] = 0;
+                    $item['line_total']     = round($price * $quantity, 2);
+
+                    $subtotal += $item['line_total'];
+                }
+                unset($item);
+
+                $payments['furniture'] = [
+                    'source'          => 'cart',
+                    'items'           => array_values($furnitureItems),
+                    'subtotal'        => number_format($subtotal, 2, '.', ''),
+                    'tax'             => number_format($subtotal * 0.18, 2, '.', ''),
+                    'total'           => number_format($subtotal * 1.18, 2, '.', ''),
+                    'currency_symbol' => $currencySymbol,
+                    'status'          => 'pending'
+                ];
+            }
+
+            if ($needElectricityFromCart && !empty($electricityItems)) {
+
+                $subtotal = 0;
+
+                foreach ($electricityItems as &$item) {
+                    $quantity = (int) ($item['quantity'] ?? 1);
+                    $price    = (float) ($item['price'] ?? 0);
+
+                    $item['item_id']        = (int) $item['item_id'];
+                    $item['quantity']       = $quantity;
+                    $item['unit_price']     = $price;
+                    $item['is_electricity'] = 1;
+                    $item['line_total']     = round($price * $quantity, 2);
+
+                    $subtotal += $item['line_total'];
+                }
+                unset($item);
+
+                $payments['electricity'] = [
+                    'source'          => 'cart',
+                    'items'           => array_values($electricityItems),
+                    'subtotal'        => number_format($subtotal, 2, '.', ''),
+                    'tax'             => number_format($subtotal * 0.18, 2, '.', ''),
+                    'total'           => number_format($subtotal * 1.18, 2, '.', ''),
+                    'currency_symbol' => $currencySymbol,
+                    'status'          => 'pending'
+                ];
+            }
+        }
+
+        return $this->response
+            ->setStatusCode(200)
+            ->setJSON([
+                'status'  => true,
+                'code'    => 200,
+                'message' => 'Pending payments fetched.',
+                'data'    => [
+                    'stall_type'      => $isRawSpace ? 'raw' : ($isShellSpace ? 'shell' : 'unknown'),
+                    'is_raw_space'    => $isRawSpace,
+                    'currency_symbol' => $currencySymbol,
+                    'payments'        => $payments
+                ]
+            ]);
+    }
+    public function editRequest()
+    {
+        $jwt = $this->getJwtContext();
+
+        $exhibitorContactId = $jwt['vendorId'] ?? null;
+        $exhibitorId        = $jwt['exhibitor_id'] ?? null;
+        $subEventId         = $jwt['subEventId'] ?? null;
+
+        if (!$exhibitorContactId || !$exhibitorId) {
+            return $this->response->setJSON([
+                'status'  => false,
+                'message' => 'Unauthorized.',
+            ])->setStatusCode(401);
+        }
+
+        $data   = $this->request->getJSON(true);
+        $detail = trim($data['detail'] ?? '');
+
+        if ($detail === '') {
+            return $this->response->setJSON([
+                'status'  => false,
+                'message' => 'Detail is required.',
+            ])->setStatusCode(422);
+        }
+
+        $exhibitor = $this->db->table('exhibitor_contact_persons as ecp')
+            ->join('exhibitors as e', 'e.id = ecp.exhibitor_id', 'left')
+            ->select('e.organisation_name, e.brand_name, ecp.first_name, ecp.last_name, ecp.email, ecp.country_code, ecp.mobile_number')
+            ->where('ecp.id', $exhibitorContactId)
+            ->get()
+            ->getRowArray();
+
+        if (!$exhibitor) {
+            return $this->response->setJSON([
+                'status'  => false,
+                'message' => 'Exhibitor not found.',
+            ])->setStatusCode(404);
+        }
+
+        $contactPerson = trim(($exhibitor['first_name'] ?? '') . ' ' . ($exhibitor['last_name'] ?? ''));
+        $contactNumber = trim(($exhibitor['country_code'] ?? '') . ' ' . ($exhibitor['mobile_number'] ?? ''));
+        $contactEmail  = $exhibitor['email'] ?? '';
+
+        $setupRow = $this->db->table('manual_setups')
+            ->select('notification_email')
+            ->where('sub_event_id', $subEventId)
+            ->get()
+            ->getRowArray();
+
+        $recipients = [];
+
+        if (!empty($setupRow['notification_email'])) {
+            $recipients = array_filter(
+                array_map('trim', explode(',', $setupRow['notification_email']))
+            );
+
+            $recipients = array_values(
+                array_filter(
+                    $recipients,
+                    fn($email) => filter_var($email, FILTER_VALIDATE_EMAIL)
+                )
+            );
+        }
+
+        if (empty($recipients)) {
+            log_message(
+                'warning',
+                'No valid notification_email found in manual_setup for sub_event_id: ' . $subEventId
+            );
+
+            return $this->response->setJSON([
+                'status'  => false,
+                'message' => 'Request could not be sent: no notification recipients configured.',
+            ])->setStatusCode(500);
+        }
+
+        $subject = 'Profile Edit Request — ' .
+            ($exhibitor['organisation_name'] ?? $exhibitor['brand_name'] ?? 'Exhibitor');
+
+        $htmlBody = "
+<div style='font-family: \"Segoe UI\", Arial, sans-serif; background-color: #f4f6f8; padding: 30px 0; margin: 0;'>
+  <table role='presentation' width='100%' cellpadding='0' cellspacing='0' style='max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08);'>
+
+    <!-- Header -->
+    <tr>
+      <td style='background-color: #1a2b49; padding: 24px 32px;'>
+        <h1 style='color: #ffffff; font-size: 20px; margin: 0; font-weight: 600;'>Exhibitor Change Request</h1>
+      </td>
+    </tr>
+
+    <!-- Body -->
+    <tr>
+      <td style='padding: 32px;'>
+
+        <table role='presentation' width='100%' cellpadding='0' cellspacing='0' style='margin-bottom: 24px;'>
+          <tr>
+            <td style='padding: 8px 0; color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; width: 160px;'>Organisation</td>
+            <td style='padding: 8px 0; color: #111827; font-size: 15px; font-weight: 500;'>" . htmlspecialchars($exhibitor['organisation_name'] ?? '') . "</td>
+          </tr>
+          <tr>
+            <td style='padding: 8px 0; color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;'>Brand</td>
+            <td style='padding: 8px 0; color: #111827; font-size: 15px; font-weight: 500;'>" . htmlspecialchars($exhibitor['brand_name'] ?? '') . "</td>
+          </tr>
+          <tr>
+            <td style='padding: 8px 0; color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; vertical-align: top;'>Contact Person</td>
+            <td style='padding: 8px 0; color: #111827; font-size: 15px;'>
+              <span style='font-weight: 500;'>" . htmlspecialchars($contactPerson) . "</span><br>
+              <span style='color: #4b5563; font-size: 14px;'>" . htmlspecialchars($contactEmail) . " &bull; " . htmlspecialchars($contactNumber) . "</span>
+            </td>
+          </tr>
+        </table>
+
+        <div style='border-top: 1px solid #e5e7eb; padding-top: 20px;'>
+          <p style='margin: 0 0 10px 0; color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;'>Requested Change</p>
+          <div style='background-color: #f9fafb; border-left: 3px solid #1a2b49; padding: 16px 18px; border-radius: 4px; color: #111827; font-size: 15px; line-height: 1.6;'>
+            " . nl2br(htmlspecialchars($detail)) . "
+          </div>
+        </div>
+
+      </td>
+    </tr>
+
+    <!-- Footer -->
+    <tr>
+      <td style='background-color: #f9fafb; padding: 18px 32px; border-top: 1px solid #e5e7eb;'>
+        <p style='margin: 0; color: #9ca3af; font-size: 12px;'>This is an automated notification regarding an exhibitor profile change request.</p>
+      </td>
+    </tr>
+
+  </table>
+</div>
+";
+
+        $failedRecipients = [];
+        $errors = [];
+
+        foreach ($recipients as $recipientEmail) {
+            try {
+                $ok = sendEmail(
+                    toEmail: $recipientEmail,
+                    toName: $recipientEmail,
+                    subject: $subject,
+                    htmlBody: $htmlBody
+                );
+
+                if (!$ok) {
+                    $failedRecipients[] = $recipientEmail;
+                    $errors[] = [
+                        'recipient' => $recipientEmail,
+                        'message'   => 'Email sending failed.',
+                    ];
+                }
+            } catch (\Throwable $e) {
+                $failedRecipients[] = $recipientEmail;
+
+                $errors[] = [
+                    'recipient' => $recipientEmail,
+                    'message'   => $e->getMessage(),
+                    'error'     => $e->getFile() . ':' . $e->getLine(),
+                ];
+
+                log_message(
+                    'error',
+                    'Edit request email exception for ' . $recipientEmail . ': ' . $e->getMessage()
+                );
+            }
+        }
+
+        if (count($failedRecipients) === count($recipients)) {
+            log_message(
+                'error',
+                'Edit request email failed for all recipients: ' .
+                    implode(', ', $failedRecipients)
+            );
+
+            return $this->response->setJSON([
+                'status'            => false,
+                'message'           => 'Email failed for all recipients.',
+                'failed_recipients' => $failedRecipients,
+                'errors'            => $errors,
+            ])->setStatusCode(500);
+        }
+
+        if (!empty($failedRecipients)) {
+            log_message(
+                'warning',
+                'Edit request email failed for some recipients: ' .
+                    implode(', ', $failedRecipients)
+            );
+
+            return $this->response->setJSON([
+                'status'            => true,
+                'message'           => 'Profile edit request sent successfully to some recipients.',
+                'failed_recipients' => $failedRecipients,
+                'errors'            => $errors,
+            ]);
+        }
+
+        return $this->response->setJSON([
+            'status'  => true,
+            'message' => 'Profile edit request sent successfully.',
+        ]);
+    }
     private function compactPdfHtml(string $html): string
     {
         $compactCss = <<<CSS

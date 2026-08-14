@@ -113,8 +113,9 @@
 .badge-date strong{font-weight:700}
 .fascia-preview-block{margin-top:12px;display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap}
 .preview-wrap{position:relative;display:inline-block;flex-shrink:0}
-.rejection-reason-box{margin-top:0;padding:10px 14px;background:#fdf3f2;border:1px solid #f2c9c5;border-radius:10px;color:#9c3a32;font-size:0.84rem;line-height:1.5;display:none;flex:1 1 280px;max-width:320px}
+.rejection-reason-box{margin-top:0;padding:10px 14px;background:#fdf3f2;border:1px solid #f2c9c5;border-radius:10px;color:#9c3a32;font-size:0.84rem;line-height:1.5;display:none;flex:1 1 280px;}
 .rejection-reason-box strong{display:block;margin-bottom:3px;font-weight:700}
+.rejection-reason-box .view-more-reason{color:#c4574f;font-weight:700;text-decoration:underline;cursor:pointer;margin-left:4px;white-space:nowrap}
 .pay-now-confirm{text-align:left;padding:8px 0}
 .pay-now-confirm .detail-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0f0f0}
 .pay-now-confirm .detail-row:last-child{border-bottom:none;font-weight:700;font-size:1.05rem;padding-top:8px;border-top:2px solid #4a72b8}
@@ -1159,6 +1160,23 @@ $(function() {
         }
     }
 
+    function truncateWords(text, wordLimit) {
+        if (!text) return '';
+        const words = text.trim().split(/\s+/);
+        if (words.length <= wordLimit) return text;
+        return words.slice(0, wordLimit).join(' ') + '…';
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        return String(text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
     function showRejectionReason(
         status,
         reason,
@@ -1192,16 +1210,107 @@ $(function() {
             '';
 
         if (finalReason) {
+            const wordCount = finalReason.trim().split(/\s+/).length;
+            const shortReason = truncateWords(finalReason, 15);
+            const needsViewMore = wordCount > 15;
+
+            let html =
+                `<strong>Rejection Reason:</strong>` +
+                `<span class="rejection-reason-text">${escapeHtml(shortReason)}</span>`;
+
+            if (needsViewMore) {
+                html +=
+                    `<a href="#" class="view-more-reason" data-full-reason="${escapeHtml(finalReason)}">View more</a>`;
+            }
+
             $reasonBox
-                .html(
-                    `<strong>Rejection Reason:</strong>${finalReason}`
-                )
+                .html(html)
                 .show();
         } else {
             $reasonBox
                 .hide()
                 .empty();
         }
+    }
+
+    $(document).on('click', '.view-more-reason', function(e) {
+        e.preventDefault();
+
+        const fullReason = $(this).attr('data-full-reason') || '';
+
+        Swal.fire({
+            icon: 'error',
+            title: 'Rejection Reason',
+            text: fullReason,
+            confirmButtonText: 'Close',
+            confirmButtonColor: '#4a72b8'
+        });
+    });
+
+    function showElectricityConfirmation(
+        quantity,
+        rate,
+        total,
+        exhibitorType
+    ) {
+        const normalizedType =
+            normalizeExhibitorType(
+                exhibitorType
+            ) || EXHIBITOR_TYPE;
+
+        const currency =
+            getCurrencyConfig(
+                normalizedType
+            );
+
+        const formattedRate =
+            `${currency.symbol}${parseFloat(rate).toFixed(2)}`;
+
+        const formattedTotal =
+            `${currency.symbol}${parseFloat(total).toFixed(2)}`;
+
+        const html = `
+            <div class="pay-now-confirm">
+                <div class="detail-row">
+                    <span class="label">Quantity</span>
+                    <span class="value">${quantity} KW</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Rate per KW</span>
+                    <span class="value">${formattedRate}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Total Amount</span>
+                    <span class="value">${formattedTotal}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Currency</span>
+                    <span class="value">${currency.code}</span>
+                </div>
+            </div>
+        `;
+
+        Swal.fire({
+            icon: 'success',
+            title: 'Details Submitted Successfully!',
+            html: html,
+            showDenyButton: true,
+            confirmButtonText: 'Pay Now',
+            denyButtonText: 'Pay Later',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            width: '480px',
+            customClass: {
+                popup: 'fascia-swal-popup'
+            }
+        }).then(function(result) {
+            if (result.isConfirmed) {
+                window.location.href =
+                    getCartPageUrl();
+            } else {
+                location.reload();
+            }
+        });
     }
 
     function getUrlScheme() {
@@ -1584,72 +1693,6 @@ $(function() {
                 renderFasciaNotes(
                     response?.raw_text || ''
                 );
-            }
-        });
-    }
-
-    function showElectricityConfirmation(
-        quantity,
-        rate,
-        total,
-        exhibitorType
-    ) {
-        const normalizedType =
-            normalizeExhibitorType(
-                exhibitorType
-            ) || EXHIBITOR_TYPE;
-
-        const currency =
-            getCurrencyConfig(
-                normalizedType
-            );
-
-        const formattedRate =
-            `${currency.symbol}${parseFloat(rate).toFixed(2)}`;
-
-        const formattedTotal =
-            `${currency.symbol}${parseFloat(total).toFixed(2)}`;
-
-        const html = `
-            <div class="pay-now-confirm">
-                <div class="detail-row">
-                    <span class="label">Quantity</span>
-                    <span class="value">${quantity} KW</span>
-                </div>
-                <div class="detail-row">
-                    <span class="label">Rate per KW</span>
-                    <span class="value">${formattedRate}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="label">Total Amount</span>
-                    <span class="value">${formattedTotal}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="label">Currency</span>
-                    <span class="value">${currency.code}</span>
-                </div>
-            </div>
-        `;
-
-        Swal.fire({
-            icon: 'success',
-            title: 'Details Submitted Successfully!',
-            html: html,
-            showDenyButton: true,
-            confirmButtonText: 'Pay Now',
-            denyButtonText: 'Pay Later',
-            allowOutsideClick: false,
-            allowEscapeKey: false,
-            width: '480px',
-            customClass: {
-                popup: 'fascia-swal-popup'
-            }
-        }).then(function(result) {
-            if (result.isConfirmed) {
-                window.location.href =
-                    getCartPageUrl();
-            } else {
-                location.reload();
             }
         });
     }
