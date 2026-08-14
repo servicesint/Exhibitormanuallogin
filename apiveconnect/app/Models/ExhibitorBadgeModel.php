@@ -407,7 +407,7 @@ class ExhibitorBadgeModel extends Model
         // Gradient always takes priority over image (see resolveExhibitorBadgeBackground()).
         $backgroundBase64 = $this->resolveExhibitorBadgeBackground($theme);
 
-        $uniqueValue = 'EXBTR_' . (string) $badge['id'];
+        $uniqueValue = 'EXBTR' . (string) $badge['id'];
         $qrBase64 = $this->generateQrBase64(
             $uniqueValue
         );
