@@ -37,14 +37,13 @@ class OrderModel extends Model
         'paid_at',
         'created_at',
         'updated_at',
+        'ex_created_by',
     ];
 
-    public function createOrderFromCart(int $vendorId, int $subEventId, array $cartItems, array $totals, bool $isInternational, array $extra = []): ?int
+    public function createOrderFromCart(int $vendorId, int $exhbitior_contact_person, int $subEventId, array $cartItems, array $totals, bool $isInternational, array $extra = []): ?int
     {
         $this->db->transStart();
-
         $orderNumber = $this->generateOrderNumber();
-
         $orderId = $this->insert([
             'order_number'      => $orderNumber,
             'exhibitor_id'      => $vendorId,
@@ -59,6 +58,7 @@ class OrderModel extends Model
             'quotation_amount'  => $extra['quotation_amount']  ?? null,
             'order_status'      => 'pending',
             'created_at'        => date('Y-m-d H:i:s'),
+            'ex_created_by'        => $exhbitior_contact_person,
         ]);
 
         if (!$orderId) {
