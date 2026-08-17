@@ -471,7 +471,7 @@ if (stripos($referralWebsite, 'drone') !== false) {
             </div>
         </div>
         <h2 class="login-title">Login</h2>
-        <p class="login-subtitle">Send a OTP to your registered email or mobile number.</p>
+        <!-- <p class="login-subtitle">Send a OTP to your registered email or mobile number.</p> -->
 
         <form id="otpLoginForm" autocomplete="off">
             <?= csrf_field() ?>
