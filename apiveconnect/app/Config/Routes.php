@@ -68,6 +68,6 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'jwt
     $routes->post('dashboard/furniture-opt-out', 'DashboardController::furnitureOptOut');
     $routes->get('orders/pending', 'DashboardController::getPendingOrders');
     $routes->get('dashboard/download_quotation/(:segment)', 'DashboardController::download_quotation/$1');
-    // $routes->get('dashboard/pending-payments', 'DashboardController::pending_payments');
+    $routes->get('dashboard/pending-payments', 'DashboardController::pending_payments');
     $routes->post('dashboard/profile/edit-request', 'DashboardController::editRequest');
 });

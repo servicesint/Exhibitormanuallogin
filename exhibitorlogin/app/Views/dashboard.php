@@ -8,9 +8,9 @@
         </div>
     </div>
 
-    <!-- <div class="pending-payments-wrapper" style="max-width:900px; margin:20px auto; padding:0 20px;">
+    <div class="pending-payments-wrapper" style="max-width:900px; margin:20px auto; padding:0 20px;">
         <div id="pendingPaymentsContainer"></div>
-    </div> -->
+    </div>
 </div>
 
 <style>
