@@ -955,6 +955,9 @@
                 return;
             }
             const url = `${BADGE_API_BASE_URL}/v1/exhibitor-badges/${encodeURIComponent(encryptedId)}/download`;
+
+            if (window.showLoader) window.showLoader('Preparing badge download…');
+
             try {
                 const response = await fetch(url, {
                     method: 'GET',
@@ -990,6 +993,8 @@
             } catch (error) {
                 console.error(error);
                 showToast('Network error while downloading badge.', 'danger');
+            } finally {
+                if (window.hideLoader) window.hideLoader();
             }
         }
 

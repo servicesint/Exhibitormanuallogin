@@ -251,8 +251,6 @@
         .form-closed-message .text-muted {
             color: #6c757d;
         }
-
-        /* Disabled button styles */
         button[type="submit"]:disabled,
         input[type="submit"]:disabled,
         .btn-submit.disabled,
@@ -274,6 +272,43 @@
             cursor: not-allowed;
             pointer-events: none;
         }
+        #globalLoaderOverlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.6);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #globalLoaderOverlay.active {
+            display: flex;
+        }
+
+        #globalLoaderOverlay .global-loader-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            background: #fff;
+            padding: 20px 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        #globalLoaderOverlay .spinner-border {
+            width: 2.5rem;
+            height: 2.5rem;
+        }
+
+        #globalLoaderOverlay .global-loader-text {
+            font-size: 14px;
+            color: #333;
+        }
     </style>
 </head>
  
@@ -291,10 +326,6 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
 <body class="theme-<?= esc($referralTheme) ?>">
     <script>
         (function() {
-            // Theme is driven entirely by the `referral_website` value in
-            // localStorage (set when the exhibitor arrives via /drone/ or
-            // /fireindia/). Applied here, first thing in <body>, so it's
-            // set before anything else paints.
             function detectTheme(value) {
                 var v = String(value || '').toLowerCase();
                 if (v.indexOf('drone') !== -1) return 'drone';
@@ -308,18 +339,24 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
                 body.classList.remove('theme-drone', 'theme-fireindia', 'theme-default');
                 body.classList.add('theme-' + theme);
             } catch (e) {
-                // localStorage unavailable (privacy mode etc.) - keep default.
             }
         })();
     </script>
+    <div id="globalLoaderOverlay">
+        <div class="global-loader-box">
+            <span class="spinner-border text-primary" role="status" aria-hidden="true"></span>
+            <span class="global-loader-text" id="globalLoaderText">Please wait…</span>
+        </div>
+    </div>
+
     <div class="wrapper">
         <div id="sidebar" class="sidebar d-flex flex-column">
-            <ul class="nav flex-column">
+            <ul class="nav flex-column" id="sidebarMenuList">
                 <li class="nav-item"><a class="nav-link active" href="<?= base_url('dashboard'); ?>"><i class="bi bi-house"></i><span class="nav-text">My Account</span></a></li>
                 <li class="nav-item"><a class="nav-link" href="<?= base_url('profile'); ?>"><i class="bi bi-people"></i><span class="nav-text">Profile</span><span id="status-profile" class="status-circle pending"><i class="bi bi-x-lg"></i></span></a></li>
                 <li class="nav-item" id="casualGstNavItem" style="display:none;"><a class="nav-link" href="<?= base_url('casual-gst'); ?>"><i class="bi bi-file-earmark-text"></i><span class="nav-text">Casual GST Details</span><span id="status-casual_gst" class="status-circle pending"><i class="bi bi-x-lg"></i></span></a></li>
                 <li id="fasciaNavItem" style="display:none;"><a class="nav-link" href="#" id="fasciaNavLink"><i class="bi bi-card-text"></i><span class="nav-text" id="fasciaNavText">Fascias</span><span id="status-fascia" class="status-circle pending"><i class="bi bi-x-lg"></i></span></a></li>
-                <li id="referenceImageNavItem"><a class="nav-link" href="<?= base_url('reference-image'); ?>"><i class="bi bi-image"></i><span class="nav-text">Reference Image</span></a></li>
+                <li id="referenceImageNavItem" style="display:none;"><a class="nav-link" href="<?= base_url('reference-image'); ?>"><i class="bi bi-image"></i><span class="nav-text">Reference Image</span></a></li>
                 <li id="additionalFurnitureNavItem" style="display:none;"><a class="nav-link" href="<?= base_url('additional-furniture'); ?>"><i class="bi bi-cart4"></i><span class="nav-text">Additional Furnitures</span><span id="status-additional_furniture" class="status-circle pending"><i class="bi bi-x-lg"></i></span></a></li>
                 <li id="exhibitorBadgesNavItem" style="display:none;"><a class="nav-link" href="<?= base_url('exhibitor-badges'); ?>"><i class="bi bi-person-badge"></i><span class="nav-text">Exhibitor Badges</span><span id="status-exhibitor_badges" class="status-circle pending"><i class="bi bi-x-lg"></i></span></a></li>
                 <li id="visitorInvitationNavItem" style="display:none;"><a class="nav-link" href="<?= base_url('visitor-invitation'); ?>"><i class="bi bi-person-badge"></i><span class="nav-text">Visitor Invitation</span><span id="status-visitor_ticket_requests" class="status-circle pending"><i class="bi bi-x-lg"></i></span></a></li>
@@ -409,6 +446,58 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
                 alert(message);
             }
         }
+        (function() {
+            let activeCount = 0;
+            const overlay = document.getElementById('globalLoaderOverlay');
+            const textEl = document.getElementById('globalLoaderText');
+
+            window.showLoader = function(message) {
+                activeCount++;
+                if (textEl) textEl.textContent = message || 'Please wait…';
+                if (overlay) overlay.classList.add('active');
+            };
+
+            window.hideLoader = function() {
+                activeCount = Math.max(0, activeCount - 1);
+                if (activeCount === 0 && overlay) {
+                    overlay.classList.remove('active');
+                }
+            };
+            window.forceHideLoader = function() {
+                activeCount = 0;
+                if (overlay) overlay.classList.remove('active');
+            };
+            window.fetchWithLoader = async function(url, options, message) {
+                window.showLoader(message);
+                try {
+                    return await fetch(url, options);
+                } finally {
+                    window.hideLoader();
+                }
+            };
+        })();
+        (function() {
+            const LOADER_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];
+            const originalFetch = window.fetch.bind(window);
+            window.fetch = function(input, init) {
+                init = init || {};
+                const method = (init.method || 'GET').toUpperCase();
+
+                let shouldShowLoader = LOADER_METHODS.includes(method);
+                if (typeof init.showLoader === 'boolean') {
+                    shouldShowLoader = init.showLoader;
+                }
+
+                if (!shouldShowLoader) {
+                    return originalFetch(input, init);
+                }
+
+                window.showLoader(init.loaderMessage);
+                return originalFetch(input, init).finally(function() {
+                    window.hideLoader();
+                });
+            };
+        })();
 
         function clearAllCookies() {
             document.cookie.split(';').forEach(cookie => {
@@ -429,6 +518,7 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
                 xhrFields: {
                     responseType: 'blob'
                 },
+                loaderMessage: 'Preparing your download…',
                 headers: {
                     Authorization: 'Bearer ' + token
                 },
@@ -917,6 +1007,7 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
                 if (token) {
                     await fetch(ENDPOINTS.logout, {
                         method: 'POST',
+                        loaderMessage: 'Logging out…',
                         headers: {
                             'Authorization': 'Bearer ' + token,
                             'Accept': 'application/json'
@@ -961,10 +1052,9 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
                 if (logoutBtn) {
                     logoutBtn.addEventListener('click', handleLogout);
                 }
-                setTimeout(() => {
-                    applyOnlineFormsOverride();
-                    if (profile) applyVisitorInvitationVisibility(profile);
-                }, 200);
+                applyOnlineFormsOverride();
+                if (profile) applyVisitorInvitationVisibility(profile);
+
                 window.__layoutConfigReady = true;
                 document.dispatchEvent(new CustomEvent('layoutConfigReady'));
             } catch (error) {
@@ -1007,6 +1097,28 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
         }
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script>
+        (function() {
+            const LOADER_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];
+            jQuery(document).ajaxSend(function(event, jqXHR, settings) {
+                const method = (settings.type || settings.method || 'GET').toUpperCase();
+                const isBlobDownload = settings.xhrFields && settings.xhrFields.responseType === 'blob';
+                const shouldShowLoader = settings.showLoader !== undefined
+                    ? settings.showLoader
+                    : (LOADER_METHODS.includes(method) || isBlobDownload);
+
+                settings._loaderShown = shouldShowLoader;
+                if (shouldShowLoader && window.showLoader) {
+                    window.showLoader(settings.loaderMessage);
+                }
+            });
+            jQuery(document).ajaxComplete(function(event, jqXHR, settings) {
+                if (settings._loaderShown && window.hideLoader) {
+                    window.hideLoader();
+                }
+            });
+        })();
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jquery-validation@1.19.5/dist/jquery.validate.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jquery-validation@1.19.5/dist/additional-methods.min.js"></script>

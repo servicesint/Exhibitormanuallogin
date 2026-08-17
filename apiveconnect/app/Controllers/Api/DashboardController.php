@@ -645,11 +645,31 @@ class DashboardController extends BaseController
         $isInternational = $resolved['is_international'];
 
         $currencySymbol  = $isInternational ? '$' : '₹';
+
+        $exhibitor = $this->db->table('exhibitors as e')
+            ->select('st.stall_type as stall_type_name')
+            ->join('stall_types as st', 'st.id = e.stall_type_id', 'left')
+            ->where('e.id', $exhibitor_id)
+            ->get()
+            ->getRow();
+
+        $stallTypeName = strtolower(trim($exhibitor->stall_type_name ?? ''));
+        $isShellSpace  = str_contains($stallTypeName, 'shell');
+
         try {
-            $items = $this->db->table('items')
-                ->select('id, item_name, item_image, early_bird_date, early_bird_price_inr, early_bird_price_usd, sale_price_inr, sale_price_usd, description')
+            $builder = $this->db->table('items')
+                ->select('id, item_name, item_image, early_bird_date, early_bird_price_inr, early_bird_price_usd, sale_price_inr, sale_price_usd, description, is_electricity')
                 ->where('sub_event_id', $subEventId)
-                ->where('is_deleted', 0)
+                ->where('is_deleted', 0);
+
+            if ($isShellSpace) {
+                $builder->groupStart()
+                    ->where('is_electricity', null)
+                    ->orWhere('is_electricity', 0)
+                    ->groupEnd();
+            }
+
+            $items = $builder
                 ->orderBy('item_name', 'ASC')
                 ->get()
                 ->getResultArray();
@@ -673,7 +693,8 @@ class DashboardController extends BaseController
                 'price'         => $price,
                 'sale_price'    => $salePrice,
                 'is_early_bird' => $isEarlyBird,
-                'description' => $item['description'],
+                'description'   => $item['description'],
+                'is_electricity' => (int) ($item['is_electricity'] ?? 0),
             ];
         }, $items);
         return $this->response
@@ -1118,7 +1139,7 @@ class DashboardController extends BaseController
 
     public function update_quotation()
     {
-        $payload  = JwtPayload::get();
+        $payload      = JwtPayload::get();
         $exhibitor_id = $payload->exhibitor_id ?? null;
 
         if (!$exhibitor_id) {
@@ -1126,6 +1147,7 @@ class DashboardController extends BaseController
                 ->setStatusCode(401)
                 ->setJSON(['status' => false, 'code' => 401, 'message' => 'Unauthorized.', 'data' => null]);
         }
+
         $contentType = $this->request->getHeaderLine('Content-Type');
         $input = str_contains($contentType, 'application/json')
             ? ($this->request->getJSON(true) ?? [])
@@ -1154,14 +1176,20 @@ class DashboardController extends BaseController
                 ->where('exhibitor_id', $exhibitor_id)
                 ->get()
                 ->getRow();
+
             if (!$quote) {
                 return $this->response
                     ->setStatusCode(404)
                     ->setJSON(['status' => false, 'code' => 404, 'message' => 'Quotation not found.', 'data' => null]);
             }
+
+            $finalAmount = $amountTransfer ?? $quote->amount;
+
+            $this->db->transBegin();
+
             $updateData = [
                 'ref_no'       => $referenceNo,
-                'amount'       => $amountTransfer ?? $quote->amount,
+                'amount'       => $finalAmount,
                 'remarks'      => $reason,
                 'status'       => 2,
                 'updated_date' => date('Y-m-d H:i:s')
@@ -1171,6 +1199,72 @@ class DashboardController extends BaseController
                 ->where('exhibitor_id', $exhibitor_id)
                 ->update($updateData);
 
+            // ---- Create the order + order_items records for this NEFT payment ----
+            $subEventId      = $quote->event_id ?? null;
+            $isInternational = $this->resolveIsInternational((int) $exhibitor_id);
+            $currency        = $isInternational ? 'USD' : 'INR';
+
+            $subtotal = (float) $quote->q_amount;
+            $total    = (float) $finalAmount;
+            $tax      = round($total - $subtotal, 2);
+            if ($tax < 0) {
+                $tax = 0;
+            }
+
+            $orderNumber = 'ORD-' . $qid . '-' . time();
+
+            $orderData = [
+                'order_number'           => $orderNumber,
+                'exhibitor_id'           => $exhibitor_id,
+                'sub_event_id'           => $subEventId,
+                'subtotal'               => $subtotal,
+                'tax'                    => $tax,
+                'total'                  => $total,
+                'currency'               => $currency,
+                'is_international'       => $isInternational ? 1 : 0,
+                'payment_method'         => 'neft',
+                'payment_status'         => 'pending',
+                'payment_reference'      => $referenceNo,
+                'quotation_amount'       => $quote->amount,
+                'amount_transferred'     => $amountTransfer,
+                'reason_for_difference'  => $reason,
+                'order_status'           => 'pending',
+                'created_at'             => date('Y-m-d H:i:s'),
+                'updated_at'             => date('Y-m-d H:i:s'),
+            ];
+
+            $orderInserted = $this->db->table('orders')->insert($orderData);
+            if (!$orderInserted) {
+                $this->db->transRollback();
+                return $this->response
+                    ->setStatusCode(500)
+                    ->setJSON(['status' => false, 'code' => 500, 'message' => 'Failed to create order record.', 'data' => null]);
+            }
+
+            $orderId = $this->db->insertID();
+
+            $quoteDetails = $this->db->table('quotes_details')
+                ->where('qid', $qid)
+                ->get()
+                ->getResultArray();
+
+            foreach ($quoteDetails as $detail) {
+                $orderItemData = [
+                    'order_id'     => $orderId,
+                    'order_number' => $orderNumber,
+                    'item_id'      => $detail['item_id'] ?? 0,
+                    'item_name'    => $detail['item_name'] ?? '',
+                    'item_image'   => $detail['item_image'] ?? null,
+                    'unit_price'   => $detail['unit_price'] ?? 0,
+                    'quantity'     => $detail['quantity'] ?? 1,
+                    'line_total'   => $detail['line_total'] ?? 0,
+                    'created_at'   => date('Y-m-d H:i:s'),
+                ];
+                $this->db->table('order_items')->insert($orderItemData);
+            }
+
+            $this->db->transCommit();
+
             return $this->response
                 ->setStatusCode(200)
                 ->setJSON([
@@ -1178,13 +1272,16 @@ class DashboardController extends BaseController
                     'code'    => 200,
                     'message' => 'NEFT transfer saved successfully.',
                     'data'    => [
-                        'qid'        => $qid,
-                        'ref_no'     => $referenceNo,
-                        'amount'     => $amountTransfer ?? $quote->amount,
-                        'status'     => 2
+                        'qid'          => $qid,
+                        'ref_no'       => $referenceNo,
+                        'amount'       => $finalAmount,
+                        'status'       => 2,
+                        'order_id'     => $orderId,
+                        'order_number' => $orderNumber,
                     ]
                 ]);
         } catch (\Exception $e) {
+            $this->db->transRollback();
             log_message('error', 'NEFT transfer error: ' . $e->getMessage());
             return $this->response
                 ->setStatusCode(500)
@@ -1252,7 +1349,7 @@ class DashboardController extends BaseController
         $payload    = JwtPayload::get();
         $vendorId   = $payload->exhibitor_id ?? null;
         $subEventId = $payload->sub_event_id ?? null;
-
+        $exhbitior_contact_person = $payload->sub ?? null;
         if (!$vendorId || !$subEventId) {
             return $this->response
                 ->setStatusCode(401)
@@ -1263,18 +1360,13 @@ class DashboardController extends BaseController
                     'data'    => null,
                 ]);
         }
-
         $input = $this->getInput();
-
         $isInternational = $this->resolveIsInternational($vendorId);
-
         $currency = $isInternational
             ? (getenv('RAZORPAY_INTERNATIONAL_CURRENCY') ?: 'USD')
             : (getenv('RAZORPAY_DOMESTIC_CURRENCY') ?: 'INR');
-
         $cartModel = new CartModel();
         $items = $cartModel->getItems($vendorId, $isInternational);
-
         if (empty($items)) {
             return $this->response
                 ->setStatusCode(422)
@@ -1285,17 +1377,14 @@ class DashboardController extends BaseController
                     'data'    => null,
                 ]);
         }
-
         $outOfStockItems = array_filter($items, function ($item) {
             $flag = $item['is_deleted'] ?? 0;
             return $flag === true || $flag === 1 || $flag === '1';
         });
-
         if (!empty($outOfStockItems)) {
             $outOfStockNames = array_map(function ($item) {
                 return $item['item_name'] ?? 'Unknown item';
             }, $outOfStockItems);
-
             return $this->response
                 ->setStatusCode(422)
                 ->setJSON([
@@ -1305,19 +1394,15 @@ class DashboardController extends BaseController
                     'data'    => null,
                 ]);
         }
-
         $subtotal = 0;
-
         foreach ($items as $item) {
             $price = (float) ($item['price'] ?? 0);
             $quantity = (int) ($item['quantity'] ?? 0);
             $subtotal += $price * $quantity;
         }
-
         $subtotal = round($subtotal, 2);
         $tax      = round($subtotal * 0.18, 2);
         $total    = round($subtotal + $tax, 2);
-
         if ($total <= 0) {
             return $this->response
                 ->setStatusCode(422)
@@ -1328,10 +1413,8 @@ class DashboardController extends BaseController
                     'data'    => null,
                 ]);
         }
-
         $keyId     = getenv('RAZORPAY_KEY_ID');
         $keySecret = getenv('RAZORPAY_KEY_SECRET');
-
         if (!$keyId || !$keySecret) {
             return $this->response
                 ->setStatusCode(500)
@@ -1342,11 +1425,9 @@ class DashboardController extends BaseController
                     'data'    => null,
                 ]);
         }
-
         $successUrl = $this->sanitizeRedirectUrl($input['success_url'] ?? getenv('RAZORPAY_SUCCESS_URL'));
         $failedUrl = $this->sanitizeRedirectUrl($input['failed_url'] ?? getenv('RAZORPAY_FAILED_URL'));
         $callbackUrl = $input['callback_url'] ?? getenv('RAZORPAY_CALLBACK_URL');
-
         if (!$successUrl || !$failedUrl || !$callbackUrl) {
             return $this->response
                 ->setStatusCode(500)
@@ -1357,10 +1438,8 @@ class DashboardController extends BaseController
                     'data'    => null,
                 ]);
         }
-
         try {
             $api = new Api($keyId, $keySecret);
-
             $razorpayOrder = $api->order->create([
                 'amount'          => (int) round($total * 100),
                 'currency'        => $currency,
@@ -1372,11 +1451,10 @@ class DashboardController extends BaseController
                     'is_international' => $isInternational ? '1' : '0',
                 ],
             ]);
-
             $orderModel = new OrderModel();
-
             $orderId = $orderModel->createOrderFromCart(
                 $vendorId,
+                $exhbitior_contact_person,
                 $subEventId,
                 $items,
                 [
@@ -1468,8 +1546,6 @@ class DashboardController extends BaseController
         if (!$host) {
             return $url;
         }
-
-        // Agar domain URL path mein doubled hai (e.g. host/host/...), to ek baar clean karo
         $doubledPattern = '#(https?://' . preg_quote($host, '#') . ')/' . preg_quote($host, '#') . '#i';
         return preg_replace($doubledPattern, '$1', $url);
     }
@@ -4850,30 +4926,20 @@ class DashboardController extends BaseController
         $isInternational = $this->resolveIsInternational($vendorId);
         $currencySymbol  = $isInternational ? '$' : '₹';
 
-        $fascia = $this->db->table('stall_categories')
-            ->where('exhibitor_id', $vendorId)
-            ->where('sub_event_id', $subEventId)
-            ->orderBy('id', 'DESC')
+        $exhibitor = $this->db->table('exhibitors as e')
+            ->select('e.stall_type_id, st.stall_type as stall_type_name')
+            ->join('stall_types as st', 'st.id = e.stall_type_id', 'left')
+            ->where('e.id', $vendorId)
             ->get()
             ->getRow();
 
-        $stallTypeId = (int) ($fascia->stall_type_id ?? 0);
+        $stallTypeId   = (int) ($exhibitor->stall_type_id ?? 0);
+        $stallTypeName = strtolower(trim($exhibitor->stall_type_name ?? ''));
 
-        $isRawSpace   = ($stallTypeId === 2);
-        $isShellSpace = ($stallTypeId === 3);
+        $isRawSpace   = str_contains($stallTypeName, 'raw');
+        $isShellSpace = str_contains($stallTypeName, 'shell');
 
         if (!$isRawSpace && !$isShellSpace) {
-
-            $hasElectricityInQuotes = $this->db->table('quotes_details qd')
-                ->select('qd.id')
-                ->join('quotes q', 'q.qid = qd.qid')
-                ->join('items i', 'i.id = qd.item_id', 'left')
-                ->where('q.exhibitor_id', $vendorId)
-                ->where('q.event_id', $subEventId)
-                ->where('q.status', 0)
-                ->where('i.is_electricity', 1)
-                ->get()
-                ->getRow();
 
             $hasElectricityInCart = $this->db->table('cart c')
                 ->select('c.id')
@@ -4882,20 +4948,6 @@ class DashboardController extends BaseController
                 ->where('c.sub_event_id', $subEventId)
                 ->where('c.is_deleted', 0)
                 ->where('i.is_electricity', 1)
-                ->get()
-                ->getRow();
-
-            $hasFurnitureInQuotes = $this->db->table('quotes_details qd')
-                ->select('qd.id')
-                ->join('quotes q', 'q.qid = qd.qid')
-                ->join('items i', 'i.id = qd.item_id', 'left')
-                ->where('q.exhibitor_id', $vendorId)
-                ->where('q.event_id', $subEventId)
-                ->where('q.status', 0)
-                ->groupStart()
-                ->where('i.is_electricity', null)
-                ->orWhere('i.is_electricity', 0)
-                ->groupEnd()
                 ->get()
                 ->getRow();
 
@@ -4912,10 +4964,10 @@ class DashboardController extends BaseController
                 ->get()
                 ->getRow();
 
-            if ($hasElectricityInQuotes || $hasElectricityInCart) {
+            if ($hasElectricityInCart) {
                 $isRawSpace   = true;
                 $isShellSpace = false;
-            } elseif ($hasFurnitureInQuotes || $hasFurnitureInCart) {
+            } elseif ($hasFurnitureInCart) {
                 $isRawSpace   = false;
                 $isShellSpace = true;
             }
@@ -4926,180 +4978,8 @@ class DashboardController extends BaseController
             'electricity' => null,
         ];
 
-        $pendingQuotes = $this->db->table('quotes q')
-            ->select('q.id, q.qid, q.currency, q.q_amount, q.amount, q.status, q.ref_no, q.remarks')
-            ->where('q.exhibitor_id', $vendorId)
-            ->where('q.event_id', $subEventId)
-            ->where('q.status', 0)
-            ->orderBy('q.id', 'DESC')
-            ->get()
-            ->getResultArray();
-
-        $furnitureQuote   = null;
-        $electricityQuote = null;
-
-        foreach ($pendingQuotes as $quote) {
-
-            $details = $this->db->table('quotes_details qd')
-                ->select('
-                qd.id,
-                qd.qid,
-                qd.item_id,
-                qd.item_name,
-                qd.quantity,
-                qd.unit_price,
-                qd.sale_price,
-                qd.line_total,
-                qd.is_early_bird,
-                qd.added_date,
-                qd.updated_date,
-                i.item_name AS master_item_name,
-                i.item_image,
-                i.is_electricity
-            ')
-                ->join('items i', 'i.id = qd.item_id', 'left')
-                ->where('qd.qid', $quote['qid'])
-                ->orderBy('qd.id', 'ASC')
-                ->get()
-                ->getResultArray();
-
-            if (empty($details)) {
-                continue;
-            }
-
-            $furnitureItems   = [];
-            $electricityItems = [];
-
-            foreach ($details as $item) {
-
-                $isElectricity = $item['is_electricity'] !== null
-                    && (int) $item['is_electricity'] === 1;
-
-                $item['item_name'] = !empty($item['item_name'])
-                    ? $item['item_name']
-                    : $item['master_item_name'];
-
-                if ($isElectricity) {
-                    $electricityItems[] = $item;
-                } else {
-                    $furnitureItems[] = $item;
-                }
-            }
-
-            if (!empty($electricityItems) && $electricityQuote === null) {
-                $electricityQuote = [
-                    'qid'   => $quote['qid'],
-                    'items' => $electricityItems
-                ];
-            }
-
-            if (!empty($furnitureItems) && $furnitureQuote === null) {
-                $furnitureQuote = [
-                    'qid'   => $quote['qid'],
-                    'items' => $furnitureItems
-                ];
-            }
-
-            if ($furnitureQuote !== null && (!$isRawSpace || $electricityQuote !== null)) {
-                break;
-            }
-        }
-
-        if ($isShellSpace) {
-            $electricityQuote = null;
-        }
-
-        if ($furnitureQuote !== null) {
-
-            $furnitureItems = $furnitureQuote['items'];
-
-            if ($isShellSpace && !empty($furnitureItems)) {
-                $furnitureItems = [end($furnitureItems)];
-            }
-
-            $furnitureSubtotal = 0;
-
-            foreach ($furnitureItems as &$item) {
-
-                $quantity = (int) ($item['quantity'] ?? 1);
-                if ($quantity <= 0) {
-                    $quantity = 1;
-                }
-
-                $unitPrice = (float) ($item['unit_price'] ?? 0);
-                $lineTotal = round($unitPrice * $quantity, 2);
-
-                $item['item_id']        = (int) $item['item_id'];
-                $item['item_name']      = $item['item_name'];
-                $item['quantity']       = $quantity;
-                $item['unit_price']     = $unitPrice;
-                $item['sale_price']     = (float) ($item['sale_price'] ?? $unitPrice);
-                $item['line_total']     = $lineTotal;
-                $item['is_electricity'] = 0;
-
-                $furnitureSubtotal += $lineTotal;
-            }
-            unset($item);
-
-            $payments['furniture'] = [
-                'source'          => 'quotation',
-                'qid'             => $furnitureQuote['qid'],
-                'items'           => array_values($furnitureItems),
-                'subtotal'        => number_format($furnitureSubtotal, 2, '.', ''),
-                'tax'             => number_format($furnitureSubtotal * 0.18, 2, '.', ''),
-                'total'           => number_format($furnitureSubtotal * 1.18, 2, '.', ''),
-                'currency_symbol' => $currencySymbol,
-                'status'          => 'pending'
-            ];
-        }
-
-        if ($isRawSpace && $electricityQuote !== null) {
-
-            $electricityItems = $electricityQuote['items'];
-
-            $electricitySubtotal = 0;
-
-            foreach ($electricityItems as &$item) {
-
-                $quantity = (int) ($item['quantity'] ?? 1);
-                if ($quantity <= 0) {
-                    $quantity = 1;
-                }
-
-                $unitPrice = (float) ($item['unit_price'] ?? 0);
-                $lineTotal = round($unitPrice * $quantity, 2);
-
-                $item['item_id']        = (int) $item['item_id'];
-                $item['item_name']      = $item['item_name'];
-                $item['quantity']       = $quantity;
-                $item['unit_price']     = $unitPrice;
-                $item['sale_price']     = (float) ($item['sale_price'] ?? $unitPrice);
-                $item['line_total']     = $lineTotal;
-                $item['is_electricity'] = 1;
-
-                $electricitySubtotal += $lineTotal;
-            }
-            unset($item);
-
-            $payments['electricity'] = [
-                'source'          => 'quotation',
-                'qid'             => $electricityQuote['qid'],
-                'items'           => array_values($electricityItems),
-                'subtotal'        => number_format($electricitySubtotal, 2, '.', ''),
-                'tax'             => number_format($electricitySubtotal * 0.18, 2, '.', ''),
-                'total'           => number_format($electricitySubtotal * 1.18, 2, '.', ''),
-                'currency_symbol' => $currencySymbol,
-                'status'          => 'pending'
-            ];
-        }
-
-        $needFurnitureFromCart   = ($payments['furniture'] === null);
-        $needElectricityFromCart = ($isRawSpace && $payments['electricity'] === null);
-
-        if ($needFurnitureFromCart || $needElectricityFromCart) {
-
-            $cartItems = $this->db->table('cart c')
-                ->select('
+        $cartItems = $this->db->table('cart c')
+            ->select('
                 c.id,
                 c.item_id,
                 c.quantity,
@@ -5110,91 +4990,96 @@ class DashboardController extends BaseController
                 i.item_image,
                 i.is_electricity
             ')
-                ->join('items i', 'i.id = c.item_id', 'left')
-                ->where('c.vendor_id', $vendorId)
-                ->where('c.sub_event_id', $subEventId)
-                ->where('c.is_deleted', 0)
-                ->where('i.is_deleted', 0)
-                ->orderBy('c.id', 'ASC')
-                ->get()
-                ->getResultArray();
+            ->join('items i', 'i.id = c.item_id', 'left')
+            ->where('c.vendor_id', $vendorId)
+            ->where('c.sub_event_id', $subEventId)
+            ->where('c.is_deleted', 0)
+            ->where('i.is_deleted', 0)
+            ->orderBy('c.id', 'ASC')
+            ->get()
+            ->getResultArray();
 
-            $furnitureItems   = [];
+        $furnitureItems   = [];
+        $electricityItems = [];
+
+        foreach ($cartItems as $item) {
+            if ($item['is_electricity'] !== null && (int) $item['is_electricity'] === 1) {
+                $electricityItems[] = $item;
+            } else {
+                $furnitureItems[] = $item;
+            }
+        }
+
+        if ($isShellSpace) {
             $electricityItems = [];
-
-            foreach ($cartItems as $item) {
-                if ($item['is_electricity'] !== null && (int) $item['is_electricity'] === 1) {
-                    $electricityItems[] = $item;
-                } else {
-                    $furnitureItems[] = $item;
-                }
+            if (!empty($furnitureItems)) {
+                $furnitureItems = [end($furnitureItems)];
             }
+        }
 
-            if ($isShellSpace) {
-                $electricityItems = [];
-                if (!empty($furnitureItems)) {
-                    $furnitureItems = [end($furnitureItems)];
+        if (!empty($furnitureItems)) {
+
+            $subtotal = 0;
+
+            foreach ($furnitureItems as &$item) {
+                $quantity = (int) ($item['quantity'] ?? 1);
+                if ($quantity <= 0) {
+                    $quantity = 1;
                 }
+                $price = (float) ($item['price'] ?? 0);
+
+                $item['item_id']        = (int) $item['item_id'];
+                $item['quantity']       = $quantity;
+                $item['unit_price']     = $price;
+                $item['sale_price']     = (float) ($item['original_price'] ?? $price);
+                $item['is_electricity'] = 0;
+                $item['line_total']     = round($price * $quantity, 2);
+
+                $subtotal += $item['line_total'];
             }
+            unset($item);
 
-            if ($needFurnitureFromCart && !empty($furnitureItems)) {
+            $payments['furniture'] = [
+                'source'          => 'cart',
+                'items'           => array_values($furnitureItems),
+                'subtotal'        => number_format($subtotal, 2, '.', ''),
+                'tax'             => number_format($subtotal * 0.18, 2, '.', ''),
+                'total'           => number_format($subtotal * 1.18, 2, '.', ''),
+                'currency_symbol' => $currencySymbol,
+                'status'          => 'pending'
+            ];
+        }
 
-                $subtotal = 0;
+        if ($isRawSpace && !empty($electricityItems)) {
 
-                foreach ($furnitureItems as &$item) {
-                    $quantity = (int) ($item['quantity'] ?? 1);
-                    $price    = (float) ($item['price'] ?? 0);
+            $subtotal = 0;
 
-                    $item['item_id']        = (int) $item['item_id'];
-                    $item['quantity']       = $quantity;
-                    $item['unit_price']     = $price;
-                    $item['sale_price']     = (float) ($item['original_price'] ?? $price);
-                    $item['is_electricity'] = 0;
-                    $item['line_total']     = round($price * $quantity, 2);
-
-                    $subtotal += $item['line_total'];
+            foreach ($electricityItems as &$item) {
+                $quantity = (int) ($item['quantity'] ?? 1);
+                if ($quantity <= 0) {
+                    $quantity = 1;
                 }
-                unset($item);
+                $price = (float) ($item['price'] ?? 0);
 
-                $payments['furniture'] = [
-                    'source'          => 'cart',
-                    'items'           => array_values($furnitureItems),
-                    'subtotal'        => number_format($subtotal, 2, '.', ''),
-                    'tax'             => number_format($subtotal * 0.18, 2, '.', ''),
-                    'total'           => number_format($subtotal * 1.18, 2, '.', ''),
-                    'currency_symbol' => $currencySymbol,
-                    'status'          => 'pending'
-                ];
+                $item['item_id']        = (int) $item['item_id'];
+                $item['quantity']       = $quantity;
+                $item['unit_price']     = $price;
+                $item['is_electricity'] = 1;
+                $item['line_total']     = round($price * $quantity, 2);
+
+                $subtotal += $item['line_total'];
             }
+            unset($item);
 
-            if ($needElectricityFromCart && !empty($electricityItems)) {
-
-                $subtotal = 0;
-
-                foreach ($electricityItems as &$item) {
-                    $quantity = (int) ($item['quantity'] ?? 1);
-                    $price    = (float) ($item['price'] ?? 0);
-
-                    $item['item_id']        = (int) $item['item_id'];
-                    $item['quantity']       = $quantity;
-                    $item['unit_price']     = $price;
-                    $item['is_electricity'] = 1;
-                    $item['line_total']     = round($price * $quantity, 2);
-
-                    $subtotal += $item['line_total'];
-                }
-                unset($item);
-
-                $payments['electricity'] = [
-                    'source'          => 'cart',
-                    'items'           => array_values($electricityItems),
-                    'subtotal'        => number_format($subtotal, 2, '.', ''),
-                    'tax'             => number_format($subtotal * 0.18, 2, '.', ''),
-                    'total'           => number_format($subtotal * 1.18, 2, '.', ''),
-                    'currency_symbol' => $currencySymbol,
-                    'status'          => 'pending'
-                ];
-            }
+            $payments['electricity'] = [
+                'source'          => 'cart',
+                'items'           => array_values($electricityItems),
+                'subtotal'        => number_format($subtotal, 2, '.', ''),
+                'tax'             => number_format($subtotal * 0.18, 2, '.', ''),
+                'total'           => number_format($subtotal * 1.18, 2, '.', ''),
+                'currency_symbol' => $currencySymbol,
+                'status'          => 'pending'
+            ];
         }
 
         return $this->response
@@ -5205,6 +5090,7 @@ class DashboardController extends BaseController
                 'message' => 'Pending payments fetched.',
                 'data'    => [
                     'stall_type'      => $isRawSpace ? 'raw' : ($isShellSpace ? 'shell' : 'unknown'),
+                    'stall_type_id'   => $stallTypeId,
                     'is_raw_space'    => $isRawSpace,
                     'currency_symbol' => $currencySymbol,
                     'payments'        => $payments
@@ -5315,10 +5201,22 @@ class DashboardController extends BaseController
             <td style='padding: 8px 0; color: #111827; font-size: 15px; font-weight: 500;'>" . htmlspecialchars($exhibitor['brand_name'] ?? '') . "</td>
           </tr>
           <tr>
-            <td style='padding: 8px 0; color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; vertical-align: top;'>Contact Person</td>
+            <td style='padding: 8px 0; color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; vertical-align: top;'>Exhibitor Name</td>
             <td style='padding: 8px 0; color: #111827; font-size: 15px;'>
               <span style='font-weight: 500;'>" . htmlspecialchars($contactPerson) . "</span><br>
-              <span style='color: #4b5563; font-size: 14px;'>" . htmlspecialchars($contactEmail) . " &bull; " . htmlspecialchars($contactNumber) . "</span>
+             
+            </td>
+          </tr>
+          <tr>
+            <td style='padding: 8px 0; color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; vertical-align: top;'>Email</td>
+            <td style='padding: 8px 0; color: #111827; font-size: 15px;'>
+              <span style='color: #4b5563; font-size: 14px;'>" . htmlspecialchars($contactEmail) . "</span>
+            </td>
+          </tr>
+          <tr>
+            <td style='padding: 8px 0; color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; vertical-align: top;'>Mobile Number</td>
+            <td style='padding: 8px 0; color: #111827; font-size: 15px;'>
+              <span style='color: #4b5563; font-size: 14px;'>". htmlspecialchars($contactNumber) . "</span>
             </td>
           </tr>
         </table>

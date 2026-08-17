@@ -2,7 +2,6 @@
 <?= $this->section('content') ?>
 
 <style>
-    /* Readonly Message */
     .readonly-message {
         background: #fff3cd;
         border: 1px solid #ffc107;
@@ -238,7 +237,6 @@
         padding: 3px 7px;
     }
 
-    /* Due Date badge */
     .furniture-end {
         display: inline-flex;
         align-items: center;
@@ -261,7 +259,6 @@
         font-weight: 700;
     }
 
-    /* Pending Orders Modal */
     .pending-orders-modal .modal-content {
         border: none;
         border-radius: 20px;
@@ -360,7 +357,6 @@
         background: #218838 !important;
     }
 
-    /* ===== Tables (furniture + orders) ===== */
     .furn-table,
     #ordersPage .table {
         width: 100%;
@@ -425,7 +421,6 @@
         color: #2b3a4f;
     }
 
-    /* Qty stepper */
     .furn-table .input-group {
         border: 1px solid #e2e8f1;
         border-radius: 11px;
@@ -646,7 +641,6 @@
         color: #9aa4b2;
     }
 
-    /* ===== NEFT form ===== */
     .neft-card label {
         display: block;
         margin-bottom: 7px;
@@ -687,7 +681,6 @@
         background: #3d5f9c;
     }
 
-    /* ===== Image preview overlay ===== */
     .image-preview-overlay {
         position: fixed;
         inset: 0;
@@ -720,10 +713,6 @@
 
     .modalImage-preview {
         max-width: 100%;
-        /* max-height: 235px; */
-        /* object-fit: contain; */
-        /* border-radius: 12px; */
-        /* margin-bottom: 12px; */
     }
 
     .image-preview-title {
@@ -742,7 +731,6 @@
         word-break: break-word;
     }
 
-    /* ===== Order detail modal ===== */
     #orderDetailModal .modal-content {
         border: none;
         border-radius: 20px;
@@ -771,7 +759,6 @@
         font-weight: 700;
     }
 
-    /* ===== Compact, refined pagination ===== */
     #ordersPagination {
         flex-wrap: wrap;
         gap: 12px;
@@ -933,7 +920,6 @@
         margin-top: 1px;
     }
 
-    /* Hide furniture section when opted out */
     .furniture-opted-out .furniture-section-wrapper {
         display: none !important;
     }
@@ -1131,7 +1117,6 @@
                 </div>
             </div>
 
-            <!-- Furniture Opted Out Message -->
             <div class="furniture-optedout-card-wrapper">
                 <div class="furniture-optedout-card">
                     <div class="furniture-optedout-icon">
@@ -1146,7 +1131,6 @@
                 </div>
             </div>
 
-            <!-- Furniture Section -->
             <div class="furniture-section-wrapper">
                 <?php $inventory = $inventory ?? []; ?>
                 <div class="table-responsive" id="furnitureSection">
@@ -1206,7 +1190,7 @@
                         <tr>
                             <th>#</th>
                             <th>Order No.</th>
-                            <th>Items</th>
+                            <!-- <th>Items</th> -->
                             <th>Total</th>
                             <th>Payment Status</th>
                             <th>Date</th>
@@ -1261,7 +1245,6 @@
     </div>
 </div>
 
-<!-- Pending Orders Modal -->
 <div class="modal fade pending-orders-modal" id="pendingOrdersModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
@@ -1319,11 +1302,9 @@
             } else if (window.onlineFormsEnableDisable) {
                 const enabled = parseInt(window.onlineFormsEnableDisable.additional_furniture, 10) === 1;
                 const open = parseInt(window.onlineFormsOpenClose.additional_furniture, 10) === 1;
-                if (!open) status = 'disabled';
-                else if (!enabled) status = 'enabled_closed';
+                if (!enabled) status = 'disabled';
+                else if (!open) status = 'enabled_closed';
             }
-
-            console.log('Additional Furniture Status:', status);
             if (status === 'disabled') {
                 if (window.showToast) {
                     window.showToast('Additional Furniture form is currently disabled.', 'error');
@@ -1331,11 +1312,7 @@
                     alert('Additional Furniture form is currently disabled.');
                 }
                 setTimeout(function() {
-                    if (window.redirectToDashboard) {
-                        window.redirectToDashboard();
-                    } else {
-                        window.location.href = (window.BASE_URL || '') + '/dashboard';
-                    }
+                    window.location.href = window.BASE_URL || '/dashboard';
                 }, 1500);
                 return false;
             }
@@ -1381,7 +1358,6 @@
             return true;
         }
 
-        // ===== DUE DATE DISPLAY =====
         function renderFurnitureDueDate() {
             const dueDate = window.onlineFormsDueDates && window.onlineFormsDueDates.additional_furniture;
             const el = document.getElementById('furnitureDueDate');
@@ -1396,7 +1372,7 @@
             if (window.moment) {
                 const m = moment(dueDate);
                 if (m.isValid()) {
-                    formatted = m.format('Do MMM YYYY'); // e.g. "1st Jul 2026"
+                    formatted = m.format('Do MMM YYYY');
                 }
             }
             el.textContent = formatted;
@@ -1406,8 +1382,6 @@
         const UPLOAD_BASE_URL = '<?= env('UPLOAD_BASE_URL') ?>';
         const LOGIN_URL = '<?= base_url('login') ?>';
         const APP_BASE_URL = window.location.origin;
-        // alert('API_BASE_URL: ' + API_BASE_URL);
-        // alert('APP_BASE_URL: ' + APP_BASE_URL);
         const ENDPOINTS = {
             furniture: `${API_BASE_URL}/v1/cart/furniture`,
             add: `${API_BASE_URL}/v1/cart/add`,
@@ -1543,10 +1517,8 @@
 
             let response;
             try {
-                console.log(`API Call: ${method} ${url}`, options);
                 response = await fetch(url, options);
             } catch (err) {
-                console.error(err);
                 showToast('Network error. Please try again.', 'danger');
                 return null;
             }
@@ -1559,7 +1531,6 @@
             try {
                 return await response.json();
             } catch (err) {
-                console.error(err);
                 showToast('Unexpected server response.', 'danger');
                 return null;
             }
@@ -1593,8 +1564,6 @@
             loadQuotations();
         }
         window.showNeft = showNeft;
-
-        // ===== Pending Orders Functions =====
 
         async function showPendingOrders() {
             const modal = new bootstrap.Modal(document.getElementById('pendingOrdersModal'));
@@ -1709,7 +1678,6 @@
         </div>`;
         }
 
-        // Retry payment for pending order
         window.retryPayment = async function(orderId, orderNumber) {
             try {
                 showToast(`Redirecting to payment for order #${orderNumber}...`, 'info');
@@ -1783,7 +1751,6 @@
                 razorpay.open();
 
             } catch (error) {
-                console.error('Payment retry error:', error);
                 showToast('Failed to process payment. Please try again.', 'danger');
             }
         };
@@ -2025,8 +1992,6 @@
             }
         }
 
-        // ===== Furniture opt-out functions =====
-
         function showFurnitureOptedOutState() {
             state.isOptedOut = true;
 
@@ -2078,10 +2043,7 @@
                 if (!result || !result.status) {
                     return;
                 }
-                console.log('Furniture API response:', result);
                 const isOptedOut = Number(result.data?.is_need_additional_furniture) === 0;
-                console.log('Furniture opt-out status:', isOptedOut);
-
                 if (isOptedOut) {
                     showFurnitureOptedOutState();
                 } else {
@@ -2092,7 +2054,7 @@
                     loadFurnitureList();
                 }
             } catch (error) {
-                console.error('Error checking furniture opt-out status:', error);
+               
             }
         }
 
@@ -2369,7 +2331,7 @@
                             razorpay_signature: response.razorpay_signature
                         },
                     });
-                    console.log('Payment verification result:', verifyResult);
+                    
                     if (!verifyResult || !verifyResult.status) {
                         showToast(
                             verifyResult?.message || 'Payment verification failed.',
@@ -2410,7 +2372,7 @@
         function getEncId(order) {
             const encId = order.enc_id ?? order.encId ?? order.encrypted_id ?? order.enc ?? null;
             if (!encId) {
-                console.warn('Order is missing an encrypted id (enc_id) — check the API response for this order:', order);
+               
             }
             return encId;
         }
@@ -2429,7 +2391,7 @@
                 <tr data-order-id="${order.id}">
                     <td>${index + 1}</td>
                     <td>${order.order_number}</td>
-                    <td>${itemsSummary}</td>
+                   
                     <td>${currencySym}${order.total}</td>
                     <td><span class="badge bg-secondary text-uppercase">${order.payment_status}</span></td>
                     <td>${order.created_at}</td>
@@ -2521,7 +2483,7 @@
             }
 
             state.orders.all = result.data.orders;
-            console.log('Orders list response — check if enc_id is present on each order:', state.orders.all);
+            
             state.orders.currentPage = 1;
             renderOrdersPage();
         }
@@ -2580,7 +2542,6 @@
                 await loadCartItems();
                 await loadFurnitureList();
             } catch (err) {
-                console.error(err);
                 showToast(err.message || 'Something went wrong while downloading quotation.', 'danger');
             } finally {
                 if (btn) {
@@ -2631,7 +2592,7 @@
                 window.URL.revokeObjectURL(objUrl);
                 showToast('Invoice downloaded.', 'success');
             } catch (err) {
-                console.error(err);
+               
                 showToast(err.message || 'Something went wrong while downloading invoice.', 'danger');
             } finally {
                 if (btn) {
@@ -2788,7 +2749,6 @@
             if (downloadBtn) downloadBtn.classList.add('d-none');
             new bootstrap.Modal(modalEl).show();
             const result = await apiCall(ORDER_ENDPOINTS.detail(orderId));
-            console.log('Order detail response:', result);
             if (!result || !result.status) {
                 modalBody.innerHTML = `<p class="text-danger text-center py-4">${result?.message || 'Unable to load order details.'}</p>`;
                 return;
@@ -2953,7 +2913,6 @@
         window.submitNeftForm = submitNeftForm;
 
         document.addEventListener('DOMContentLoaded', async function() {
-            console.log('Additional Furniture page loaded');
             cacheDom();
             if (!state.token) {
                 redirectToLogin();
@@ -2967,7 +2926,6 @@
             }
             bindEvents();
             loadCartItems();
-            // Load pending orders count on page load
             await loadPendingOrders();
 
             const urlParams = new URLSearchParams(window.location.search);
@@ -2977,12 +2935,10 @@
         });
 
         document.addEventListener('layoutConfigReady', function() {
-            console.log('Layout config ready - rechecking Additional Furniture status');
             checkAdditionalFurnitureStatus();
             renderFurnitureDueDate();
         });
         if (window.__layoutConfigReady) {
-            console.log('Layout config already ready - checking Additional Furniture status');
             checkAdditionalFurnitureStatus();
             renderFurnitureDueDate();
         }
