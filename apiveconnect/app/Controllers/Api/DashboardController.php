@@ -1222,7 +1222,7 @@ class DashboardController extends BaseController
                 'total'                  => $total,
                 'currency'               => $currency,
                 'is_international'       => $isInternational ? 1 : 0,
-                'payment_method'         => 'neft',
+                'payment_method'         => 'bank',
                 'payment_status'         => 'pending',
                 'payment_reference'      => $referenceNo,
                 'quotation_amount'       => $quote->amount,
@@ -1465,7 +1465,7 @@ class DashboardController extends BaseController
                 ],
                 $isInternational,
                 [
-                    'payment_method'       => 'razorpay',
+                    'payment_method'       => 'online',
                     'quotation_amount'     => $input['quotation_amount'] ?? $total,
                     'payment_status'       => 'pending',
                     'razorpay_order_id'    => $razorpayOrder['id'],
@@ -1487,7 +1487,7 @@ class DashboardController extends BaseController
             }
 
             $this->saveOrderPaymentDetails((int) $orderId, [
-                'payment_method'    => 'razorpay',
+                'payment_method'    => 'online',
                 'payment_status'    => 'pending',
                 'payment_reference' => $razorpayOrder['id'],
                 'razorpay_order_id' => $razorpayOrder['id'],
@@ -1663,7 +1663,7 @@ class DashboardController extends BaseController
             }
             $this->saveOrderPaymentDetails((int) $order['id'], [
                 'payment_status'       => 'paid',
-                'payment_method'       => 'razorpay',
+                'payment_method'       => 'online',
                 'razorpay_payment_id'  => $razorpayPaymentId,
                 'razorpay_signature'   => $razorpaySignature,
                 'payment_reference'    => $razorpayPaymentId ?: $razorpayOrderId,
@@ -1712,7 +1712,7 @@ class DashboardController extends BaseController
                 if ($order) {
                     $this->saveOrderPaymentDetails((int) $order['id'], [
                         'payment_status' => 'failed',
-                        'payment_method' => 'razorpay',
+                        'payment_method' => 'online',
                         'payment_reference' => $razorpayPaymentId ?: $razorpayOrderId,
                         'payment_response' => json_encode([
                             'razorpay_order_id'   => $razorpayOrderId,
@@ -5010,11 +5010,20 @@ class DashboardController extends BaseController
             }
         }
 
+        // Only the most recently added item is considered "pending" —
+        // applies to furniture in both Raw and Shell space.
+        if (!empty($furnitureItems)) {
+            $furnitureItems = [end($furnitureItems)];
+        }
+
+        // Same rule for electricity — only relevant for Raw space, but
+        // always trimmed to the last item regardless.
+        if (!empty($electricityItems)) {
+            $electricityItems = [end($electricityItems)];
+        }
+
         if ($isShellSpace) {
             $electricityItems = [];
-            if (!empty($furnitureItems)) {
-                $furnitureItems = [end($furnitureItems)];
-            }
         }
 
         if (!empty($furnitureItems)) {

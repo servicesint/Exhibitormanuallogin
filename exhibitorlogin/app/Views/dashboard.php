@@ -103,10 +103,12 @@ function buildPaymentCard(title, icon, payment, currencySymbol) {
             </td>
             <td style="padding:8px 12px;text-align:center;">${item.quantity}</td>
             <td style="padding:8px 12px;text-align:right;">${currencySymbol}${payment.total}</td>
-            <td style="padding:8px 12px;text-align:right;"> <button class="btn btn-primary btn-sm" style="border-radius:999px;padding:8px 24px;background:#4a72b8;border:none;"
-                    onclick="window.location.href='<?= base_url('additional-furniture') ?>'">
+            <td style="padding:8px 12px;text-align:right;">
+                <button class="btn btn-primary btn-sm" style="border-radius:999px;padding:8px 24px;background:#4a72b8;border:none;"
+                    onclick="window.location.href='<?= base_url('additional-furniture') ?>?view=cart'">
                     <i class="bi bi-cart me-1"></i>
-                </button></td>
+                </button>
+            </td>
         </tr>
     `;
     }).join('');
