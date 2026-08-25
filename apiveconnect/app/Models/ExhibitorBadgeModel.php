@@ -371,15 +371,16 @@ class ExhibitorBadgeModel extends Model
             $subEventId
         );
         $photoBase64 = null;
+        $photoUrl = null;
         if (!empty($badge['exhibitor_image'])) {
             $baseUrl = rtrim(env('UPLOAD_BASE_URL'), '/');
-            $imageUrl = $baseUrl . '/' . ltrim($badge['exhibitor_image'], '/');
-            $imageContent = @file_get_contents($imageUrl);
+            $photoUrl = $baseUrl . '/' . ltrim($badge['exhibitor_image'], '/');
+            $imageContent = @file_get_contents($photoUrl);
             if ($imageContent !== false) {
                 $photoBase64 = $this->makeCircularPhotoBase64($imageContent, 400);
 
                 if (!$photoBase64) {
-                    $extension = strtolower(pathinfo($imageUrl, PATHINFO_EXTENSION));
+                    $extension = strtolower(pathinfo($photoUrl, PATHINFO_EXTENSION));
                     $mime = match ($extension) {
                         'png'  => 'image/png',
                         'jpg', 'jpeg' => 'image/jpeg',
@@ -423,19 +424,46 @@ class ExhibitorBadgeModel extends Model
                 $exhibitorId,
                 $badge
             );
+
+        $email = $badge['email'] ?? '';
+        $mobile = $badge['mobile_number'] ?? '';
+
+        $vcardLines = [
+            'BEGIN:VCARD',
+            'VERSION:3.0',
+            'EVENT-NAME:' . $eventName,
+            'FN:' . $fullName,
+            'ORG:' . $companyName,
+            'TITLE:Exhibitor',
+            'TEL;TYPE=CELL:' . $mobile,
+            'EMAIL:' . $email,
+            'X-BADGE-CODE:' . $uniqueValue,
+        ];
+        if (!empty($photoUrl)) {
+            $vcardLines[] = 'PHOTO;VALUE=URI:' . $photoUrl;
+        }
+        $vcardLines[] = 'END:VCARD';
+
+        $vcard = implode("\n", $vcardLines);
+
+        $qrBase64 = $this->generateQrBase64(
+            $vcard
+        );
+
         return [
             'sub_event_name' => $eventName ?: 'EXHIBITOR EVENT',
             'full_name' => $fullName,
             'first_name' => $badge['first_name'] ?? '',
             'last_name' => $badge['last_name'] ?? '',
-            'email' => $badge['email'] ?? '',
-            'mobile_number' => $badge['mobile_number'] ?? '',
+            'email' => $email,
+            'mobile_number' => $mobile,
             'company_name' => $companyName,
             'theme_primary' => $theme['primary'],
             'theme_secondary' => $theme['secondary'],
             'badge_background' => $backgroundBase64,
             'photo' => $photoBase64,
             'qr' => $qrBase64,
+            'unique_value' => $uniqueValue,
         ];
     }
 
