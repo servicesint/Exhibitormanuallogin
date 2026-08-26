@@ -669,6 +669,50 @@
         color: #6b7891;
     }
 
+    .neft-card .form-control.is-invalid {
+        border-color: #dc3545;
+        background: #fdf3f2;
+    }
+
+    .neft-card .form-control:disabled {
+        background: #f1f4f9;
+        color: #8792a3;
+        cursor: not-allowed;
+    }
+
+    .deduction-type-radios {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        margin-bottom: 10px;
+    }
+
+    .deduction-type-radios .form-check {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin: 0;
+    }
+
+    .deduction-type-radios .form-check-input {
+        width: 1.1em;
+        height: 1.1em;
+        cursor: pointer;
+        margin: 0;
+    }
+
+    .deduction-type-radios .form-check-label {
+        font-weight: 600;
+        font-size: 0.88rem;
+        color: #3c4a5e;
+        cursor: pointer;
+        margin: 0;
+    }
+
+    #neftExpectedAmountHint {
+        font-size: 0.8rem;
+    }
+
     #neftSubmitBtn {
         border-radius: 999px;
         padding: 10px 22px;
@@ -677,8 +721,15 @@
         background: #4a72b8;
     }
 
-    #neftSubmitBtn:hover {
+    #neftSubmitBtn:hover:not(:disabled) {
         background: #3d5f9c;
+    }
+
+    #neftSubmitBtn:disabled,
+    #neftSubmitBtn.disabled-btn {
+        background: #d7dce4;
+        color: #9aa4b2;
+        cursor: not-allowed;
     }
 
     .image-preview-overlay {
@@ -1225,18 +1276,35 @@
                         <div class="col-md-4 mb-3">
                             <label>Amount Transfer</label>
                             <input type="text" class="form-control" name="amount_transfer" id="neftAmountTransfer">
+                            <small id="neftExpectedAmountHint" class="text-muted d-block mt-1"></small>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label>Deduction Type</label>
+                            <select class="form-control" id="neftDeductionType" name="deduction_type">
+                                <option value="">Select</option>
+                                <option value="tds">TDS</option>
+                                <option value="others">Others</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label>Difference Amount</label>
+                            <input type="text" class="form-control" id="neftDifferenceAmount" readonly>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label>Reference No.</label>
+                            <input type="text" class="form-control" name="reference_no" id="neftReferenceNo">
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label>Reference No.</label>
-                        <input type="text" class="form-control" name="reference_no" id="neftReferenceNo">
-                    </div>
-                    <div class="mb-3">
+
+                    <!-- Kept in DOM (backend may still expect the field) but hidden from user -->
+                    <div class="mb-3" style="display:none;">
                         <label>Reason for difference</label>
                         <textarea class="form-control" name="reason_for_difference" id="neftReasonForDifference" rows="3"></textarea>
                     </div>
+
                     <div class="text-end">
-                        <button type="submit" class="btn btn-dark" id="neftSubmitBtn">Submit</button>
+                        <button type="submit" class="btn btn-dark" id="neftSubmitBtn" disabled>Submit</button>
                     </div>
                 </div>
             </form>
@@ -1279,7 +1347,6 @@
             <div class="modal-header">
                 <h5 class="modal-title">Order Details</h5>
                 <div class="d-flex align-items-center">
-                   
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
             </div>
@@ -1289,7 +1356,6 @@
         </div>
     </div>
 </div>
-
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script>
     (function() {
@@ -1406,7 +1472,6 @@
             isOptedOut: false,
             pendingOrders: [],
         };
-
         const dom = {};
 
         function cacheDom() {
@@ -1774,94 +1839,304 @@
                 quotations.map(q => `<option value="${q.qid}">${q.ref_no} - ${money(q.amount)}</option>`).join('');
         }
 
+        /* ================== NEFT amount-match logic (TDS / GST radio) ================== */
+
+        function getExpectedNeftAmount(quotationAmount, deductionType, tdsPercent) {
+            if (!quotationAmount || isNaN(quotationAmount)) return null;
+
+            let expected;
+            if (deductionType === 'gst') {
+                // GST mode: only remove 18% GST, no TDS involved
+                expected = quotationAmount / 1.18;
+            } else {
+                // TDS mode: only remove TDS % from the full quotation amount, no GST removal
+                const tds = parseFloat(tdsPercent) || 0;
+                expected = quotationAmount - (quotationAmount * tds / 100);
+            }
+
+            return Math.round(expected * 100) / 100;
+        }
+        const ALLOWED_DIFFERENCE_PERCENTS = [2, 10]; // works silently in background — never shown to the user
+        const DIFF_TOLERANCE = 0.5;
+
+        function getSelectedDeductionType() {
+            const sel = document.getElementById('neftDeductionType');
+            return sel ? sel.value : '';
+        }
+
+        function getSelectedTds() {
+            const sel = document.getElementById('neftTdsSelect');
+            return sel ? parseFloat(sel.value) || 0 : 0;
+        }
+
+        // Only TDS math now — "Others" never reaches this because submit is blocked
+        function getExpectedNeftAmount(quotationAmount, tdsPercent) {
+            if (!quotationAmount || isNaN(quotationAmount)) return null;
+            const tds = parseFloat(tdsPercent) || 0;
+            const expected = quotationAmount - (quotationAmount * tds / 100);
+            return Math.round(expected * 100) / 100;
+        }
+
+        function amountsMatch(a, b, tolerance = DIFF_TOLERANCE) {
+            if (a === null || b === null || isNaN(a) || isNaN(b)) return false;
+            return Math.abs(a - b) <= tolerance;
+        }
+
+        function setNeftSubmitEnabled(enabled) {
+            const btn = document.getElementById('neftSubmitBtn');
+            if (!btn) return;
+            btn.disabled = !enabled;
+            btn.classList.toggle('disabled-btn', !enabled);
+        }
+
+        function matchDifferencePercent(quotationAmount, differenceAmount) {
+            if (!quotationAmount || isNaN(quotationAmount) || isNaN(differenceAmount)) return null;
+            for (const pct of ALLOWED_DIFFERENCE_PERCENTS) {
+                const expected = Math.round((quotationAmount * pct / 100) * 100) / 100;
+                if (amountsMatch(differenceAmount, expected)) {
+                    return pct;
+                }
+            }
+            return null;
+        }
+
+
+        function updateDeductionTypeUI() {
+            // Deduction type only gates whether the form is submittable — no visible calc UI to update.
+            refreshNeftHintAndValidation();
+        }
+
+        let neftValidationDebounce = null;
+        let neftLastToastState = null;
+
+        function refreshNeftHintAndValidation() {
+            clearTimeout(neftValidationDebounce);
+            neftValidationDebounce = setTimeout(runNeftValidation, 400);
+        }
+
+        function runNeftValidation() {
+            const amountField = document.getElementById('neftAmountTransfer');
+            const diffField = document.getElementById('neftDifferenceAmount');
+            const hintEl = document.getElementById('neftExpectedAmountHint');
+            const quotationAmount = parseFloat(document.getElementById('neftQuotationAmount').value);
+            const deductionType = getSelectedDeductionType();
+            const amountTransfer = parseFloat(amountField.value);
+            const hasAmountEntered = amountField.value.trim() !== '' && !isNaN(amountTransfer);
+
+            // Nothing entered yet — clear and stop
+            if (!quotationAmount || !hasAmountEntered) {
+                if (diffField) diffField.value = '';
+                if (hintEl) hintEl.textContent = '';
+                amountField.classList.remove('is-invalid');
+                setNeftSubmitEnabled(false);
+                neftLastToastState = null;
+                return;
+            }
+
+            const differenceAmount = Math.round((quotationAmount - amountTransfer) * 100) / 100;
+            if (diffField) diffField.value = differenceAmount;
+
+            // "Others" is never submittable, regardless of the amount
+            if (deductionType === 'others') {
+                if (hintEl) hintEl.textContent = '';
+                amountField.classList.remove('is-invalid');
+                setNeftSubmitEnabled(false);
+
+                const stateKey = 'others';
+                if (neftLastToastState !== stateKey) {
+                    showToast('This deduction type cannot be submitted online. Please contact your event coordinator.', 'danger');
+                    neftLastToastState = stateKey;
+                }
+                return;
+            }
+
+            if (!deductionType) {
+                if (hintEl) hintEl.textContent = 'Please select a deduction type.';
+                amountField.classList.remove('is-invalid');
+                setNeftSubmitEnabled(false);
+                neftLastToastState = null;
+                return;
+            }
+
+            const matchedPercent = matchDifferencePercent(quotationAmount, differenceAmount);
+
+            if (matchedPercent !== null) {
+                if (hintEl) hintEl.textContent = ``;
+                amountField.classList.remove('is-invalid');
+                setNeftSubmitEnabled(true);
+                neftLastToastState = null;
+            } else {
+                if (hintEl) hintEl.textContent = ``;
+                amountField.classList.add('is-invalid');
+                setNeftSubmitEnabled(false);
+
+                const stateKey = `mismatch:${differenceAmount}`;
+                if (neftLastToastState !== stateKey) {
+                    showToast(
+                        'Invalid amount. Please check the Amount Transfer value entered.',
+                        'danger'
+                    );
+                    neftLastToastState = stateKey;
+                }
+            }
+        }
+
+
         async function loadNeftQuotationDetails(qid) {
+            const amountField = document.getElementById('neftAmountTransfer');
+            const diffField = document.getElementById('neftDifferenceAmount');
+            const hintEl = document.getElementById('neftExpectedAmountHint');
+            const deductionTypeSelect = document.getElementById('neftDeductionType');
+
+            neftLastToastState = null;
+
             if (!qid) {
                 document.getElementById('neftQuotationAmount').value = '';
-                document.getElementById('neftAmountTransfer').value = '';
+                amountField.value = '';
+                if (diffField) diffField.value = '';
                 document.getElementById('neftReferenceNo').value = '';
                 document.getElementById('neftReasonForDifference').value = '';
+                if (hintEl) hintEl.textContent = '';
+                if (deductionTypeSelect) deductionTypeSelect.value = '';
+                amountField.classList.remove('is-invalid');
+                setNeftSubmitEnabled(false);
                 return;
             }
 
             const result = await apiCall(`${ENDPOINTS.quotationDetails}/${qid}`);
             if (!result || !result.status) {
                 showToast('Failed to load quotation details', 'danger');
+                setNeftSubmitEnabled(false);
                 return;
             }
 
             const quote = result.data?.quote;
-            document.getElementById('neftQuotationAmount').value = quote?.amount || '';
+            const quotationAmount = parseFloat(quote?.amount) || 0;
+            document.getElementById('neftQuotationAmount').value = quotationAmount || '';
+
+            if (deductionTypeSelect) deductionTypeSelect.value = '';
+            amountField.value = '';
+            if (diffField) diffField.value = '';
+            if (hintEl) hintEl.textContent = '';
+            amountField.classList.remove('is-invalid');
+            setNeftSubmitEnabled(false);
         }
-        document.getElementById('neftAmountTransfer').addEventListener('input', function() {
-            const amountTransfer = parseFloat(this.value);
-            const quotationAmount = parseFloat(document.getElementById('neftQuotationAmount').value);
-            const reasonField = document.getElementById('neftReasonForDifference');
-            const reasonWrapper = reasonField.closest('.mb-3');
-            if (!quotationAmount || isNaN(amountTransfer)) return;
-            if (amountTransfer > quotationAmount) {
-                this.value = '';
-                showToast(`Amount Transfer cannot exceed Quotation Amount (${state.currencySymbol} ${quotationAmount})`, 'danger');
-                return;
-            }
-            if (amountTransfer < quotationAmount && amountTransfer > 0) {
-                reasonField.dataset.required = 'true';
-                reasonWrapper.querySelector('label').innerHTML = 'Reason for difference <span class="text-danger">*</span>';
-            } else {
-                reasonField.dataset.required = 'false';
-                reasonField.onblur = null;
-                reasonWrapper.querySelector('label').textContent = 'Reason for difference';
-            }
+
+
+        document.getElementById('neftAmountTransfer').addEventListener('input', refreshNeftHintAndValidation);
+        document.getElementById('neftDeductionType')?.addEventListener('change', updateDeductionTypeUI);
+
+        document.querySelectorAll('input[name="deduction_type"]').forEach(function(radio) {
+            radio.addEventListener('change', updateDeductionTypeUI);
         });
+
+        document.getElementById('neftTdsSelect')?.addEventListener('change', refreshNeftHintAndValidation);
+
         async function submitNeftForm(e) {
             e.preventDefault();
+
             const qid = document.getElementById('neftQuotationSelect').value;
             const amountTransfer = parseFloat(document.getElementById('neftAmountTransfer').value);
             const quotationAmount = parseFloat(document.getElementById('neftQuotationAmount').value);
             const referenceNo = document.getElementById('neftReferenceNo').value;
-            const reasonForDiff = document.getElementById('neftReasonForDifference').value;
+            const deductionType = getSelectedDeductionType();
+
             if (!qid) {
-                showToast('Please select a quotation', 'danger');
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Quotation required',
+                    text: 'Please select a quotation first.'
+                });
                 return;
             }
+
+            if (!deductionType) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Deduction type required',
+                    text: 'Please select a deduction type.'
+                });
+                return;
+            }
+
+            if (deductionType === 'others') {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Cannot submit',
+                    text: 'This deduction type cannot be submitted online. Please contact your event coordinator.'
+                });
+                return;
+            }
+
             if (!amountTransfer || isNaN(amountTransfer)) {
-                showToast('Please enter a valid amount', 'danger');
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Amount required',
+                    text: 'Please enter a valid transfer amount.'
+                });
                 return;
             }
-            if (amountTransfer > quotationAmount) {
-                showToast(`Amount Transfer cannot be greater than Quotation Amount (${state.currencySymbol} ${quotationAmount})`, 'danger');
+
+            const differenceAmount = Math.round((quotationAmount - amountTransfer) * 100) / 100;
+            const matchedPercent = matchDifferencePercent(quotationAmount, differenceAmount);
+
+            if (matchedPercent === null) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Amount mismatch',
+                    html: `The Amount Transfer entered does not match an accepted deduction amount.<br><br>
+                   <strong>Difference Amount: ${state.currencySymbol} ${differenceAmount}</strong>`
+                });
                 return;
             }
-            if (amountTransfer < quotationAmount && !reasonForDiff.trim()) {
-                showToast('Reason for difference is required when amount is less than quotation amount', 'danger');
-                document.getElementById('neftReasonForDifference').focus();
-                return;
-            }
+
             if (!referenceNo.trim()) {
-                showToast('Please enter reference number', 'danger');
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Reference number required',
+                    text: 'Please enter the reference number.'
+                });
+                document.getElementById('neftReferenceNo').focus();
                 return;
             }
+
+            // tds_percent still sent to backend silently, based on the matched percent — not shown to the user
             const payload = {
                 qid: parseInt(qid),
                 amount_transfer: amountTransfer,
+                deduction_type: deductionType,
+                tds_percent: matchedPercent,
+                difference_amount: differenceAmount,
                 reference_no: referenceNo.trim(),
-                reason_for_difference: reasonForDiff.trim()
+                reason_for_difference: ''
             };
+
             const btn = document.getElementById('neftSubmitBtn');
             btn.disabled = true;
             btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+
             const result = await apiCall(ENDPOINTS.saveNeft, {
                 method: 'POST',
                 body: payload,
                 contentType: 'application/json'
             });
-            btn.disabled = false;
+
             btn.innerHTML = 'Submit';
+
             if (!result || !result.status) {
                 showToast(result?.message || 'Failed to save NEFT transfer', 'danger');
+                setNeftSubmitEnabled(true);
                 return;
             }
+
             showToast('NEFT transfer saved successfully', 'success');
             document.getElementById('neftForm').reset();
+            document.getElementById('neftExpectedAmountHint').textContent = '';
+            document.getElementById('neftDifferenceAmount').value = '';
+            neftLastToastState = null;
+            const deductionTypeSelect = document.getElementById('neftDeductionType');
+            if (deductionTypeSelect) deductionTypeSelect.value = '';
+            setNeftSubmitEnabled(false);
         }
 
         function changeQty(btn, change) {
@@ -2054,7 +2329,7 @@
                     loadFurnitureList();
                 }
             } catch (error) {
-               
+
             }
         }
 
@@ -2331,7 +2606,7 @@
                             razorpay_signature: response.razorpay_signature
                         },
                     });
-                    
+
                     if (!verifyResult || !verifyResult.status) {
                         showToast(
                             verifyResult?.message || 'Payment verification failed.',
@@ -2372,7 +2647,7 @@
         function getEncId(order) {
             const encId = order.enc_id ?? order.encId ?? order.encrypted_id ?? order.enc ?? null;
             if (!encId) {
-               
+
             }
             return encId;
         }
@@ -2483,7 +2758,7 @@
             }
 
             state.orders.all = result.data.orders;
-            
+
             state.orders.currentPage = 1;
             renderOrdersPage();
         }
@@ -2592,7 +2867,7 @@
                 window.URL.revokeObjectURL(objUrl);
                 showToast('Invoice downloaded.', 'success');
             } catch (err) {
-               
+
                 showToast(err.message || 'Something went wrong while downloading invoice.', 'danger');
             } finally {
                 if (btn) {
