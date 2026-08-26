@@ -1139,9 +1139,11 @@ class DashboardController extends BaseController
 
     public function update_quotation()
     {
+        error_reporting(E_ALL);
+        ini_set('display_errors', 1);
+        ini_set('display_startup_errors', 1);
         $payload      = JwtPayload::get();
         $exhibitor_id = $payload->exhibitor_id ?? null;
-
         if (!$exhibitor_id) {
             return $this->response
                 ->setStatusCode(401)
@@ -1156,18 +1158,27 @@ class DashboardController extends BaseController
         $qid            = (int) ($input['qid'] ?? 0);
         $amountTransfer = $input['amount_transfer'] ?? null;
         $referenceNo    = $input['reference_no'] ?? null;
-        $reason         = $input['reason_for_difference'] ?? null;
+        $deductionType  = $input['deduction_type'] ?? null;
 
         if ($qid <= 0) {
             return $this->response
                 ->setStatusCode(422)
                 ->setJSON(['status' => false, 'code' => 422, 'message' => 'Invalid quotation ID.', 'data' => null]);
         }
-
         if (empty($referenceNo)) {
             return $this->response
                 ->setStatusCode(422)
                 ->setJSON(['status' => false, 'code' => 422, 'message' => 'Reference number is required.', 'data' => null]);
+        }
+        if (empty($deductionType) || !in_array($deductionType, ['tds', 'others'], true)) {
+            return $this->response
+                ->setStatusCode(422)
+                ->setJSON(['status' => false, 'code' => 422, 'message' => 'A valid deduction type is required.', 'data' => null]);
+        }
+        if ($deductionType === 'others') {
+            return $this->response
+                ->setStatusCode(422)
+                ->setJSON(['status' => false, 'code' => 422, 'message' => 'This deduction type cannot be submitted online. Please contact your event coordinator.', 'data' => null]);
         }
 
         try {
@@ -1183,56 +1194,88 @@ class DashboardController extends BaseController
                     ->setJSON(['status' => false, 'code' => 404, 'message' => 'Quotation not found.', 'data' => null]);
             }
 
-            $finalAmount = $amountTransfer ?? $quote->amount;
+            // Server-side re-validation of the TDS math — never trust client-computed values for money.
+            $quotationAmount = (float) $quote->amount; // full quotation amount incl. GST
+            $amountTransfer  = $amountTransfer !== null ? (float) $amountTransfer : $quotationAmount;
+            $differenceAmount = round($quotationAmount - $amountTransfer, 2);
+
+            $allowedPercents = [2, 10];
+            $tolerance = 0.5;
+            $matchedPercent = null;
+            foreach ($allowedPercents as $pct) {
+                $expected = round($quotationAmount * $pct / 100, 2);
+                if (abs($differenceAmount - $expected) <= $tolerance) {
+                    $matchedPercent = $pct;
+                    break;
+                }
+            }
+
+            if ($matchedPercent === null) {
+                return $this->response
+                    ->setStatusCode(422)
+                    ->setJSON(['status' => false, 'code' => 422, 'message' => 'Amount Transfer does not match an accepted deduction amount.', 'data' => null]);
+            }
+
+            $tdsPercent = $matchedPercent;
+            $reasonForDifference = sprintf(
+                'TDS %d%% deducted — Difference Amount: %s%.2f',
+                $tdsPercent,
+                'INR ',
+                $differenceAmount
+            );
 
             $this->db->transBegin();
 
             $updateData = [
-                'ref_no'       => $referenceNo,
-                'amount'       => $finalAmount,
-                'remarks'      => $reason,
-                'status'       => 2,
-                'updated_date' => date('Y-m-d H:i:s')
+                'ref_no'         => $referenceNo,
+                'amount'         => $amountTransfer,
+                'tds_percent'    => $tdsPercent,
+                'deduction_type' => $deductionType,
+                'remarks'        => $reasonForDifference,
+                'status'         => 2,
+                'updated_date'   => date('Y-m-d H:i:s')
             ];
             $this->db->table('quotes')
                 ->where('qid', $qid)
                 ->where('exhibitor_id', $exhibitor_id)
                 ->update($updateData);
 
-            // ---- Create the order + order_items records for this NEFT payment ----
             $subEventId      = $quote->event_id ?? null;
             $isInternational = $this->resolveIsInternational((int) $exhibitor_id);
             $currency        = $isInternational ? 'USD' : 'INR';
-
             $subtotal = (float) $quote->q_amount;
-            $total    = (float) $finalAmount;
-            $tax      = round($total - $subtotal, 2);
+            $tax      = round($quotationAmount - $subtotal, 2);
             if ($tax < 0) {
                 $tax = 0;
             }
-
+            $total = round($subtotal + $tax, 2);
+            $reasonForDifference = sprintf(
+                'TDS %d%% deducted — Difference Amount: %s%.2f',
+                $tdsPercent,
+                $currency === 'USD' ? '$' : '₹',
+                $differenceAmount
+            );
             $orderNumber = 'ORD-' . $qid . '-' . time();
-
             $orderData = [
-                'order_number'           => $orderNumber,
-                'exhibitor_id'           => $exhibitor_id,
-                'sub_event_id'           => $subEventId,
-                'subtotal'               => $subtotal,
-                'tax'                    => $tax,
-                'total'                  => $total,
-                'currency'               => $currency,
-                'is_international'       => $isInternational ? 1 : 0,
-                'payment_method'         => 'bank',
-                'payment_status'         => 'pending',
-                'payment_reference'      => $referenceNo,
-                'quotation_amount'       => $quote->amount,
-                'amount_transferred'     => $amountTransfer,
-                'reason_for_difference'  => $reason,
-                'order_status'           => 'pending',
-                'created_at'             => date('Y-m-d H:i:s'),
-                'updated_at'             => date('Y-m-d H:i:s'),
+                'order_number'          => $orderNumber,
+                'exhibitor_id'          => $exhibitor_id,
+                'sub_event_id'          => $subEventId,
+                'subtotal'              => $subtotal,
+                'tax'                   => $tax,
+                'total'                 => $total,
+                'currency'              => $currency,
+                'is_international'      => $isInternational ? 1 : 0,
+                'payment_method'        => 'neft',
+                'payment_status'        => 'pending',
+                'payment_reference'     => $referenceNo,
+                'quotation_amount'      => $quotationAmount,
+                'amount_transferred'    => $amountTransfer,
+                'tds'           => $tdsPercent,
+                'reason_for_difference' => $reasonForDifference,
+                'order_status'          => 'pending',
+                'created_at'            => date('Y-m-d H:i:s'),
+                'updated_at'            => date('Y-m-d H:i:s'),
             ];
-
             $orderInserted = $this->db->table('orders')->insert($orderData);
             if (!$orderInserted) {
                 $this->db->transRollback();
@@ -1242,7 +1285,6 @@ class DashboardController extends BaseController
             }
 
             $orderId = $this->db->insertID();
-
             $quoteDetails = $this->db->table('quotes_details')
                 ->where('qid', $qid)
                 ->get()
@@ -1262,9 +1304,7 @@ class DashboardController extends BaseController
                 ];
                 $this->db->table('order_items')->insert($orderItemData);
             }
-
             $this->db->transCommit();
-
             return $this->response
                 ->setStatusCode(200)
                 ->setJSON([
@@ -1272,12 +1312,15 @@ class DashboardController extends BaseController
                     'code'    => 200,
                     'message' => 'NEFT transfer saved successfully.',
                     'data'    => [
-                        'qid'          => $qid,
-                        'ref_no'       => $referenceNo,
-                        'amount'       => $finalAmount,
-                        'status'       => 2,
-                        'order_id'     => $orderId,
-                        'order_number' => $orderNumber,
+                        'qid'                   => $qid,
+                        'ref_no'                => $referenceNo,
+                        'amount'                => $amountTransfer,
+                        'deduction_type'        => $deductionType,
+                        'tds_percent'           => $tdsPercent,
+                        'reason_for_difference' => $reasonForDifference,
+                        'status'                => 2,
+                        'order_id'              => $orderId,
+                        'order_number'          => $orderNumber,
                     ]
                 ]);
         } catch (\Exception $e) {
