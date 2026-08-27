@@ -119,65 +119,65 @@ function send_sms_remote($mobile, $otp, $portal)
     return (bool) ($result['status'] ?? false);
 }
 
-if (!function_exists('send_sms_otp')) {
-    function send_sms_otp($mobile, $otp)
-    {
-        // ✅ FIX: Add your actual SMS gateway credentials here
-        $params = [
-            'user'        => '20090418',      // ← Replace with actual username
-            'pwd'         => 'Globe@2020',       // ← Replace with actual password
-            'senderid'    => 'SIEVNT',      // ← Replace with actual sender ID
-            'CountryCode' => '91',
-            'mobileno'    => preg_replace('/\D/', '', $mobile),
-            'msgtext'     => "Your Exhibitor Login OTP Code is {$otp}. This code is valid for 15 minutes. Exhibition Managed by Services International",
-            'pe_id'       => '1701159229231639515',
-            'template_id' => '1777178634395350287',
-            'smstype'     => '0'
-        ];
+// if (!function_exists('send_sms_otp')) {
+//     function send_sms_otp($mobile, $otp)
+//     {
+//         // ✅ FIX: Add your actual SMS gateway credentials here
+//         $params = [
+//             'user'        => '20090418',      // ← Replace with actual username
+//             'pwd'         => 'Globe@2020',       // ← Replace with actual password
+//             'senderid'    => 'SIEVNT',      // ← Replace with actual sender ID
+//             'CountryCode' => '91',
+//             'mobileno'    => preg_replace('/\D/', '', $mobile),
+//             'msgtext'     => "Your Exhibitor Login OTP Code is {$otp}. This code is valid for 15 minutes. Exhibition Managed by Services International",
+//             'pe_id'       => '1701159229231639515',
+//             'template_id' => '1777178634395350287',
+//             'smstype'     => '0'
+//         ];
 
-        $url = "http://www.mshastra.com/sendurl.aspx?" . http_build_query($params);
+//         $url = "http://www.mshastra.com/sendurl.aspx?" . http_build_query($params);
 
-        log_message('info', "[send_sms_otp] Sending SMS to: {$mobile}, URL: {$url}");
+//         log_message('info', "[send_sms_otp] Sending SMS to: {$mobile}, URL: {$url}");
 
-        $ch = curl_init();
+//         $ch = curl_init();
 
-        curl_setopt_array($ch, [
-            CURLOPT_URL            => $url,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT        => 30,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_SSL_VERIFYPEER => false,
-        ]);
+//         curl_setopt_array($ch, [
+//             CURLOPT_URL            => $url,
+//             CURLOPT_RETURNTRANSFER => true,
+//             CURLOPT_TIMEOUT        => 30,
+//             CURLOPT_FOLLOWLOCATION => true,
+//             CURLOPT_SSL_VERIFYPEER => false,
+//         ]);
 
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $errorNo  = curl_errno($ch);
-        $errorMsg = curl_error($ch);
+//         $response = curl_exec($ch);
+//         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+//         $errorNo  = curl_errno($ch);
+//         $errorMsg = curl_error($ch);
 
-        curl_close($ch);
+//         curl_close($ch);
 
-        log_message('info', "[send_sms_otp] Response: {$response}, HTTP Code: {$httpCode}, Error No: {$errorNo}, Error Msg: {$errorMsg}");
+//         log_message('info', "[send_sms_otp] Response: {$response}, HTTP Code: {$httpCode}, Error No: {$errorNo}, Error Msg: {$errorMsg}");
 
-        if ($errorNo != 0) {
-            log_message('error', "[send_sms_otp] cURL error number: {$errorNo}, Message: {$errorMsg}");
-            return false;
-        }
+//         if ($errorNo != 0) {
+//             log_message('error', "[send_sms_otp] cURL error number: {$errorNo}, Message: {$errorMsg}");
+//             return false;
+//         }
 
-        if ($httpCode == 200 && !empty($response)) {
-            // Check if response contains success indicators
-            if (strpos($response, 'SUCCESS') !== false || strpos($response, 'success') !== false || strpos($response, '1') !== false) {
-                log_message('info', "[send_sms_otp] SMS sent successfully to {$mobile}");
-                return true;
-            } else {
-                log_message('error', "[send_sms_otp] SMS API returned error: {$response}");
-                return false;
-            }
-        }
+//         if ($httpCode == 200 && !empty($response)) {
+//             // Check if response contains success indicators
+//             if (strpos($response, 'SUCCESS') !== false || strpos($response, 'success') !== false || strpos($response, '1') !== false) {
+//                 log_message('info', "[send_sms_otp] SMS sent successfully to {$mobile}");
+//                 return true;
+//             } else {
+//                 log_message('error', "[send_sms_otp] SMS API returned error: {$response}");
+//                 return false;
+//             }
+//         }
 
-        log_message('error', "[send_sms_otp] Failed to send SMS to {$mobile}. HTTP Code: {$httpCode}. Response: {$response}");
-        return false;
-    }
-}
+//         log_message('error', "[send_sms_otp] Failed to send SMS to {$mobile}. HTTP Code: {$httpCode}. Response: {$response}");
+//         return false;
+//     }
+// }
 
 if (!function_exists('resolvePortalBranding')) {
     function resolvePortalBranding(string $referralWebsite): array
@@ -425,7 +425,71 @@ if (!function_exists('sendEmail')) {
 //         return false;
 //     }
 // }
+if (!function_exists('send_sms_otp')) {
+    function send_sms_otp($mobile, $otp)
+    {
+        $params = [
+            'user'        => '20090418',
+            'pwd'         => 'Globe@2020',
+            'senderid'    => 'SIEVNT',
+            'CountryCode' => '91',
+            'mobileno'    => preg_replace('/\D/', '', $mobile),
+            'msgtext'     => "Your Exhibitor Login OTP Code is {$otp}. This code is valid for 15 minutes. Exhibition Managed by Services International",
+            'pe_id'       => '1701159229231639515',
+            'template_id' => '1777178634395350287',
+            'smstype'     => '0'
+        ];
 
+        $url = "http://www.mshastra.com/sendurl.aspx?" . http_build_query($params);
+
+        log_message('info', "[send_sms_otp] Sending SMS to: {$mobile}, URL: {$url}");
+
+        $ch = curl_init();
+        curl_setopt_array($ch, [
+            CURLOPT_URL            => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 30,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_SSL_VERIFYPEER => false,
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $errorNo  = curl_errno($ch);
+        $errorMsg = curl_error($ch);
+        curl_close($ch);
+
+        log_message('info', "[send_sms_otp] Response: {$response}, HTTP Code: {$httpCode}, Error No: {$errorNo}, Error Msg: {$errorMsg}");
+
+        if ($errorNo != 0) {
+            log_message('error', "[send_sms_otp] cURL error number: {$errorNo}, Message: {$errorMsg}");
+            return false;
+        }
+
+        if ($httpCode == 200 && !empty($response)) {
+            $response = trim($response);
+
+            $errorKeywords = ['error', 'invalid', 'failed', 'fail', 'insufficient', 'unauthorized', 'expired'];
+            foreach ($errorKeywords as $kw) {
+                if (stripos($response, $kw) !== false) {
+                    log_message('error', "[send_sms_otp] SMS API returned error: {$response}");
+                    return false;
+                }
+            }
+
+            if (preg_match('/^\d+$/', $response) || stripos($response, 'success') !== false) {
+                log_message('info', "[send_sms_otp] SMS sent successfully to {$mobile}");
+                return true;
+            }
+
+            log_message('error', "[send_sms_otp] Unrecognized SMS API response: {$response}");
+            return false;
+        }
+
+        log_message('error', "[send_sms_otp] Failed to send SMS to {$mobile}. HTTP Code: {$httpCode}. Response: {$response}");
+        return false;
+    }
+}
 if (!function_exists('sendOtpMessage')) {
     function sendOtpMessage(
         $user,
@@ -435,9 +499,7 @@ if (!function_exists('sendOtpMessage')) {
         ?int $subEventId = null
     ): bool {
         $branding = resolvePortalBranding($referralWebsite);
-
         $isInternational = false;
-
         if (isset($user->exhibitor_type) && !empty($user->exhibitor_type)) {
             if (strtolower($user->exhibitor_type) === 'international') {
                 $isInternational = true;
@@ -454,16 +516,13 @@ if (!function_exists('sendOtpMessage')) {
                 $form = $formModel->getSubEvents($subEventId);
             }
             $uploadBaseUrl = env('UPLOAD_BASE_URL');
-            $viewPath = APPPATH . 'Views/' . str_replace('/', DIRECTORY_SEPARATOR, $branding['otpView']) . '.php';
             $viewData = [
                 'message'              => $otpMessage,
                 'sub_event_name'       => $form->sub_event_name ?? $branding['portalName'],
                 'logo'                 => $form ? $uploadBaseUrl . $form->sub_event_logo : $branding['logoUrl'],
                 'sub_event_date_image' => $form ? $uploadBaseUrl . $form->sub_event_date_image : '',
             ];
-            $htmlBody = is_file($viewPath)
-                ? view($branding['otpView'], $viewData)
-                : '<p>' . htmlspecialchars($otpMessage, ENT_QUOTES, 'UTF-8') . '</p>';
+            $htmlBody = view($branding['otpView'], $viewData);
             return sendEmail(
                 toEmail: $email,
                 toName: $user->first_name ?? 'User',
@@ -498,6 +557,7 @@ if (!function_exists('sendOtpMessage')) {
                 $results['mobile'] = false;
             }
         }
+
         if ($channel === 'email') {
             return $results['email'] ?? false;
         }

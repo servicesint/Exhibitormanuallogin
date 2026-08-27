@@ -64,8 +64,6 @@ class AuthController extends BaseController
         $referralWebsite = (string) ($this->request->getVar('referreral_website') ?? $this->request->getVar('referral_website') ?? '');
         $otpSent = sendOtpMessage($user, $otp, $channel, $referralWebsite, $subEventId);
         if (!$otpSent) {
-    
-        if (!$otpSent) {
             return $this->response->setJSON([
                 'status' => false,
                 'message' => 'OTP could not be sent'
