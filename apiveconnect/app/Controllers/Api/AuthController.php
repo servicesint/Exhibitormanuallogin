@@ -64,13 +64,16 @@ class AuthController extends BaseController
         $referralWebsite = (string) ($this->request->getVar('referreral_website') ?? $this->request->getVar('referral_website') ?? '');
         $otpSent = sendOtpMessage($user, $otp, $channel, $referralWebsite, $subEventId);
         if (!$otpSent) {
-            log_message('error', 'sendOtpMessage failed: ' . json_encode([
-                'user' => $user,
-                'channel' => $channel,
-                'referralWebsite' => $referralWebsite,
-                'subEventId' => $subEventId
-            ]));
-        }
+    log_message('error', 'sendOtpMessage failed: ' . json_encode([
+        'user' => $user,
+        'channel' => $channel,
+        'referralWebsite' => $referralWebsite,
+        'subEventId' => $subEventId,
+        'error' => is_array($otpSent)
+            ? ($otpSent['message'] ?? $otpSent['error'] ?? $otpSent)
+            : $otpSent
+    ]));
+}
         if (!$otpSent) {
             return $this->response->setJSON([
                 'status' => false,
