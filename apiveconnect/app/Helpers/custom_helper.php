@@ -323,6 +323,109 @@ if (!function_exists('sendEmail')) {
     }
 }
 
+// if (!function_exists('sendOtpMessage')) {
+//     function sendOtpMessage(
+//         $user,
+//         string $otp,
+//         string $channel,
+//         string $referralWebsite = '',
+//         ?int $subEventId = null
+//     ): bool {
+//         $branding = resolvePortalBranding($referralWebsite);
+        
+//         // ✅ FIX: Check if user is international based on exhibitor_type
+//         $isInternational = false;
+        
+//         if (isset($user->exhibitor_type) && !empty($user->exhibitor_type)) {
+//             // If exhibitor_type is 'International', then it's international
+//             if (strtolower($user->exhibitor_type) === 'international') {
+//                 $isInternational = true;
+//             }
+//         }
+        
+//         $mobile = $user->mobile ?? $user->mobile_number ?? '';
+//         $email = $user->email ?? '';
+        
+//         $results = [];
+        
+//         $otpMessage = "Your Exhibitor Login OTP Code is {$otp}. This code is valid for 15 minutes. Exhibition Managed by Services International";
+        
+//         if ($channel === 'email' || $channel === 'both') {
+//             if (!empty($email)) {
+//                 $form = null;
+                
+//                 if ($subEventId) {
+//                     $formModel = new ExhibitorContactPersonModel();
+//                     $form = $formModel->getSubEvents($subEventId);
+//                 }
+                
+//                 $uploadBaseUrl = env('UPLOAD_BASE_URL');
+//                 $viewPath = APPPATH . 'Views/' . str_replace('/', DIRECTORY_SEPARATOR, $branding['otpView']) . '.php';
+                
+//                 $viewData = [
+//                     'message'              => $otpMessage,
+//                     'sub_event_name'       => $form->sub_event_name ?? $branding['portalName'],
+//                     'logo'                 => $form ? $uploadBaseUrl . $form->sub_event_logo : $branding['logoUrl'],
+//                     'sub_event_date_image' => $form ? $uploadBaseUrl . $form->sub_event_date_image : '',
+//                 ];
+
+//                 $htmlBody = '';
+                
+//                 if (is_file($viewPath)) {
+//                     $htmlBody = view($branding['otpView'], $viewData);
+//                 } else {
+//                     $htmlBody = '<p>' . htmlspecialchars($otpMessage, ENT_QUOTES, 'UTF-8') . '</p>';
+//                 }
+
+//                 $emailResult = sendEmail(
+//                     toEmail: $email,
+//                     toName: $user->first_name ?? 'User',
+//                     subject: $branding['portalName'] . ' — Login OTP',
+//                     htmlBody: $htmlBody,
+//                     fromEmail: $branding['fromEmail'],
+//                     fromName: $branding['fromName']
+//                 );
+                
+//                 $results['email'] = $emailResult;
+//                 log_message('info', "[sendOtpMessage] Email OTP sent to: {$email}, Result: " . ($emailResult ? 'Success' : 'Failed'));
+//             }
+//         }
+        
+//         if ($channel === 'mobile' || $channel === 'both') {
+//             // ✅ FIX: Only send SMS if NOT international
+//             if (!$isInternational && !empty($mobile)) {
+//                 $mobileResult = send_sms_otp($mobile, $otp);
+//                 $results['mobile'] = $mobileResult;
+//                 log_message('info', "[sendOtpMessage] SMS OTP sent to: {$mobile}, Result: " . ($mobileResult ? 'Success' : 'Failed'));
+//             } else if ($isInternational) {
+//                 log_message('info', "[sendOtpMessage] International exhibitor - SMS skipped for mobile: {$mobile}");
+//                 $results['mobile'] = false;
+//             } else {
+//                 log_message('info', "[sendOtpMessage] No mobile number found for SMS");
+//                 $results['mobile'] = false;
+//             }
+//         }
+        
+//         if ($channel === 'email' && !empty($email)) {
+//             return $results['email'] ?? false;
+//         }
+        
+//         if ($channel === 'mobile' && !empty($mobile) && !$isInternational) {
+//             return $results['mobile'] ?? false;
+//         }
+        
+//         if ($channel === 'both') {
+//             if ($isInternational) {
+//                 return $results['email'] ?? false;
+//             }
+            
+//             return ($results['email'] ?? false) || ($results['mobile'] ?? false);
+//         }
+        
+//         return false;
+//     }
+// }
+
 if (!function_exists('sendOtpMessage')) {
     function sendOtpMessage(
         $user,
@@ -332,96 +435,85 @@ if (!function_exists('sendOtpMessage')) {
         ?int $subEventId = null
     ): bool {
         $branding = resolvePortalBranding($referralWebsite);
-        
-        // ✅ FIX: Check if user is international based on exhibitor_type
+
         $isInternational = false;
-        
+
         if (isset($user->exhibitor_type) && !empty($user->exhibitor_type)) {
-            // If exhibitor_type is 'International', then it's international
             if (strtolower($user->exhibitor_type) === 'international') {
                 $isInternational = true;
             }
         }
-        
         $mobile = $user->mobile ?? $user->mobile_number ?? '';
-        $email = $user->email ?? '';
-        
+        $email  = $user->email ?? '';
         $results = [];
-        
         $otpMessage = "Your Exhibitor Login OTP Code is {$otp}. This code is valid for 15 minutes. Exhibition Managed by Services International";
-        
-        if ($channel === 'email' || $channel === 'both') {
-            if (!empty($email)) {
-                $form = null;
-                
-                if ($subEventId) {
-                    $formModel = new ExhibitorContactPersonModel();
-                    $form = $formModel->getSubEvents($subEventId);
-                }
-                
-                $uploadBaseUrl = env('UPLOAD_BASE_URL');
-                $viewPath = APPPATH . 'Views/' . str_replace('/', DIRECTORY_SEPARATOR, $branding['otpView']) . '.php';
-                
-                $viewData = [
-                    'message'              => $otpMessage,
-                    'sub_event_name'       => $form->sub_event_name ?? $branding['portalName'],
-                    'logo'                 => $form ? $uploadBaseUrl . $form->sub_event_logo : $branding['logoUrl'],
-                    'sub_event_date_image' => $form ? $uploadBaseUrl . $form->sub_event_date_image : '',
-                ];
-
-                $htmlBody = '';
-                
-                if (is_file($viewPath)) {
-                    $htmlBody = view($branding['otpView'], $viewData);
-                } else {
-                    $htmlBody = '<p>' . htmlspecialchars($otpMessage, ENT_QUOTES, 'UTF-8') . '</p>';
-                }
-
-                $emailResult = sendEmail(
-                    toEmail: $email,
-                    toName: $user->first_name ?? 'User',
-                    subject: $branding['portalName'] . ' — Login OTP',
-                    htmlBody: $htmlBody,
-                    fromEmail: $branding['fromEmail'],
-                    fromName: $branding['fromName']
-                );
-                
-                $results['email'] = $emailResult;
-                log_message('info', "[sendOtpMessage] Email OTP sent to: {$email}, Result: " . ($emailResult ? 'Success' : 'Failed'));
+        $sendOtpEmail = function () use ($branding, $subEventId, $otpMessage, $email, $user) {
+            $form = null;
+            if ($subEventId) {
+                $formModel = new ExhibitorContactPersonModel();
+                $form = $formModel->getSubEvents($subEventId);
             }
+            $uploadBaseUrl = env('UPLOAD_BASE_URL');
+            $viewPath = APPPATH . 'Views/' . str_replace('/', DIRECTORY_SEPARATOR, $branding['otpView']) . '.php';
+            $viewData = [
+                'message'              => $otpMessage,
+                'sub_event_name'       => $form->sub_event_name ?? $branding['portalName'],
+                'logo'                 => $form ? $uploadBaseUrl . $form->sub_event_logo : $branding['logoUrl'],
+                'sub_event_date_image' => $form ? $uploadBaseUrl . $form->sub_event_date_image : '',
+            ];
+            $htmlBody = is_file($viewPath)
+                ? view($branding['otpView'], $viewData)
+                : '<p>' . htmlspecialchars($otpMessage, ENT_QUOTES, 'UTF-8') . '</p>';
+            return sendEmail(
+                toEmail: $email,
+                toName: $user->first_name ?? 'User',
+                subject: $branding['portalName'] . ' — Login OTP',
+                htmlBody: $htmlBody,
+                fromEmail: $branding['fromEmail'],
+                fromName: $branding['fromName']
+            );
+        };
+
+        if (($channel === 'email' || $channel === 'both') && !empty($email)) {
+            $emailResult = $sendOtpEmail();
+            $results['email'] = $emailResult;
+            log_message('info', "[sendOtpMessage] Email OTP sent to: {$email}, Result: " . ($emailResult ? 'Success' : 'Failed'));
         }
-        
+
         if ($channel === 'mobile' || $channel === 'both') {
-            // ✅ FIX: Only send SMS if NOT international
             if (!$isInternational && !empty($mobile)) {
                 $mobileResult = send_sms_otp($mobile, $otp);
                 $results['mobile'] = $mobileResult;
                 log_message('info', "[sendOtpMessage] SMS OTP sent to: {$mobile}, Result: " . ($mobileResult ? 'Success' : 'Failed'));
-            } else if ($isInternational) {
+            } elseif ($isInternational) {
                 log_message('info', "[sendOtpMessage] International exhibitor - SMS skipped for mobile: {$mobile}");
                 $results['mobile'] = false;
+                if ($channel === 'mobile' && !empty($email) && !isset($results['email'])) {
+                    $emailResult = $sendOtpEmail();
+                    $results['email'] = $emailResult;
+                    log_message('info', "[sendOtpMessage] International user - fell back to email: {$email}, Result: " . ($emailResult ? 'Success' : 'Failed'));
+                }
             } else {
                 log_message('info', "[sendOtpMessage] No mobile number found for SMS");
                 $results['mobile'] = false;
             }
         }
-        
-        if ($channel === 'email' && !empty($email)) {
+        if ($channel === 'email') {
             return $results['email'] ?? false;
         }
-        
-        if ($channel === 'mobile' && !empty($mobile) && !$isInternational) {
+        if ($channel === 'mobile') {
+            if ($isInternational) {
+                return $results['email'] ?? false;
+            }
             return $results['mobile'] ?? false;
         }
-        
         if ($channel === 'both') {
             if ($isInternational) {
                 return $results['email'] ?? false;
             }
-            
             return ($results['email'] ?? false) || ($results['mobile'] ?? false);
         }
-        
+
         return false;
     }
 }
