@@ -121,6 +121,82 @@
 .pay-now-confirm .detail-row:last-child{border-bottom:none;font-weight:700;font-size:1.05rem;padding-top:8px;border-top:2px solid #4a72b8}
 .pay-now-confirm .label{color:#6b7891}
 .pay-now-confirm .value{color:#253345;font-weight:600}
+.rejection-reason-swal-popup{
+    border-radius:18px !important;
+    box-shadow:0 20px 50px rgba(20,40,80,0.18) !important;
+    padding:1.5rem 1.75rem 1.75rem !important;
+    max-width:92vw !important;
+    overflow:hidden !important;
+}
+.rejection-reason-swal-icon{
+    width:78px !important;
+    height:72px !important;
+    margin:0 auto 14px !important;
+    border-color:#dc3545 !important;
+}
+.rejection-reason-swal-icon .swal2-x-mark-line-left,
+.rejection-reason-swal-icon .swal2-x-mark-line-right{
+    background-color:#dc3545 !important;
+}
+.rejection-reason-swal-title{
+    font-size:1.3rem !important;
+    font-weight:700 !important;
+    color:#dc3545 !important;
+    text-align:center !important;
+    padding:0 0 4px !important;
+    margin:0 !important;
+}
+.rejection-reason-subtitle{
+    font-size:1.05rem !important;
+    font-weight:700 !important;
+    color:#253345 !important;
+    text-align:left !important;
+    margin:8px 0 10px !important;
+}
+.rejection-reason-swal-html,
+.rejection-reason-modal-body{
+    font-size:14px !important;
+    line-height:1.7 !important;
+    color:#4a4a4a !important;
+    text-align:left !important;
+    max-height:50vh;
+    /* overflow-y:auto !important; */
+    padding-right:10px;
+    margin:0 !important;
+}
+.rejection-reason-modal-body p{
+    margin:0 0 14px;
+}
+.rejection-reason-modal-body p:last-child{
+    margin-bottom:0;
+}
+.rejection-reason-modal-body strong{
+    color:#253345;
+    display:inline-block;
+    margin-bottom:2px;
+}
+.rejection-reason-modal-body ul,
+.rejection-reason-modal-body ol{
+    margin:0 0 14px 20px;
+    padding:0;
+}
+.rejection-reason-swal-html::-webkit-scrollbar{
+    width:6px;
+}
+.rejection-reason-swal-html::-webkit-scrollbar-thumb{
+    background:#d0d7e2;
+    border-radius:10px;
+}
+@media (max-width:600px){
+    .rejection-reason-swal-popup{
+        width:94vw !important;
+        padding:1.25rem !important;
+    }
+    .rejection-reason-swal-html,
+    .rejection-reason-modal-body{
+        max-height:60vh;
+    }
+}
 </style>
 
 <?php
@@ -381,10 +457,12 @@ if (!in_array($selectedScheme, [1, 2, 3], true)) {
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 <script src="https://cdn.jsdelivr.net/jquery.validation/1.19.5/jquery.validate.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
 
 <script>
 $(function() {
     var guidelinesShown = false;
+    let currentFullRejectionReason = '';
 
     const API_BASE_URL = '<?= env('API_BASE_URL') ?>';
     const FASCIA_URL = `${API_BASE_URL}/v1/dashboard/fascia`;
@@ -1198,54 +1276,110 @@ $(function() {
             return;
         }
 
-        const finalReason =
-            (
-                otherReason &&
-                String(otherReason).trim()
-            ) ||
-            (
-                reason &&
-                String(reason).trim()
-            ) ||
-            '';
+    const rawReason =
+        (
+            otherReason &&
+            String(otherReason).trim()
+        ) ||
+        (
+            reason &&
+            String(reason).trim()
+        ) ||
+        '';
 
-        if (finalReason) {
-            const wordCount = finalReason.trim().split(/\s+/).length;
-            const shortReason = truncateWords(finalReason, 15);
-            const needsViewMore = wordCount > 15;
+    currentFullRejectionReason = formatPlainTextToHtml(rawReason);   // 👈 ab formatted HTML store hoga
 
-            let html =
-                `<strong>Rejection Reason:</strong>` +
-                `<span class="rejection-reason-text">${escapeHtml(shortReason)}</span>`;
+    if (rawReason) {
+        const plainText = rawReason.replace(/<[^>]*>/g, '');
+        const wordCount = plainText.trim().split(/\s+/).length;
+        const needsViewMore = wordCount > 10;
 
-            if (needsViewMore) {
-                html +=
-                    `<a href="#" class="view-more-reason" data-full-reason="${escapeHtml(finalReason)}">View more</a>`;
-            }
+        const shortReason = needsViewMore
+            ? escapeHtml(truncateWords(plainText, 10))
+            : escapeHtml(plainText);
 
-            $reasonBox
-                .html(html)
-                .show();
-        } else {
-            $reasonBox
-                .hide()
-                .empty();
+        let html =
+            `<strong>Rejection Reason:</strong>` +
+            `<span class="rejection-reason-text">${shortReason}</span>`;
+
+        if (needsViewMore) {
+            html +=
+                `<a href="#" class="view-more-reason">View more</a>`;
         }
+
+        $reasonBox
+            .html(html)
+            .show();
+    } else {
+        $reasonBox
+            .hide()
+            .empty();
     }
+}
 
     $(document).on('click', '.view-more-reason', function(e) {
-        e.preventDefault();
+    e.preventDefault();
 
-        const fullReason = $(this).attr('data-full-reason') || '';
+    const safeHtml =
+        (typeof DOMPurify !== 'undefined')
+            ? DOMPurify.sanitize(currentFullRejectionReason)
+            : currentFullRejectionReason;
 
-        Swal.fire({
-            icon: 'error',
-            title: 'Rejection Reason',
-            text: fullReason,
-            confirmButtonText: 'Close',
-            confirmButtonColor: '#4a72b8'
-        });
-    });
+    Swal.fire({
+    icon: 'error',
+    iconColor: '#dc3545',
+    title: 'Rejected',
+    html: `
+        <div class="rejection-reason-subtitle">Rejection Reason</div>
+        <div class="rejection-reason-modal-body">${safeHtml}</div>
+    `,
+    confirmButtonText: 'Close',
+    confirmButtonColor: '#4a72b8',
+    width: '720px',
+    heightAuto: false,
+    customClass: {
+        popup: 'rejection-reason-swal-popup',
+        icon: 'rejection-reason-swal-icon',
+        title: 'rejection-reason-swal-title',
+        htmlContainer: 'rejection-reason-swal-html'
+    }
+});
+});
+
+function formatPlainTextToHtml(text) {
+    if (!text) return '';
+
+    // Agar already HTML tags hain, waise hi treat karo (kisi purane record mein ho sakta hai)
+    if (/<[a-z][\s\S]*>/i.test(text)) {
+        return text;
+    }
+
+    // Plain text ko safely escape karo pehle
+    const escaped = escapeHtml(text);
+
+    // Double newline = naya paragraph
+    const paragraphs = escaped
+        .split(/\n\s*\n/)
+        .map(function(block) {
+            const trimmed = block.trim();
+            if (!trimmed) return '';
+
+            // Single newline ko <br> banao
+            let withBreaks = trimmed.replace(/\n/g, '<br>');
+
+            // "1. Title" jaisi numbered heading lines ko bold karo
+            withBreaks = withBreaks.replace(
+                /^(\d+\.\s?[^<]+?)(<br>|$)/,
+                '<strong>$1</strong>$2'
+            );
+
+            return `<p>${withBreaks}</p>`;
+        })
+        .filter(Boolean)
+        .join('');
+
+    return paragraphs;
+}
 
     function showElectricityConfirmation(
         quantity,
