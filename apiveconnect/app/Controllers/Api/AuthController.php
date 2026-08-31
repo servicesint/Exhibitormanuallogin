@@ -62,8 +62,30 @@ class AuthController extends BaseController
         );
         $channel = $isEmail ? 'email' : 'mobile';
         $referralWebsite = (string) ($this->request->getVar('referreral_website') ?? $this->request->getVar('referral_website') ?? '');
+        log_message('info', 'OTP send attempt: ' . json_encode([
+                    'user_id'      => $user->id,
+                    'email'        => $user->email,
+                    'mobile'       => $user->mobile_number,
+                    'channel'      => $channel,
+                    'sub_event_id' => $subEventId,
+                ]));
         $otpSent = sendOtpMessage($user, $otp, $channel, $referralWebsite, $subEventId);
+        log_message('info', 'OTP send result: ' . json_encode([
+                    'user_id'     => $user->id,
+                    'channel'     => $channel,
+                    'raw_result'  => $otpSent,
+                    'result_type' => gettype($otpSent),
+                ]));
         if (!$otpSent) {
+            log_message('error', 'sendOtpMessage failed: ' . json_encode([
+                'user' => $user,
+                'channel' => $channel,
+                'referralWebsite' => $referralWebsite,
+                'subEventId' => $subEventId,
+                'error' => is_array($otpSent)
+                    ? ($otpSent['message'] ?? $otpSent['error'] ?? $otpSent)
+                    : $otpSent
+            ]));
             return $this->response->setJSON([
                 'status' => false,
                 'message' => 'OTP could not be sent'
