@@ -242,10 +242,23 @@ if (!function_exists('sendEmail')) {
             log_message('error', "[sendEmail] Invalid recipient: {$toEmail}");
             return false;
         }
-        
-        $fromEmail = $fromEmail ?: env('DEFAULT_FROM_EMAIL', 'info@bridalasia.com');
-        $fromName  = $fromName  ?: env('DEFAULT_FROM_NAME',  'Exhibitor Portal');
-        
+        if (stripos($fromEmail, 'Bridal Asia') !== false) {
+            $fromEmail = env('BRIDALASIA_FROM_EMAIL', 'info@bridalasia.com');
+            $fromName  = $fromName  ?: env('BRIDALASIA_FROM_NAME',  'Exhibitor Portal');
+        } else if (stripos($fromEmail, 'Drone Expo') !== false) {
+            $fromEmail = env('DRONEEXPO_FROM_EMAIL', 'info@droneexpo.in');
+            $fromName  = $fromName  ?: env('DRONEEXPO_FROM_NAME',  'Exhibitor Portal');
+        } else if (stripos($fromEmail, 'Fire india') !== false) {
+            $fromEmail = env('FIREINDIA_FROM_EMAIL', 'info@fireindia.net');
+            $fromName  = $fromName  ?: env('FIREINDIA_FROM_NAME',  'Exhibitor Portal');
+        } else if (stripos($fromEmail, 'Secure Nation Expo') !== false) {
+            $fromEmail = env('SECURENATION_FROM_EMAIL', 'info@securenationexpo.com');
+            $fromName  = $fromName  ?: env('SECURENATION_FROM_NAME',  'Exhibitor Portal');
+        } else {
+            // $fromEmail here is still the unmatched name (or empty) — always fall back to default
+            $fromEmail = env('DRONEEXPO_FROM_EMAIL', 'info@droneexpo.in');
+            $fromName  = $fromName  ?: env('DRONEEXPO_FROM_NAME',  'Exhibitor Portal');
+        }
         $payload = [
             'from'             => ['email' => $fromEmail, 'name' => $fromName],
             'subject'          => $subject,
@@ -318,7 +331,7 @@ if (!function_exists('sendEmail')) {
             log_message('error', "[sendEmail] Netcore error response: {$response}");
             return false;
         }
-        z
+
         return true;
     }
 }

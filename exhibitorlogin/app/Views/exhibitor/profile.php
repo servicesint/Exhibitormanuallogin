@@ -512,7 +512,7 @@
             label: 'Certificate/Memento Name',
             name: 'name_on_certificate_memento',
             placeholder: 'Enter the name to be printed on the certificate/memento.',
-            required: false,
+            required: true,
             minlength: 0,
             maxlength: 150,
             profileKey: 'name_on_certificate_memento',

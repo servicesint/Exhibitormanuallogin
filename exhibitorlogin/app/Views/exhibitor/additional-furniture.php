@@ -1920,6 +1920,7 @@
             const hintEl = document.getElementById('neftExpectedAmountHint');
             const quotationAmount = parseFloat(document.getElementById('neftQuotationAmount').value);
             const deductionType = getSelectedDeductionType();
+            const deductionTypeSelect = document.getElementById('neftDeductionType');
             const amountTransfer = parseFloat(amountField.value);
             const hasAmountEntered = amountField.value.trim() !== '' && !isNaN(amountTransfer);
 
@@ -1928,6 +1929,7 @@
                 if (diffField) diffField.value = '';
                 if (hintEl) hintEl.textContent = '';
                 amountField.classList.remove('is-invalid');
+                if (deductionTypeSelect) deductionTypeSelect.disabled = false;
                 setNeftSubmitEnabled(false);
                 neftLastToastState = null;
                 return;
@@ -1935,6 +1937,18 @@
 
             const differenceAmount = Math.round((quotationAmount - amountTransfer) * 100) / 100;
             if (diffField) diffField.value = differenceAmount;
+
+            // Difference is 0 — deduction type isn't needed, allow direct submission
+            if (differenceAmount === 0) {
+                if (deductionTypeSelect) deductionTypeSelect.disabled = true;
+                if (hintEl) hintEl.textContent = '';
+                amountField.classList.remove('is-invalid');
+                setNeftSubmitEnabled(true);
+                neftLastToastState = null;
+                return;
+            } else {
+                if (deductionTypeSelect) deductionTypeSelect.disabled = false;
+            }
 
             // "Others" is never submittable, regardless of the amount
             if (deductionType === 'others') {
@@ -2050,7 +2064,11 @@
                 return;
             }
 
-            if (!deductionType) {
+            const differenceAmount = Math.round((quotationAmount - amountTransfer) * 100) / 100;
+            const isZeroDifference = differenceAmount === 0;
+
+            // Deduction type isn't needed when the transferred amount matches the quotation exactly
+            if (!isZeroDifference && !deductionType) {
                 Swal.fire({
                     icon: 'warning',
                     title: 'Deduction type required',
@@ -2059,7 +2077,7 @@
                 return;
             }
 
-            if (deductionType === 'others') {
+            if (!isZeroDifference && deductionType === 'others') {
                 Swal.fire({
                     icon: 'error',
                     title: 'Cannot submit',
@@ -2077,17 +2095,19 @@
                 return;
             }
 
-            const differenceAmount = Math.round((quotationAmount - amountTransfer) * 100) / 100;
-            const matchedPercent = matchDifferencePercent(quotationAmount, differenceAmount);
+            let matchedPercent = 0;
+            if (!isZeroDifference) {
+                matchedPercent = matchDifferencePercent(quotationAmount, differenceAmount);
 
-            if (matchedPercent === null) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Amount mismatch',
-                    html: `The Amount Transfer entered does not match an accepted deduction amount.<br><br>
-                   <strong>Difference Amount: ${state.currencySymbol} ${differenceAmount}</strong>`
-                });
-                return;
+                if (matchedPercent === null) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Amount mismatch',
+                        html: `The Amount Transfer entered does not match an accepted deduction amount.<br><br>
+               <strong>Difference Amount: ${state.currencySymbol} ${differenceAmount}</strong>`
+                    });
+                    return;
+                }
             }
 
             if (!referenceNo.trim()) {
@@ -2104,7 +2124,7 @@
             const payload = {
                 qid: parseInt(qid),
                 amount_transfer: amountTransfer,
-                deduction_type: deductionType,
+                deduction_type: isZeroDifference ? 'na' : deductionType,
                 tds_percent: matchedPercent,
                 difference_amount: differenceAmount,
                 reference_no: referenceNo.trim(),
