@@ -42,6 +42,7 @@ class OrderModel extends Model
 
     public function createOrderFromCart(int $vendorId, int $exhbitior_contact_person, int $subEventId, array $cartItems, array $totals, bool $isInternational, array $extra = []): ?int
     {
+        
         $this->db->transStart();
         $orderNumber = $this->generateOrderNumber();
         $orderId = $this->insert([
@@ -52,6 +53,8 @@ class OrderModel extends Model
             'tax'               => $totals['tax'],
             'total'             => $totals['total'],
             'currency'          => $isInternational ? 'USD' : 'INR',
+            'igst_percent'      => $isInternational ? 18 : 0,
+            'gst_percent'       => $isInternational ? 18 : 0,
             'is_international'  => $isInternational ? 1 : 0,
             'payment_method'    => $extra['payment_method']    ?? null,
             'payment_status'    => 'pending',
