@@ -1196,7 +1196,6 @@
                             </tr>
                         </thead>
                         <tbody id="furnitureTableBody">
-
                         </tbody>
                     </table>
                 </div>
@@ -1249,7 +1248,6 @@
                         </tr>
                     </thead>
                     <tbody id="ordersContainer">
-
                     </tbody>
                 </table>
             </div>
@@ -1278,7 +1276,6 @@
                             <input type="text" class="form-control" name="amount_transfer" id="neftAmountTransfer">
                             <small id="neftExpectedAmountHint" class="text-muted d-block mt-1"></small>
                         </div>
-
                         <div class="col-md-4 mb-3">
                             <label>Deduction Type</label>
                             <select class="form-control" id="neftDeductionType" name="deduction_type">
@@ -1296,20 +1293,17 @@
                             <input type="text" class="form-control" name="reference_no" id="neftReferenceNo">
                         </div>
                     </div>
-
                     <!-- Kept in DOM (backend may still expect the field) but hidden from user -->
                     <div class="mb-3" style="display:none;">
                         <label>Reason for difference</label>
                         <textarea class="form-control" name="reason_for_difference" id="neftReasonForDifference" rows="3"></textarea>
                     </div>
-
                     <div class="text-end">
                         <button type="submit" class="btn btn-dark" id="neftSubmitBtn" disabled>Submit</button>
                     </div>
                 </div>
             </form>
         </div>
-
     </div>
 </div>
 
