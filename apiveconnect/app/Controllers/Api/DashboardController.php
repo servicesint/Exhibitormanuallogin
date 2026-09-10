@@ -1285,11 +1285,13 @@ class DashboardController extends BaseController
                 'total'                 => $total,
                 'currency'              => $currency,
                 'is_international'      => $isInternational ? 1 : 0,
-                'payment_method'        => 'neft',
+                'payment_method'        => 'bank',
                 'payment_status'        => 'pending',
                 'payment_reference'     => $referenceNo,
                 'quotation_amount'      => $quotationAmount,
                 'amount_transferred'    => $amountTransfer,
+                'igst_percent'          => (int) $isInternational ? 18 : 0,
+                'gst_percent'           => (int) $isInternational ? 0 : 18,
                 'tds'           => $tdsPercent,
                 'reason_for_difference' => $reasonForDifference,
                 'order_status'          => 'pending',
@@ -1330,7 +1332,7 @@ class DashboardController extends BaseController
                 ->setJSON([
                     'status'  => true,
                     'code'    => 200,
-                    'message' => 'NEFT transfer saved successfully.',
+                    'message' => 'Bank transfer saved successfully.',
                     'data'    => [
                         'qid'                   => $qid,
                         'ref_no'                => $referenceNo,
@@ -1345,10 +1347,10 @@ class DashboardController extends BaseController
                 ]);
         } catch (\Exception $e) {
             $this->db->transRollback();
-            log_message('error', 'NEFT transfer error: ' . $e->getMessage());
+            log_message('error', 'Bank transfer error: ' . $e->getMessage());
             return $this->response
                 ->setStatusCode(500)
-                ->setJSON(['status' => false, 'code' => 500, 'message' => 'Failed to save NEFT transfer.', 'data' => null]);
+                ->setJSON(['status' => false, 'code' => 500, 'message' => 'Failed to save Bank transfer.', 'data' => null]);
         }
     }
 
@@ -4457,7 +4459,6 @@ class DashboardController extends BaseController
                     ]
                 ]);
             }
-
             $fasciaOptions = json_decode($manualSetup['fascia_options'], true);
             $fasciaCategory = null;
             if (isset($fasciaOptions['shell_space']) && $fasciaOptions['shell_space'] == 1) {

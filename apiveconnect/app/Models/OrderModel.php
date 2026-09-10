@@ -9,7 +9,6 @@ class OrderModel extends Model
     protected $table      = 'orders';
     protected $primaryKey = 'id';
     protected $returnType = 'array';
-
     protected $allowedFields = [
         'order_number',
         'exhibitor_id',
@@ -53,7 +52,7 @@ class OrderModel extends Model
             'tax'               => $totals['tax'],
             'total'             => $totals['total'],
             'currency'          => $isInternational ? 'USD' : 'INR',
-            'igst_percent'      => $isInternational ? 18 : 0,
+            'igst_percent'      => $isInternational ? 0 : 18,
             'gst_percent'       => $isInternational ? 18 : 0,
             'is_international'  => $isInternational ? 1 : 0,
             'payment_method'    => $extra['payment_method']    ?? null,
@@ -112,12 +111,10 @@ class OrderModel extends Model
         if (!$order) {
             return null;
         }
-
         $orderItemsModel = new OrderItemModel();
         $order['items'] = $orderItemsModel->where('order_id', $order['id'])->where('order_number', $order['order_number'])
             ->orderBy('id', 'DESC')
             ->findAll();
-
         return $order;
     }
 
