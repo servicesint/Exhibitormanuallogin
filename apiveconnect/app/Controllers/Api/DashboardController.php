@@ -1167,7 +1167,7 @@ class DashboardController extends BaseController
                 ->setStatusCode(422)
                 ->setJSON(['status' => false, 'code' => 422, 'message' => 'Reference number is required.', 'data' => null]);
         }
-       
+
         if ($deductionType === 'others') {
             return $this->response
                 ->setStatusCode(422)
@@ -1187,11 +1187,11 @@ class DashboardController extends BaseController
                     ->setJSON(['status' => false, 'code' => 404, 'message' => 'Quotation not found.', 'data' => null]);
             }
 
-        // Server-side re-validation of the TDS math — never trust client-computed values for money.
-        $quotationAmount = (float) $quote->amount;   // full quotation amount incl. GST (Total)
-        $baseAmount      = (float) $quote->q_amount; // base amount (pre-GST) — TDS & GST are calculated on this
-        $amountTransfer  = $amountTransfer !== null ? (float) $amountTransfer : $quotationAmount;
-        $differenceAmount = round($quotationAmount - $amountTransfer, 2);
+            // Server-side re-validation of the TDS math — never trust client-computed values for money.
+            $quotationAmount = (float) $quote->amount;   // full quotation amount incl. GST (Total)
+            $baseAmount      = (float) $quote->q_amount; // base amount (pre-GST) — TDS & GST are calculated on this
+            $amountTransfer  = $amountTransfer !== null ? (float) $amountTransfer : $quotationAmount;
+            $differenceAmount = round($quotationAmount - $amountTransfer, 2);
 
             $allowedPercents = [2, 10];
             $tolerance = 0.5;
@@ -1727,6 +1727,12 @@ class DashboardController extends BaseController
                 }
                 return redirect()->to($failureUrl);
             }
+            $fullPaymentDetails = null;
+            try {
+                $fullPaymentDetails = $api->payment->fetch($razorpayPaymentId)->toArray();
+            } catch (\Throwable $e) {
+                log_message('error', 'Failed to fetch full Razorpay payment details: ' . $e->getMessage());
+            }
             $this->saveOrderPaymentDetails((int) $order['id'], [
                 'payment_status'       => 'paid',
                 'payment_method'       => 'online',
@@ -1735,12 +1741,14 @@ class DashboardController extends BaseController
                 'payment_reference'    => $razorpayPaymentId ?: $razorpayOrderId,
                 'payment_currency'     => $order['currency'] ?? null,
                 'payment_amount'       => $order['total'] ?? null,
-                'payment_response'     => json_encode([
-                    'razorpay_order_id'   => $razorpayOrderId,
-                    'razorpay_payment_id' => $razorpayPaymentId,
-                    'razorpay_signature'  => $razorpaySignature,
-                    'verified_at'         => date('Y-m-d H:i:s'),
-                ]),
+                'payment_response'     => $fullPaymentDetails
+                    ? json_encode($fullPaymentDetails)
+                    : json_encode([
+                        'razorpay_order_id'   => $razorpayOrderId,
+                        'razorpay_payment_id' => $razorpayPaymentId,
+                        'razorpay_signature'  => $razorpaySignature,
+                        'verified_at'         => date('Y-m-d H:i:s'),
+                    ]),
                 'paid_at'              => date('Y-m-d H:i:s'),
             ]);
             $cartModel = new CartModel();
@@ -2250,8 +2258,6 @@ class DashboardController extends BaseController
                     ? json_decode($manualSetup['online_forms_open_close'], true)
                     : [];
                 $badgesNote = $manualSetup['manual_badges_note'] ?? '';
-                
-                
             }
             $badgesEnabled = isset($enableDisable['exhibitor_badges']) ? (int) $enableDisable['exhibitor_badges'] : 1;
             $badgesOpen = isset($openClose['exhibitor_badges']) ? (int) $openClose['exhibitor_badges'] : 1;
@@ -2310,7 +2316,7 @@ class DashboardController extends BaseController
                     'badges_enabled' => ($badgesEnabled === 1),
                     'badges_open' => ($badgesOpen === 1),
                     'badges_note' => $badgesNote,
-                   
+
                     'vendor_badge_color' => $vendorBadgeColor,
                     'exhibitor_badge_background' => $exhibitorBadgeBackground,
                     'vendor_badge_background' => $vendorBadgeBackground,
@@ -3571,176 +3577,176 @@ class DashboardController extends BaseController
         ]);
     }
     public function download_quotation($qid = null)
-{
-    try {
-        $jwt = $this->getJwtContext();
-        $vendorId = $jwt['exhibitor_id'] ?? null;
-        if (!$vendorId) {
-            return $this->response
-                ->setStatusCode(401)
-                ->setJSON([
-                    'status'  => false,
-                    'code'    => 401,
-                    'message' => 'Unauthorized.',
-                    'data'    => null
-                ]);
-        }
+    {
+        try {
+            $jwt = $this->getJwtContext();
+            $vendorId = $jwt['exhibitor_id'] ?? null;
+            if (!$vendorId) {
+                return $this->response
+                    ->setStatusCode(401)
+                    ->setJSON([
+                        'status'  => false,
+                        'code'    => 401,
+                        'message' => 'Unauthorized.',
+                        'data'    => null
+                    ]);
+            }
 
-        if (empty($qid)) {
-            return $this->response
-                ->setStatusCode(422)
-                ->setJSON([
-                    'status'  => false,
-                    'code'    => 422,
-                    'message' => 'Quotation ID is required.',
-                    'data'    => null
-                ]);
-        }
+            if (empty($qid)) {
+                return $this->response
+                    ->setStatusCode(422)
+                    ->setJSON([
+                        'status'  => false,
+                        'code'    => 422,
+                        'message' => 'Quotation ID is required.',
+                        'data'    => null
+                    ]);
+            }
 
-        $quote = $this->db->table('quotes')
-            ->where('qid', $qid)
-            ->where('exhibitor_id', $vendorId)
-            ->get()
-            ->getRowArray();
+            $quote = $this->db->table('quotes')
+                ->where('qid', $qid)
+                ->where('exhibitor_id', $vendorId)
+                ->get()
+                ->getRowArray();
 
-        if (!$quote) {
-            return $this->response
-                ->setStatusCode(404)
-                ->setJSON([
-                    'status'  => false,
-                    'code'    => 404,
-                    'message' => 'Quotation not found.',
-                    'data'    => null
-                ]);
-        }
+            if (!$quote) {
+                return $this->response
+                    ->setStatusCode(404)
+                    ->setJSON([
+                        'status'  => false,
+                        'code'    => 404,
+                        'message' => 'Quotation not found.',
+                        'data'    => null
+                    ]);
+            }
 
-        $detailRows = $this->db->table('quotes_details')
-            ->where('qid', $qid)
-            ->get()
-            ->getResultArray();
+            $detailRows = $this->db->table('quotes_details')
+                ->where('qid', $qid)
+                ->get()
+                ->getResultArray();
 
-        $items = array_map(function ($row) {
-            return [
-                'id'            => $row['item_id'],
-                'item_name'     => $row['item_name'],
-                'quantity'      => (int) $row['quantity'],
-                'price'         => (float) $row['unit_price'],
-                'sale_price'    => (float) ($row['sale_price'] ?? $row['unit_price']),
-                'is_early_bird' => (bool) ($row['is_early_bird'] ?? 0),
-                'item_image'    => $row['item_image'] ?? null,
+            $items = array_map(function ($row) {
+                return [
+                    'id'            => $row['item_id'],
+                    'item_name'     => $row['item_name'],
+                    'quantity'      => (int) $row['quantity'],
+                    'price'         => (float) $row['unit_price'],
+                    'sale_price'    => (float) ($row['sale_price'] ?? $row['unit_price']),
+                    'is_early_bird' => (bool) ($row['is_early_bird'] ?? 0),
+                    'item_image'    => $row['item_image'] ?? null,
+                ];
+            }, $detailRows);
+
+            $isInternational = $this->resolveIsInternational($vendorId);
+            $currencySymbol  = $quote['currency'] ?: ($isInternational ? '$' : '₹');
+            $currencyText    = $isInternational ? 'USD' : 'INR';
+
+            $contactModel = new ExhibitorContactPersonModel();
+            $profile      = $contactModel->getProfile($vendorId);
+
+            $subtotal  = (float) $quote['q_amount'];
+            $total     = (float) $quote['amount'];
+            $taxAmount = round($total - $subtotal, 2);
+            $invoiceNo = $quote['ref_no'];
+            $date      = !empty($quote['added_date'])
+                ? date('d.m.Y', strtotime($quote['added_date']))
+                : date('d.m.Y');
+
+            $quoteSubEventId = $quote['event_id'] ?? null;
+
+            $subEvent = $this->db->table('manual_setups')
+                ->where('sub_event_id', $quoteSubEventId)
+                ->get()
+                ->getRow();
+
+            $subEvents = $this->db->table('company_sub_events')
+                ->where('id', $quoteSubEventId)
+                ->get()
+                ->getRow();
+
+            $exhibitorInfo = $this->getExhibitorTaxInfo($vendorId);
+
+            $gstBreakdown = $this->resolveGstBreakdown(
+                $taxAmount,
+                $exhibitorInfo['name'] ?? null,
+                $subEvents->venue_state ?? null,
+                $isInternational
+            );
+            $cgst = $gstBreakdown['cgst'];
+            $sgst = $gstBreakdown['sgst'];
+            $igst = $gstBreakdown['igst'];
+            $isSameState = $gstBreakdown['is_same_state'];
+
+            $eventName = !empty($subEvents->sub_event_name) ? $subEvents->sub_event_name : '';
+
+            $companyInfo = $this->db->table('companies')
+                ->select('company_name, company_logo')
+                ->where('id', 1)
+                ->get()
+                ->getRowArray();
+
+            $invoiceData = [
+                'invoice_no'       => $invoiceNo,
+                'signature'        => $subEvent->signature ?? '',
+                'date'             => $date,
+                'profile'          => $profile,
+                'items'            => $items,
+                'subtotal'         => $subtotal,
+                'company_name'     => $companyInfo['company_name'] ?? '',
+                'company_image'    => $companyInfo['company_logo'] ?? '',
+                'exhibitor_type'   => $exhibitorInfo['exhibitor_type'] ?? '',
+                'cgst'             => $cgst,
+                'sgst'             => $sgst,
+                'igst'             => $igst,
+                'is_same_state'    => $isSameState,
+                'total'            => $total,
+                'currency_symbol'  => $currencySymbol,
+                'currency_text'    => $currencyText,
+                'event_name'       => $eventName,
+                'customer_name'    => $exhibitorInfo['organisation_name'] ?? 'M/s Services International',
+                'customer_gstin'   => $exhibitorInfo['gst_number'] ?? 'N/A',
+                'customer_address' => $exhibitorInfo['address'] ?? '',
             ];
-        }, $detailRows);
 
-        $isInternational = $this->resolveIsInternational($vendorId);
-        $currencySymbol  = $quote['currency'] ?: ($isInternational ? '$' : '₹');
-        $currencyText    = $isInternational ? 'USD' : 'INR';
+            $html = $this->quotationInvoiceHtml($invoiceData);
 
-        $contactModel = new ExhibitorContactPersonModel();
-        $profile      = $contactModel->getProfile($vendorId);
-
-        $subtotal  = (float) $quote['q_amount'];
-        $total     = (float) $quote['amount'];
-        $taxAmount = round($total - $subtotal, 2);
-        $invoiceNo = $quote['ref_no'];
-        $date      = !empty($quote['added_date'])
-            ? date('d.m.Y', strtotime($quote['added_date']))
-            : date('d.m.Y');
-
-        $quoteSubEventId = $quote['event_id'] ?? null;
-
-        $subEvent = $this->db->table('manual_setups')
-            ->where('sub_event_id', $quoteSubEventId)
-            ->get()
-            ->getRow();
-
-        $subEvents = $this->db->table('company_sub_events')
-            ->where('id', $quoteSubEventId)
-            ->get()
-            ->getRow();
-
-        $exhibitorInfo = $this->getExhibitorTaxInfo($vendorId);
-
-        $gstBreakdown = $this->resolveGstBreakdown(
-            $taxAmount,
-            $exhibitorInfo['name'] ?? null,
-            $subEvents->venue_state ?? null,
-            $isInternational
-        );
-        $cgst = $gstBreakdown['cgst'];
-        $sgst = $gstBreakdown['sgst'];
-        $igst = $gstBreakdown['igst'];
-        $isSameState = $gstBreakdown['is_same_state'];
-
-        $eventName = !empty($subEvents->sub_event_name) ? $subEvents->sub_event_name : '';
-
-        $companyInfo = $this->db->table('companies')
-            ->select('company_name, company_logo')
-            ->where('id', 1)
-            ->get()
-            ->getRowArray();
-
-        $invoiceData = [
-            'invoice_no'       => $invoiceNo,
-            'signature'        => $subEvent->signature ?? '',
-            'date'             => $date,
-            'profile'          => $profile,
-            'items'            => $items,
-            'subtotal'         => $subtotal,
-            'company_name'     => $companyInfo['company_name'] ?? '',
-            'company_image'    => $companyInfo['company_logo'] ?? '',
-            'exhibitor_type'   => $exhibitorInfo['exhibitor_type'] ?? '',
-            'cgst'             => $cgst,
-            'sgst'             => $sgst,
-            'igst'             => $igst,
-            'is_same_state'    => $isSameState,
-            'total'            => $total,
-            'currency_symbol'  => $currencySymbol,
-            'currency_text'    => $currencyText,
-            'event_name'       => $eventName,
-            'customer_name'    => $exhibitorInfo['organisation_name'] ?? 'M/s Services International',
-            'customer_gstin'   => $exhibitorInfo['gst_number'] ?? 'N/A',
-            'customer_address' => $exhibitorInfo['address'] ?? '',
-        ];
-
-        $html = $this->quotationInvoiceHtml($invoiceData);
-
-        $tempDir = WRITEPATH . 'mpdf';
-        if (!is_dir($tempDir)) {
-            mkdir($tempDir, 0777, true);
-        }
-        $mpdf = new Mpdf([
-            'mode'          => 'utf-8',
-            'format'        => 'A4',
-            'margin_left'   => 10,
-            'margin_right'  => 10,
-            'margin_top'    => 10,
-            'margin_bottom' => 10,
-            'default_font'  => 'dejavusans',
-            'tempDir'       => $tempDir,
-        ]);
-        $mpdf->WriteHTML($html);
-        $fileName = 'Additional-Furniture-Quotation-' . str_replace('/', '-', $invoiceNo) . '.pdf';
-        $pdfContent = $mpdf->Output($fileName, Destination::STRING_RETURN);
-
-        return $this->response
-            ->setStatusCode(200)
-            ->setHeader('Content-Type', 'application/pdf')
-            ->setHeader('Content-Disposition', 'attachment; filename="' . $fileName . '"')
-            ->setHeader('Content-Length', strlen($pdfContent))
-            ->setBody($pdfContent);
-    } catch (\Throwable $e) {
-        log_message('error', 'download_quotation failed: ' . $e->getMessage() . ' | ' . $e->getFile() . ':' . $e->getLine());
-        return $this->response
-            ->setStatusCode(500)
-            ->setJSON([
-                'status'  => false,
-                'code'    => 500,
-                'message' => 'Something went wrong while generating quotation PDF.',
-                'error'   => $e->getMessage(),
-                'data'    => null
+            $tempDir = WRITEPATH . 'mpdf';
+            if (!is_dir($tempDir)) {
+                mkdir($tempDir, 0777, true);
+            }
+            $mpdf = new Mpdf([
+                'mode'          => 'utf-8',
+                'format'        => 'A4',
+                'margin_left'   => 10,
+                'margin_right'  => 10,
+                'margin_top'    => 10,
+                'margin_bottom' => 10,
+                'default_font'  => 'dejavusans',
+                'tempDir'       => $tempDir,
             ]);
+            $mpdf->WriteHTML($html);
+            $fileName = 'Additional-Furniture-Quotation-' . str_replace('/', '-', $invoiceNo) . '.pdf';
+            $pdfContent = $mpdf->Output($fileName, Destination::STRING_RETURN);
+
+            return $this->response
+                ->setStatusCode(200)
+                ->setHeader('Content-Type', 'application/pdf')
+                ->setHeader('Content-Disposition', 'attachment; filename="' . $fileName . '"')
+                ->setHeader('Content-Length', strlen($pdfContent))
+                ->setBody($pdfContent);
+        } catch (\Throwable $e) {
+            log_message('error', 'download_quotation failed: ' . $e->getMessage() . ' | ' . $e->getFile() . ':' . $e->getLine());
+            return $this->response
+                ->setStatusCode(500)
+                ->setJSON([
+                    'status'  => false,
+                    'code'    => 500,
+                    'message' => 'Something went wrong while generating quotation PDF.',
+                    'error'   => $e->getMessage(),
+                    'data'    => null
+                ]);
+        }
     }
-}
 
     public function getReferenceImage()
     {
@@ -3748,7 +3754,7 @@ class DashboardController extends BaseController
             $jwt = $this->getJwtContext();
             $subEventId = $jwt['subEventId'] ?? null;
             $exhibitorId = $jwt['payload']->exhibitor_id ?? null;
-            
+
             if (!$subEventId || !$exhibitorId) {
                 return $this->response->setStatusCode(401)->setJSON([
                     'status' => false,
@@ -3757,7 +3763,7 @@ class DashboardController extends BaseController
                     'data' => null,
                 ]);
             }
-        
+
             $exhibitor = $this->db->table('exhibitor_contact_persons as ecp')
                 ->join('exhibitors as e', 'ecp.exhibitor_id = e.id', 'left')
                 ->select('e.stall_type_id')
@@ -3766,7 +3772,7 @@ class DashboardController extends BaseController
                 ->where('ecp.is_deleted', 0)
                 ->get()
                 ->getRowArray();
-          
+
             if (empty($exhibitor)) {
                 return $this->response->setStatusCode(404)->setJSON([
                     'status' => false,
@@ -3784,14 +3790,14 @@ class DashboardController extends BaseController
                     'data' => null,
                 ]);
             }
-            
+
             $manualSetup = $this->db->table('manual_setups')
                 ->select('shell_space_reference_img')
                 ->where('sub_event_id', $subEventId)
                 ->where('is_deleted', 0)
                 ->get()
                 ->getRowArray();
-            
+
             if (empty($manualSetup) || empty($manualSetup['shell_space_reference_img'])) {
                 return $this->response->setStatusCode(404)->setJSON([
                     'status' => false,
@@ -3800,17 +3806,17 @@ class DashboardController extends BaseController
                     'data' => null,
                 ]);
             }
-            
+
             $uploadBaseUrl = env('UPLOAD_BASE_URL', '');
             $imagePath = $manualSetup['shell_space_reference_img'];
-            
+
             if (filter_var($imagePath, FILTER_VALIDATE_URL)) {
                 $imageUrl = $imagePath;
             } else {
                 $imagePath = ltrim($imagePath, '/');
                 $imageUrl = rtrim($uploadBaseUrl, '/') . '/' . $imagePath;
             }
-            
+
             return $this->response->setStatusCode(200)->setJSON([
                 'status' => true,
                 'code' => 200,
@@ -3820,10 +3826,9 @@ class DashboardController extends BaseController
                     'image_path' => $imagePath,
                 ],
             ]);
-            
         } catch (\Exception $e) {
             log_message('error', '[getReferenceImage] Exception: ' . $e->getMessage());
-            
+
             return $this->response->setStatusCode(500)->setJSON([
                 'status' => false,
                 'code' => 500,
@@ -5289,7 +5294,7 @@ class DashboardController extends BaseController
           <tr>
             <td style='padding: 8px 0; color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; vertical-align: top;'>Mobile Number</td>
             <td style='padding: 8px 0; color: #111827; font-size: 15px;'>
-              <span style='color: #4b5563; font-size: 14px;'>". htmlspecialchars($contactNumber) . "</span>
+              <span style='color: #4b5563; font-size: 14px;'>" . htmlspecialchars($contactNumber) . "</span>
             </td>
           </tr>
         </table>
