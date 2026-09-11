@@ -1848,27 +1848,36 @@
         }
 
         function getBaseAmount(quotationAmount) {
-            if (!quotationAmount || isNaN(quotationAmount)) return null;
-            return quotationAmount / (1 + GST_RATE);
-        }
+    if (!quotationAmount || isNaN(quotationAmount)) return null;
+    return quotationAmount / (1 + GST_RATE);
+}
 
-        function getExpectedNeftAmount(quotationAmount, tdsPercent) {
-            const base = getBaseAmount(quotationAmount);
-            if (base === null) return null;
-            const tds = parseFloat(tdsPercent) || 0;
-            const afterTds = base - (base * tds / 100);
-            const withGst = afterTds + (afterTds * GST_RATE);
-            return round2(withGst);
-        }
+function getExpectedNeftAmount(quotationAmount, tdsPercent) {
+    const base = getBaseAmount(quotationAmount);
+    if (base === null) return null;
+    const tds = parseFloat(tdsPercent) || 0;
+    const tdsAmount = base * tds / 100;
+    const gstAmount = base * GST_RATE;
+    return round2(base - tdsAmount + gstAmount);
+}
 
-        function getExpectedDifference(quotationAmount, tdsPercent) {
-            const base = getBaseAmount(quotationAmount);
-            if (base === null) return null;
-            const tds = parseFloat(tdsPercent) || 0;
-            const afterTds = base - (base * tds / 100);
-            const withGst = afterTds + (afterTds * GST_RATE);
-            return round2(quotationAmount - withGst);
+function getExpectedDifference(quotationAmount, tdsPercent) {
+    const expected = getExpectedNeftAmount(quotationAmount, tdsPercent);
+    if (expected === null) return null;
+    return round2(quotationAmount - expected);
+}
+
+function matchDifferencePercent(quotationAmount, differenceAmount) {
+    const base = getBaseAmount(quotationAmount);
+    if (base === null) return null;
+    for (const pct of ALLOWED_DIFFERENCE_PERCENTS) {
+        const expected = round2(base * pct / 100);
+        if (amountsMatch(differenceAmount, expected)) {
+            return pct;
         }
+    }
+    return null;
+}
 
         function amountsMatch(a, b, tolerance = DIFF_TOLERANCE) {
             if (a === null || b === null || isNaN(a) || isNaN(b)) return false;
@@ -1882,15 +1891,7 @@
             btn.classList.toggle('disabled-btn', !enabled);
         }
 
-        function matchDifferencePercent(quotationAmount, differenceAmount) {
-            for (const pct of ALLOWED_DIFFERENCE_PERCENTS) {
-                const expected = round2(quotationAmount * pct / 100);
-                if (amountsMatch(differenceAmount, expected)) {
-                    return pct;
-                }
-            }
-            return null;
-        }
+       
 
         function updateDeductionTypeUI() {
             refreshNeftHintAndValidation();
@@ -1914,7 +1915,6 @@
             const amountTransfer = parseFloat(amountField.value);
             const hasAmountEntered = amountField.value.trim() !== '' && !isNaN(amountTransfer);
 
-            // Nothing entered yet — clear and stop
             if (!quotationAmount || !hasAmountEntered) {
                 if (diffField) diffField.value = '';
                 if (hintEl) hintEl.textContent = '';
@@ -2435,7 +2435,7 @@
                     </div>
                 </div>`;
         }
-        state.cartHasOutOfStock = false;
+
         async function loadCartItems() {
             if (!dom.cartItemsContainer) return;
             const result = await apiCall(ENDPOINTS.items);

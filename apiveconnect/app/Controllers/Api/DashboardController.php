@@ -1187,10 +1187,11 @@ class DashboardController extends BaseController
                     ->setJSON(['status' => false, 'code' => 404, 'message' => 'Quotation not found.', 'data' => null]);
             }
 
-            // Server-side re-validation of the TDS math — never trust client-computed values for money.
-            $quotationAmount = (float) $quote->amount; // full quotation amount incl. GST
-            $amountTransfer  = $amountTransfer !== null ? (float) $amountTransfer : $quotationAmount;
-            $differenceAmount = round($quotationAmount - $amountTransfer, 2);
+        // Server-side re-validation of the TDS math — never trust client-computed values for money.
+        $quotationAmount = (float) $quote->amount;   // full quotation amount incl. GST (Total)
+        $baseAmount      = (float) $quote->q_amount; // base amount (pre-GST) — TDS & GST are calculated on this
+        $amountTransfer  = $amountTransfer !== null ? (float) $amountTransfer : $quotationAmount;
+        $differenceAmount = round($quotationAmount - $amountTransfer, 2);
 
             $allowedPercents = [2, 10];
             $tolerance = 0.5;
@@ -1218,7 +1219,7 @@ class DashboardController extends BaseController
                 $deductionType  = $deductionType ?: 'na';
             } else {
                 foreach ($allowedPercents as $pct) {
-                    $expected = round($quotationAmount * $pct / 100, 2);
+                    $expected = round($baseAmount * $pct / 100, 2);
                     if (abs($differenceAmount - $expected) <= $tolerance) {
                         $matchedPercent = $pct;
                         break;
@@ -4883,229 +4884,92 @@ class DashboardController extends BaseController
 
     public function furnitureOptOut()
     {
-        $jwt = $this->getJwtContext();
-
-        $exhibitorContactId = $jwt['vendorId'] ?? null;
-        $exhibitorId        = $jwt['exhibitor_id'] ?? null;
-        $subEventId         = $jwt['subEventId'] ?? null;
-        $event_id         = $jwt['eventId'] ?? null;
-
-        if (!$exhibitorContactId || !$exhibitorId) {
-            return $this->response->setJSON([
-                'status'  => false,
-                'message' => 'Unauthorized.',
-            ])->setStatusCode(401);
-        }
-
-        $data   = $this->request->getJSON(true);
-        $detail = trim($data['detail'] ?? '');
-
-        if ($detail === '') {
-            return $this->response->setJSON([
-                'status'  => false,
-                'message' => 'Detail is required.',
-            ])->setStatusCode(422);
-        }
-
-        $exhibitor = $this->db->table('exhibitor_contact_persons as ecp')
-            ->join('exhibitors as e', 'e.id = ecp.exhibitor_id', 'left')
-            ->select('e.organisation_name, e.brand_name, ecp.first_name, ecp.last_name, ecp.email, ecp.country_code, ecp.mobile_number')
-            ->where('ecp.id', $exhibitorContactId)
-            ->get()
-            ->getRowArray();
-
-        if (!$exhibitor) {
-            return $this->response->setJSON([
-                'status'  => false,
-                'message' => 'Exhibitor not found.',
-            ])->setStatusCode(404);
-        }
-
-        $contactPerson = trim(($exhibitor['first_name'] ?? '') . ' ' . ($exhibitor['last_name'] ?? ''));
-        $contactNumber = trim(($exhibitor['country_code'] ?? '') . ' ' . ($exhibitor['mobile_number'] ?? ''));
-        $contactEmail  = $exhibitor['email'] ?? '';
-
-        $setupRow = $this->db->table('manual_setups')
-            ->select('notification_email')
-            ->where('sub_event_id', $subEventId)
-            ->get()
-            ->getRowArray();
-
-        $event_name = $this->db->table('company_events')
-            ->select('event_name')
-            ->where('id', $event_id)
-            ->get()
-            ->getRowArray();
-
-        $recipients = [];
-
-        if (!empty($setupRow['notification_email'])) {
-            $recipients = array_filter(
-                array_map('trim', explode(',', $setupRow['notification_email']))
-            );
-
-            $recipients = array_values(
-                array_filter(
-                    $recipients,
-                    fn($email) => filter_var($email, FILTER_VALIDATE_EMAIL)
-                )
-            );
-        }
-
-        if (empty($recipients)) {
-            log_message(
-                'warning',
-                'No valid notification_email found in manual_setup for sub_event_id: ' . $subEventId
-            );
-
-            return $this->response->setJSON([
-                'status'  => false,
-                'message' => 'Request could not be sent: no notification recipients configured.',
-            ])->setStatusCode(500);
-        }
-
-        $subject = 'Profile Edit Request — ' .
-            ($exhibitor['organisation_name'] ?? $exhibitor['brand_name'] ?? 'Exhibitor');
-
-        $htmlBody = "
-<div style='font-family: \"Segoe UI\", Arial, sans-serif; background-color: #f4f6f8; padding: 30px 0; margin: 0;'>
-  <table role='presentation' width='100%' cellpadding='0' cellspacing='0' style='max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08);'>
-
-    <!-- Header -->
-    <tr>
-      <td style='background-color: #1a2b49; padding: 24px 32px;'>
-        <h1 style='color: #ffffff; font-size: 20px; margin: 0; font-weight: 600;'>Exhibitor Change Request</h1>
-      </td>
-    </tr>
-
-    <!-- Body -->
-    <tr>
-      <td style='padding: 32px;'>
-
-        <table role='presentation' width='100%' cellpadding='0' cellspacing='0' style='margin-bottom: 24px;'>
-          <tr>
-            <td style='padding: 8px 0; color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; width: 160px;'>Organisation</td>
-            <td style='padding: 8px 0; color: #111827; font-size: 15px; font-weight: 500;'>" . htmlspecialchars($exhibitor['organisation_name'] ?? '') . "</td>
-          </tr>
-          <tr>
-            <td style='padding: 8px 0; color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;'>Brand</td>
-            <td style='padding: 8px 0; color: #111827; font-size: 15px; font-weight: 500;'>" . htmlspecialchars($exhibitor['brand_name'] ?? '') . "</td>
-          </tr>
-          <tr>
-            <td style='padding: 8px 0; color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; vertical-align: top;'>Exhibitor Name</td>
-            <td style='padding: 8px 0; color: #111827; font-size: 15px;'>
-              <span style='font-weight: 500;'>" . htmlspecialchars($contactPerson) . "</span><br>
-             
-            </td>
-          </tr>
-          <tr>
-            <td style='padding: 8px 0; color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; vertical-align: top;'>Email</td>
-            <td style='padding: 8px 0; color: #111827; font-size: 15px;'>
-              <span style='color: #4b5563; font-size: 14px;'>" . htmlspecialchars($contactEmail) . "</span>
-            </td>
-          </tr>
-          <tr>
-            <td style='padding: 8px 0; color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; vertical-align: top;'>Mobile Number</td>
-            <td style='padding: 8px 0; color: #111827; font-size: 15px;'>
-              <span style='color: #4b5563; font-size: 14px;'>" . htmlspecialchars($contactNumber) . "</span>
-            </td>
-          </tr>
-        </table>
-
-        <div style='border-top: 1px solid #e5e7eb; padding-top: 20px;'>
-          <p style='margin: 0 0 10px 0; color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;'>Requested Change</p>
-          <div style='background-color: #f9fafb; border-left: 3px solid #1a2b49; padding: 16px 18px; border-radius: 4px; color: #111827; font-size: 15px; line-height: 1.6;'>
-            " . nl2br(htmlspecialchars($detail)) . "
-          </div>
-        </div>
-
-      </td>
-    </tr>
-
-    <!-- Footer -->
-    <tr>
-      <td style='background-color: #f9fafb; padding: 18px 32px; border-top: 1px solid #e5e7eb;'>
-        <p style='margin: 0; color: #9ca3af; font-size: 12px;'>This is an automated notification regarding an exhibitor profile change request.</p>
-      </td>
-    </tr>
-
-  </table>
-</div>
-";
-
-        $failedRecipients = [];
-        $errors = [];
-
-        foreach ($recipients as $recipientEmail) {
-            try {
-                $ok = sendEmail(
-                    toEmail: $recipientEmail,
-                    toName: $recipientEmail,
-                    subject: $subject,
-                    htmlBody: $htmlBody,
-                    fromEmail: $event_name['event_name'],
-                    fromName: $event_name['event_name']
-                );
-
-                if (!$ok) {
-                    $failedRecipients[] = $recipientEmail;
-                    $errors[] = [
-                        'recipient' => $recipientEmail,
-                        'message'   => 'Email sending failed.',
-                    ];
-                }
-            } catch (\Throwable $e) {
-                $failedRecipients[] = $recipientEmail;
-
-                $errors[] = [
-                    'recipient' => $recipientEmail,
-                    'message'   => $e->getMessage(),
-                    'error'     => $e->getFile() . ':' . $e->getLine(),
-                ];
-
-                log_message(
-                    'error',
-                    'Edit request email exception for ' . $recipientEmail . ': ' . $e->getMessage()
-                );
+        try {
+            $jwt = $this->getJwtContext();
+            $vendorId   = $jwt['vendorId'] ?? null;
+            $subEventId = $jwt['subEventId'] ?? null;
+            if (!$vendorId || !$subEventId) {
+                return $this->response->setStatusCode(401)->setJSON([
+                    'status'  => false,
+                    'code'    => 401,
+                    'message' => 'Unauthorized.',
+                    'data'    => null,
+                ]);
             }
-        }
+            $exhibitor = $this->db->table('exhibitor_contact_persons as ecp')
+                ->join('exhibitors as e', 'ecp.exhibitor_id = e.id', 'left')
+                ->select('e.id as exhibitor_id, e.sub_event_id, e.is_need_additional_furniture')
+                ->where('ecp.id', $vendorId)
+                ->where('e.sub_event_id', $subEventId)
+                ->get()->getRowArray();
 
-        if (count($failedRecipients) === count($recipients)) {
-            log_message(
-                'error',
-                'Edit request email failed for all recipients: ' .
-                    implode(', ', $failedRecipients)
-            );
+            if (!$exhibitor) {
+                return $this->response->setStatusCode(404)->setJSON([
+                    'status'  => false,
+                    'code'    => 404,
+                    'message' => 'Exhibitor not found for this sub-event.',
+                    'data'    => null,
+                ]);
+            }
+            $post = $this->request->getJSON(true) ?? $this->request->getPost();
+            $isNeedFurniture = $post['is_need_additional_furniture'] ?? null;
+            if ($isNeedFurniture === null || !in_array((string) $isNeedFurniture, ['0', '1'], true)) {
+                return $this->response->setStatusCode(422)->setJSON([
+                    'status'  => false,
+                    'code'    => 422,
+                    'message' => 'is_need_additional_furniture must be 0 or 1.',
+                    'data'    => null,
+                ]);
+            }
+            $isNeedFurniture = (int) $isNeedFurniture;
+            if ((int) $exhibitor['is_need_additional_furniture'] === $isNeedFurniture) {
+                return $this->response->setStatusCode(200)->setJSON([
+                    'status'  => true,
+                    'code'    => 200,
+                    'message' => 'Preference already saved.',
+                    'data'    => [
+                        'is_need_additional_furniture' => $isNeedFurniture,
+                    ],
+                ]);
+            }
 
-            return $this->response->setJSON([
-                'status'            => false,
-                'message'           => 'Email failed for all recipients.',
-                'failed_recipients' => $failedRecipients,
-                'errors'            => $errors,
-            ])->setStatusCode(500);
-        }
+            $updated = $this->db->table('exhibitors')
+                ->where('id', $exhibitor['exhibitor_id'])
+                ->where('sub_event_id', $subEventId)
+                ->update([
+                    'is_need_additional_furniture' => $isNeedFurniture,
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ]);
 
-        if (!empty($failedRecipients)) {
-            log_message(
-                'warning',
-                'Edit request email failed for some recipients: ' .
-                    implode(', ', $failedRecipients)
-            );
+            if ($updated === false) {
+                return $this->response->setStatusCode(500)->setJSON([
+                    'status'  => false,
+                    'code'    => 500,
+                    'message' => 'Unable to save your preference.',
+                    'data'    => null,
+                ]);
+            }
 
-            return $this->response->setJSON([
-                'status'            => true,
-                'message'           => 'Profile edit request sent successfully to some recipients.',
-                'failed_recipients' => $failedRecipients,
-                'errors'            => $errors,
+            return $this->response->setStatusCode(200)->setJSON([
+                'status'  => true,
+                'code'    => 200,
+                'message' => $isNeedFurniture === 0
+                    ? 'Preference saved successfully.'
+                    : 'Additional furniture re-enabled successfully.',
+                'data'    => [
+                    'is_need_additional_furniture' => $isNeedFurniture,
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            log_message('error', 'furnitureOptOut failed: ' . $e->getMessage() . ' | ' . $e->getFile() . ':' . $e->getLine());
+            return $this->response->setStatusCode(500)->setJSON([
+                'status'  => false,
+                'code'    => 500,
+                'message' => 'Something went wrong while saving your preference.',
+                'data'    => null,
             ]);
         }
-
-        return $this->response->setJSON([
-            'status'  => true,
-            'message' => 'Profile edit request sent successfully.',
-        ]);
     }
-
     public function pending_payments()
     {
         $payload    = JwtPayload::get();
