@@ -97,6 +97,7 @@ class OrderModel extends Model
     public function getOrdersByVendor(int $vendorId): array
     {
         return $this->where('exhibitor_id', $vendorId)
+        ->where('is_complimentary !=', 0)
             ->orderBy('created_at', 'DESC')
             ->findAll();
     }
