@@ -1465,6 +1465,7 @@
             },
             isOptedOut: false,
             pendingOrders: [],
+            cartHasOutOfStock: false,
         };
         const dom = {};
 
@@ -1833,42 +1834,40 @@
                 quotations.map(q => `<option value="${q.qid}">${q.ref_no} - ${money(q.amount)}</option>`).join('');
         }
 
-        /* ================== NEFT amount-match logic (TDS / GST radio) ================== */
-
-        function getExpectedNeftAmount(quotationAmount, deductionType, tdsPercent) {
-            if (!quotationAmount || isNaN(quotationAmount)) return null;
-
-            let expected;
-            if (deductionType === 'gst') {
-                // GST mode: only remove 18% GST, no TDS involved
-                expected = quotationAmount / 1.18;
-            } else {
-                // TDS mode: only remove TDS % from the full quotation amount, no GST removal
-                const tds = parseFloat(tdsPercent) || 0;
-                expected = quotationAmount - (quotationAmount * tds / 100);
-            }
-
-            return Math.round(expected * 100) / 100;
-        }
-        const ALLOWED_DIFFERENCE_PERCENTS = [2, 10]; // works silently in background — never shown to the user
+        const ALLOWED_DIFFERENCE_PERCENTS = [2, 10];
         const DIFF_TOLERANCE = 0.5;
+        const GST_RATE = 0.18;
 
         function getSelectedDeductionType() {
             const sel = document.getElementById('neftDeductionType');
             return sel ? sel.value : '';
         }
 
-        function getSelectedTds() {
-            const sel = document.getElementById('neftTdsSelect');
-            return sel ? parseFloat(sel.value) || 0 : 0;
+        function round2(n) {
+            return Math.round(n * 100) / 100;
         }
 
-        // Only TDS math now — "Others" never reaches this because submit is blocked
-        function getExpectedNeftAmount(quotationAmount, tdsPercent) {
+        function getBaseAmount(quotationAmount) {
             if (!quotationAmount || isNaN(quotationAmount)) return null;
+            return quotationAmount / (1 + GST_RATE);
+        }
+
+        function getExpectedNeftAmount(quotationAmount, tdsPercent) {
+            const base = getBaseAmount(quotationAmount);
+            if (base === null) return null;
             const tds = parseFloat(tdsPercent) || 0;
-            const expected = quotationAmount - (quotationAmount * tds / 100);
-            return Math.round(expected * 100) / 100;
+            const afterTds = base - (base * tds / 100);
+            const withGst = afterTds + (afterTds * GST_RATE);
+            return round2(withGst);
+        }
+
+        function getExpectedDifference(quotationAmount, tdsPercent) {
+            const base = getBaseAmount(quotationAmount);
+            if (base === null) return null;
+            const tds = parseFloat(tdsPercent) || 0;
+            const afterTds = base - (base * tds / 100);
+            const withGst = afterTds + (afterTds * GST_RATE);
+            return round2(quotationAmount - withGst);
         }
 
         function amountsMatch(a, b, tolerance = DIFF_TOLERANCE) {
@@ -1884,9 +1883,8 @@
         }
 
         function matchDifferencePercent(quotationAmount, differenceAmount) {
-            if (!quotationAmount || isNaN(quotationAmount) || isNaN(differenceAmount)) return null;
             for (const pct of ALLOWED_DIFFERENCE_PERCENTS) {
-                const expected = Math.round((quotationAmount * pct / 100) * 100) / 100;
+                const expected = round2(quotationAmount * pct / 100);
                 if (amountsMatch(differenceAmount, expected)) {
                     return pct;
                 }
@@ -1894,9 +1892,7 @@
             return null;
         }
 
-
         function updateDeductionTypeUI() {
-            // Deduction type only gates whether the form is submittable — no visible calc UI to update.
             refreshNeftHintAndValidation();
         }
 
@@ -1929,10 +1925,9 @@
                 return;
             }
 
-            const differenceAmount = Math.round((quotationAmount - amountTransfer) * 100) / 100;
+            const differenceAmount = round2(quotationAmount - amountTransfer);
             if (diffField) diffField.value = differenceAmount;
 
-            // Difference is 0 — deduction type isn't needed, allow direct submission
             if (differenceAmount === 0) {
                 if (deductionTypeSelect) deductionTypeSelect.disabled = true;
                 if (hintEl) hintEl.textContent = '';
@@ -1944,7 +1939,6 @@
                 if (deductionTypeSelect) deductionTypeSelect.disabled = false;
             }
 
-            // "Others" is never submittable, regardless of the amount
             if (deductionType === 'others') {
                 if (hintEl) hintEl.textContent = '';
                 amountField.classList.remove('is-invalid');
@@ -1969,12 +1963,12 @@
             const matchedPercent = matchDifferencePercent(quotationAmount, differenceAmount);
 
             if (matchedPercent !== null) {
-                if (hintEl) hintEl.textContent = ``;
+                if (hintEl) hintEl.textContent = '';
                 amountField.classList.remove('is-invalid');
                 setNeftSubmitEnabled(true);
                 neftLastToastState = null;
             } else {
-                if (hintEl) hintEl.textContent = ``;
+                if (hintEl) hintEl.textContent = '';
                 amountField.classList.add('is-invalid');
                 setNeftSubmitEnabled(false);
 
@@ -2058,10 +2052,9 @@
                 return;
             }
 
-            const differenceAmount = Math.round((quotationAmount - amountTransfer) * 100) / 100;
+            const differenceAmount = round2(quotationAmount - amountTransfer);
             const isZeroDifference = differenceAmount === 0;
 
-            // Deduction type isn't needed when the transferred amount matches the quotation exactly
             if (!isZeroDifference && !deductionType) {
                 Swal.fire({
                     icon: 'warning',
@@ -2114,7 +2107,6 @@
                 return;
             }
 
-            // tds_percent still sent to backend silently, based on the matched percent — not shown to the user
             const payload = {
                 qid: parseInt(qid),
                 amount_transfer: amountTransfer,
