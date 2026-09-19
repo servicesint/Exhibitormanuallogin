@@ -2143,6 +2143,7 @@ function matchDifferencePercent(quotationAmount, differenceAmount) {
             const deductionTypeSelect = document.getElementById('neftDeductionType');
             if (deductionTypeSelect) deductionTypeSelect.value = '';
             setNeftSubmitEnabled(false);
+            await loadQuotations();
         }
 
         function changeQty(btn, change) {

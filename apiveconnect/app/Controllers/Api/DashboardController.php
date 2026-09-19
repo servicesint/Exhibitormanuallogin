@@ -1248,8 +1248,6 @@ class DashboardController extends BaseController
             $updateData = [
                 'ref_no'         => $referenceNo,
                 'amount'         => $amountTransfer,
-                'tds_percent'    => $tdsPercent,
-                'deduction_type' => $deductionType,
                 'remarks'        => $reasonForDifference,
                 'status'         => 2,
                 'updated_date'   => date('Y-m-d H:i:s')
