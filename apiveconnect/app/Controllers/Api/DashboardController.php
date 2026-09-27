@@ -1070,6 +1070,7 @@ class DashboardController extends BaseController
             $quotations = $this->db->table('quotes')
                 ->select('id, qid, ref_no, q_amount, amount, status, added_date')
                 ->where('exhibitor_id', $vendorId)
+                ->where('status', 0)
                 ->orderBy('id', 'DESC')
                 ->get()
                 ->getResultArray();
@@ -1252,10 +1253,19 @@ class DashboardController extends BaseController
                 'status'         => 2,
                 'updated_date'   => date('Y-m-d H:i:s')
             ];
+            // quotes.amount is the GST-inclusive quotation total (download_quotation and a re-submit both read it), so it is not
+            // overwritten with the net amount transferred; that amount is kept in orders.amount_transferred.
+            $updateDatas = [
+                'ref_no'         => $referenceNo,
+                'remarks'        => $reasonForDifference,
+                'status'         => 2,
+                'updated_date'   => date('Y-m-d H:i:s')
+            ];
+
             $this->db->table('quotes')
                 ->where('qid', $qid)
                 ->where('exhibitor_id', $exhibitor_id)
-                ->update($updateData);
+                ->update($updateDatas);
 
             $subEventId      = $quote->event_id ?? null;
             $isInternational = $this->resolveIsInternational((int) $exhibitor_id);
@@ -1753,14 +1763,21 @@ class DashboardController extends BaseController
             $cartModel->clearCart($order['exhibitor_id'], $order['sub_event_id']);
 
             $subEvent = $this->db->table('company_sub_events')
-                ->select('construction_date, end_date')
+                ->select('end_date')
                 ->where('id', $order['sub_event_id'])
                 ->get()
                 ->getRowArray();
-
-            if ($subEvent && date('Y-m-d') >= $subEvent['construction_date'] && date('Y-m-d') <= $subEvent['end_date']) {
+            $subEvent_construction = $this->db->table('manual_setups')
+                ->select('construction_date')
+                ->where('sub_event_id', $order['sub_event_id'])
+                ->get()
+                ->getRowArray();
+            // $order still holds the status from before this callback, so a repeated callback for an already paid order doesn't notify again
+            $alreadyPaid = strtolower((string) ($order['payment_status'] ?? '')) === 'paid';
+            if (!$alreadyPaid && $subEvent && !empty($subEvent_construction['construction_date']) && !empty($subEvent['end_date']) && date('Y-m-d') >= $subEvent_construction['construction_date'] && date('Y-m-d') <= $subEvent['end_date']) {
                 register_shutdown_function(function () use ($order) {
                     $this->sendConstructionWindowPaymentEmails($order);
+                    $this->sendConstructionWindowVendorNotifications($order);
                 });
             }
 
@@ -1833,23 +1850,22 @@ class DashboardController extends BaseController
 
             $db = \Config\Database::connect();
             $subEvent = $db->table('company_sub_events')
-                ->select('id, sub_event_name, construction_date, end_date')
+                ->select('id, sub_event_name, end_date')
                 ->where('id', $subEventId)
                 ->get()
                 ->getRowArray();
-
-            if (!$subEvent || empty($subEvent['construction_date']) || empty($subEvent['end_date'])) {
-                log_message('error', '[sendConstructionWindowPaymentEmails] Missing construction window dates for sub_event_id: ' . $subEventId);
-                return;
-            }
-            $manualsetup = $db->table('manual_setup')
-                ->select('id, notification_email')
+            $manualsetup = $db->table('manual_setups')
+                ->select('id, notification_email, construction_date')
                 ->where('sub_event_id', $subEventId)
                 ->get()
                 ->getRowArray();
+            if (!$subEvent || empty($manualsetup['construction_date']) || empty($subEvent['end_date'])) {
+                log_message('error', '[sendConstructionWindowPaymentEmails] Missing construction window dates for sub_event_id: ' . $subEventId);
+                return;
+            }
 
             $today = strtotime(date('Y-m-d'));
-            $constructionStart = strtotime($subEvent['construction_date']);
+            $constructionStart = strtotime($manualsetup['construction_date']);
             $eventEnd = strtotime($subEvent['end_date']);
             if ($today < $constructionStart || $today > $eventEnd) {
                 return;
@@ -1916,13 +1932,14 @@ class DashboardController extends BaseController
                     <p><strong>Event:</strong> {$eventName}</p>
                     <p>Please find your Proforma Invoice attached.</p>
                     <p>Thank you.</p>";
-                sendEmail(
+                $exhibitorMailSent = sendEmail(
                     toEmail: $vendorEmail,
                     toName: $vendorName,
                     subject: $vendorSubject,
                     htmlBody: $vendorBody,
                     attachments: $invoicePdfPath ? [$invoicePdfPath] : []
                 );
+                $this->logConstructionNotification($order['id'], 'email', 'exhibitor', $vendorEmail, $exhibitorMailSent);
             } else {
                 log_message('error', '[sendConstructionWindowPaymentEmails] Vendor email missing on order: ' . ($order['id'] ?? 'unknown'));
             }
@@ -1935,13 +1952,17 @@ class DashboardController extends BaseController
         <p><strong>Amount:</strong> {$currency} {$amount}</p>
         <p><strong>Event:</strong> {$eventName}</p>";
 
-                sendEmail(
-                    toEmail: $operationsEmail,
-                    toName: 'Operations Team',
-                    subject: $opsSubject,
-                    htmlBody: $opsBody,
-                    attachments: $invoicePdfPath ? [$invoicePdfPath] : []
-                );
+                // notification_email can hold several addresses (comma separated); sendEmail() takes one
+                foreach (preg_split('/[\s,;]+/', (string) $operationsEmail, -1, PREG_SPLIT_NO_EMPTY) as $opsRecipient) {
+                    $opsMailSent = sendEmail(
+                        toEmail: $opsRecipient,
+                        toName: 'Operations Team',
+                        subject: $opsSubject,
+                        htmlBody: $opsBody,
+                        attachments: $invoicePdfPath ? [$invoicePdfPath] : []
+                    );
+                    $this->logConstructionNotification($order['id'], 'email', 'operations (notification_email, with amount)', $opsRecipient, $opsMailSent);
+                }
             } else {
                 log_message('error', '[sendConstructionWindowPaymentEmails] OPERATIONS_TEAM_EMAIL not configured in .env');
             }
@@ -1952,6 +1973,352 @@ class DashboardController extends BaseController
         } catch (\Throwable $e) {
             log_message('error', '[sendConstructionWindowPaymentEmails] Error: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Contact person who receives the order emails / WhatsApp: matched on the order email when the order has one,
+     * otherwise the exhibitor's first contact person (the orders table has no email column).
+     */
+    private function findOrderContactPerson(array $order): ?array
+    {
+        $db   = \Config\Database::connect();
+        $find = static function (?string $email) use ($db, $order): ?array {
+            $builder = $db->table('exhibitor_contact_persons')
+                ->select('first_name, last_name, email, country_code, mobile_number')
+                ->where('exhibitor_id', $order['exhibitor_id'] ?? 0)
+                ->orderBy('id', 'ASC');
+            if ($email) {
+                $builder->where('email', $email);
+            }
+            return $builder->get()->getRowArray() ?: null;
+        };
+        return (!empty($order['email']) ? $find($order['email']) : null) ?? $find(null);
+    }
+
+    /**
+     * Sends every item vendor of a construction window order its own email + WhatsApp containing only that
+     * vendor's items (quantities only, never prices). The exhibitor gets the WhatsApp with the full item list.
+     * Prices are only shown in the notification_email mail.
+     */
+    private function sendConstructionWindowVendorNotifications(array $order): void
+    {
+        try {
+            $db = \Config\Database::connect();
+
+            $rows = $db->table('order_items as oi')
+                ->join('items as i', 'i.id = oi.item_id', 'left')
+                ->select('i.vendor_id, i.item_name, oi.quantity')
+                ->where('oi.order_id', $order['id'])
+                ->get()
+                ->getResultArray();
+
+            $itemsByVendor = [];
+            $allItems      = [];
+            foreach ($rows as $row) {
+                $item = [
+                    'item_name' => $row['item_name'] ?? '',
+                    'qty'       => $row['quantity'] ?? '',
+                ];
+                $allItems[] = $item;
+                if (empty($row['vendor_id'])) {
+                    log_message('error', '[sendConstructionWindowVendorNotifications] Item without vendor skipped on order ' . $order['id'] . ': ' . ($row['item_name'] ?? ''));
+                    continue;
+                }
+                $itemsByVendor[$row['vendor_id']][] = $item;
+            }
+            if (!$allItems) {
+                return;
+            }
+
+            $vendors = [];
+            if ($itemsByVendor) {
+                $vendorRows = $db->table('vendors')
+                    ->select('id, organisation_name, email, country_code, mobile_number')
+                    ->whereIn('id', array_keys($itemsByVendor))
+                    ->get()
+                    ->getResultArray();
+                foreach ($vendorRows as $vendorRow) {
+                    $vendors[$vendorRow['id']] = $vendorRow;
+                }
+            }
+
+            $exhibitor = $db->table('exhibitors')
+                ->select('organisation_name, brand_name, stall_number')
+                ->where('id', $order['exhibitor_id'] ?? 0)
+                ->get()
+                ->getRowArray();
+            $subEvent = $db->table('company_sub_events')
+                ->select('sub_event_name')
+                ->where('id', $order['sub_event_id'] ?? 0)
+                ->get()
+                ->getRowArray();
+
+            // Every notification_email address is put in CC of each vendor email
+            $manualSetup = $db->table('manual_setups')
+                ->select('notification_email')
+                ->where('sub_event_id', $order['sub_event_id'] ?? 0)
+                ->get()
+                ->getRowArray();
+            $ccEmails = preg_split('/[\s,;]+/', (string) ($manualSetup['notification_email'] ?? ''), -1, PREG_SPLIT_NO_EMPTY);
+
+            $clean         = static fn($value): string => trim(preg_replace('/\s+/', ' ', (string) $value));
+            $exhibitorName = $clean($exhibitor['organisation_name'] ?? '') ?: $clean($exhibitor['brand_name'] ?? '') ?: 'Exhibitor';
+            $stallNumber   = $clean($exhibitor['stall_number'] ?? '') ?: 'N/A';
+            $eventName     = (string) ($subEvent['sub_event_name'] ?? '');
+            $orderNumber   = (string) ($order['order_number'] ?? $order['id']);
+
+            // WhatsApp template name, endpoint and API key are registered per event + purpose in whatsapp_template_settings
+            $eventId  = $this->resolveEventIdFromSubEvent($order['sub_event_id'] ?? null);
+            $settings = $db->table('whatsapp_template_settings')
+                ->select('api_endpoint, api_key, template_name')
+                ->where('event_id', $eventId ?? 0)
+                ->where('purpose', 'order_notification')
+                ->where('is_deleted', 0)
+                ->get()
+                ->getRowArray();
+            $templateName  = trim((string) ($settings['template_name'] ?? ''));
+            $endpoint      = trim((string) ($settings['api_endpoint'] ?? ''));
+            $apiKey        = trim((string) ($settings['api_key'] ?? ''));
+            $whatsappReady = $templateName !== '' && $endpoint !== '' && $apiKey !== '';
+            if (!$whatsappReady) {
+                log_message('error', '[sendConstructionWindowVendorNotifications] order_notification not configured in whatsapp_template_settings for event_id: ' . ($eventId ?? 'unknown') . ' - no WhatsApp will be sent (vendors still get email)');
+            }
+
+            // WhatsApp downloads the document from a public link, so it is saved under public/uploads with an
+            // unguessable name; copies older than 7 days are removed. The email attachment uses a temporary file.
+            helper('url');
+            $publicDir = FCPATH . 'uploads/whatsapp_documents';
+            $tmpDir    = WRITEPATH . 'uploads/tmp';
+            foreach ([$publicDir, $tmpDir] as $dir) {
+                if (!is_dir($dir)) {
+                    mkdir($dir, 0755, true);
+                }
+            }
+            foreach (glob($publicDir . '/*.pdf') ?: [] as $oldFile) {
+                if (filemtime($oldFile) < time() - 7 * 86400) {
+                    @unlink($oldFile);
+                }
+            }
+
+            foreach ($itemsByVendor as $vendorId => $items) {
+                try {
+                    $vendor = $vendors[$vendorId] ?? null;
+                    if (!$vendor) {
+                        log_message('error', '[sendConstructionWindowVendorNotifications] Vendor ' . $vendorId . ' not found for order: ' . $order['id']);
+                        continue;
+                    }
+
+                    $vendorName   = $clean($vendor['organisation_name'] ?? '') ?: 'Vendor';
+                    $vendorEmail  = trim((string) ($vendor['email'] ?? ''));
+                    $canEmail     = (bool) filter_var($vendorEmail, FILTER_VALIDATE_EMAIL);
+                    $vendorMobile = $whatsappReady ? $this->normalizeWhatsappNumber((string) ($vendor['country_code'] ?? ''), (string) ($vendor['mobile_number'] ?? '')) : null;
+                    if (!$canEmail && !$vendorMobile) {
+                        log_message('error', '[sendConstructionWindowVendorNotifications] Vendor ' . $vendorId . ' has no valid email or mobile number, order: ' . $order['id']);
+                        continue;
+                    }
+
+                    $fileName = 'delivery-order-' . $order['id'] . '-vendor-' . $vendorId . '.pdf';
+                    $pdfBytes = $this->buildConstructionProformaPdf($order, $exhibitorName, $eventName, $fileName, $items);
+
+                    if ($canEmail) {
+                        $tmpPath = $tmpDir . '/' . $fileName;
+                        file_put_contents($tmpPath, $pdfBytes);
+                        $vendorBody = '<p>Dear ' . htmlspecialchars($vendorName) . ',</p>
+                            <p>Please deliver the order placed for Exhibitor: <strong>' . htmlspecialchars($exhibitorName) . '</strong></p>
+                            <p>Stand No: <strong>' . htmlspecialchars($stallNumber) . '</strong></p>
+                            <p>Event: ' . htmlspecialchars($eventName) . ' | Order: ' . htmlspecialchars($orderNumber) . '</p>
+                            <p>Please refer to the PDF attached.</p>
+                            <p>Thank you.</p>';
+                        $emailSent = sendEmail(
+                            toEmail: $vendorEmail,
+                            toName: $vendorName,
+                            subject: 'Order for delivery - ' . $exhibitorName . ' (Stand ' . $stallNumber . ')',
+                            htmlBody: $vendorBody,
+                            attachments: [$tmpPath],
+                            cc: $ccEmails
+                        );
+                        $this->logConstructionNotification($order['id'], 'email', 'vendor ' . $vendorId . ' (' . $vendorName . ')', $vendorEmail, $emailSent, 'cc (operations): ' . ($ccEmails ? implode(', ', $ccEmails) : 'none'));
+                        @unlink($tmpPath);
+                    }
+
+                    if ($vendorMobile) {
+                        $publicFileName = bin2hex(random_bytes(12)) . '-' . $fileName;
+                        if (file_put_contents($publicDir . '/' . $publicFileName, $pdfBytes) === false) {
+                            log_message('error', '[sendConstructionWindowVendorNotifications] Unable to save PDF for whatsapp, order: ' . $order['id'] . ', vendor: ' . $vendorId);
+                        } else {
+                            $documentUrl = base_url('uploads/whatsapp_documents/' . $publicFileName);
+                            $messageId   = $this->sendConstructionOrderWhatsapp(
+                                $endpoint,
+                                $apiKey,
+                                $templateName,
+                                $vendorMobile,
+                                [$vendorName, $exhibitorName, $stallNumber],
+                                $documentUrl,
+                                $fileName,
+                                $order['id']
+                            );
+                            $this->logConstructionNotification($order['id'], 'whatsapp', 'vendor ' . $vendorId . ' (' . $vendorName . ')', $vendorMobile, $messageId !== null, 'template: ' . $templateName . ' | message id: ' . ($messageId ?? '-') . ' | document: ' . $documentUrl);
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    log_message('error', '[sendConstructionWindowVendorNotifications] Vendor ' . $vendorId . ' failed on order ' . $order['id'] . ': ' . $e->getMessage());
+                }
+            }
+
+            // The exhibitor gets the same WhatsApp with the full item list (no prices)
+            $extraTargets = [];
+            if ($whatsappReady) {
+                $contact         = $this->findOrderContactPerson($order);
+                $exhibitorMobile = $contact ? $this->normalizeWhatsappNumber((string) ($contact['country_code'] ?? ''), (string) ($contact['mobile_number'] ?? '')) : null;
+                if ($exhibitorMobile) {
+                    $extraTargets[] = [
+                        'role'   => 'exhibitor',
+                        'mobile' => $exhibitorMobile,
+                        'name'   => $clean(trim(($contact['first_name'] ?? '') . ' ' . ($contact['last_name'] ?? ''))) ?: $exhibitorName,
+                    ];
+                } else {
+                    log_message('error', '[sendConstructionWindowVendorNotifications] Exhibitor has no valid mobile number, order: ' . $order['id']);
+                }
+            }
+            if ($extraTargets) {
+                $fileName       = 'order-' . $order['id'] . '.pdf';
+                $pdfBytes       = $this->buildConstructionProformaPdf($order, $exhibitorName, $eventName, $fileName, $allItems);
+                $publicFileName = bin2hex(random_bytes(12)) . '-' . $fileName;
+                if (file_put_contents($publicDir . '/' . $publicFileName, $pdfBytes) === false) {
+                    log_message('error', '[sendConstructionWindowVendorNotifications] Unable to save PDF for whatsapp, order: ' . $order['id']);
+                } else {
+                    $documentUrl = base_url('uploads/whatsapp_documents/' . $publicFileName);
+                    foreach ($extraTargets as $target) {
+                        $messageId = $this->sendConstructionOrderWhatsapp(
+                            $endpoint,
+                            $apiKey,
+                            $templateName,
+                            $target['mobile'],
+                            [$target['name'], $exhibitorName, $stallNumber],
+                            $documentUrl,
+                            $fileName,
+                            $order['id']
+                        );
+                        $this->logConstructionNotification($order['id'], 'whatsapp', $target['role'], $target['mobile'], $messageId !== null, 'template: ' . $templateName . ' | message id: ' . ($messageId ?? '-') . ' | document: ' . $documentUrl);
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            log_message('error', '[sendConstructionWindowVendorNotifications] Error: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Digits-only WhatsApp number with country code (default India), or null when it is not a valid number.
+     */
+    private function normalizeWhatsappNumber(string $countryCode, string $mobileNumber): ?string
+    {
+        $countryCode  = preg_replace('/\D/', '', $countryCode) ?: '91';
+        $mobileNumber = ltrim(preg_replace('/\D/', '', $mobileNumber), '0');
+
+        // Indian numbers: keep only last 10 digits and validate
+        if ($countryCode === '91') {
+            $mobileNumber = substr($mobileNumber, -10);
+            if (!preg_match('/^[6-9][0-9]{9}$/', $mobileNumber)) {
+                return null;
+            }
+        }
+
+        $mobile = $countryCode . $mobileNumber;
+        return ($mobileNumber === '' || strlen($mobile) < 8 || strlen($mobile) > 15) ? null : $mobile;
+    }
+
+    /**
+     * Sends the order_notification template: DOCUMENT header + body {{1}} vendor name, {{2}} exhibitor, {{3}} stand no.
+     * Returns the WhatsApp message id when Pinbot accepted it, otherwise null.
+     */
+    private function sendConstructionOrderWhatsapp(string $endpoint, string $apiKey, string $templateName, string $to, array $bodyTexts, string $documentUrl, string $documentName, $orderId): ?string
+    {
+        $payload = [
+            'messaging_product' => 'whatsapp',
+            'recipient_type'    => 'individual',
+            'to'                => $to,
+            'type'              => 'template',
+            'template'          => [
+                'name'       => $templateName,
+                'language'   => ['policy' => 'deterministic', 'code' => 'en'],
+                'components' => [
+                    [
+                        'type'       => 'header',
+                        'parameters' => [
+                            [
+                                'type'     => 'document',
+                                'document' => ['link' => $documentUrl, 'filename' => $documentName],
+                            ],
+                        ],
+                    ],
+                    [
+                        'type'       => 'body',
+                        'parameters' => array_map(static fn($text) => ['type' => 'text', 'text' => (string) $text], $bodyTexts),
+                    ],
+                ],
+            ],
+        ];
+
+        $curl = curl_init();
+
+        curl_setopt_array($curl, array(
+            CURLOPT_URL => $endpoint,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => '',
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => 'POST',
+            CURLOPT_POSTFIELDS => json_encode($payload),
+            CURLOPT_HTTPHEADER => array(
+                'Content-Type: application/json',
+                'apikey: ' . $apiKey
+            ),
+        ));
+
+        $response = curl_exec($curl);
+        $error = curl_error($curl);
+        curl_close($curl);
+
+        $response_array = json_decode((string) $response, true);
+        if (!is_array($response_array) || ($response_array['messages'][0]['message_status'] ?? '') !== 'accepted') {
+            log_message('error', '[sendConstructionOrderWhatsapp] Unable to send whatsapp for order ' . $orderId . ' to ' . $to . ' | template: ' . $templateName . ': ' . $response . ($error ? ' | curl error: ' . $error : ''));
+            return null;
+        }
+
+        return (string) ($response_array['messages'][0]['id'] ?? 'unknown');
+    }
+
+    /**
+     * One log line per notification (who it went to and whether it was sent), so the recipients of every
+     * construction window order can be checked in the log.
+     */
+    private function logConstructionNotification($orderId, string $channel, string $role, string $to, bool $sent, string $extra = ''): void
+    {
+        log_message('error', '[ConstructionNotify] order ' . $orderId . ' | ' . $channel . ' | ' . $role . ' | to: ' . $to . ' | ' . ($sent ? 'SENT' : 'FAILED') . ($extra !== '' ? ' | ' . $extra : ''));
+    }
+
+    /**
+     * Proforma Invoice / delivery PDF for a construction window order. $items holds only item_name + qty (no prices).
+     * Returns the PDF bytes.
+     */
+    private function buildConstructionProformaPdf(array $order, string $exhibitorName, string $eventName, string $fileName, array $items)
+    {
+        return PdfHelper::makeFromView(
+            'peroforma-invoice-template',
+            [
+                'vendor_name'    => $exhibitorName,
+                'vendor_gstin'   => $order['gstin'] ?? 'N/A',
+                'invoice_number' => $order['invoice_number'] ?? ('SI/PI/' . date('y') . '-' . (date('y') + 1) . '/' . ($order['id'] ?? rand(1000, 9999))),
+                'invoice_date'   => $order['invoice_date'] ?? date('d.m.Y'),
+                'event_name'     => $eventName,
+                'pan_no'         => env('COMPANY_PAN_NO', 'AABFS1981P'),
+                'items'          => $items,
+            ],
+            $fileName
+        );
     }
 
     public function submit_exhibitor_badge()

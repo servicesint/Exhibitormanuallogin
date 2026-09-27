@@ -150,6 +150,10 @@ if (!function_exists('send_sms_otp')) {
         ]);
 
         $response = curl_exec($ch);
+
+        $ip = service('request')->getIPAddress();
+
+        log_message('error', 'send_sms_otp failed | IP: ' . $ip . ' | Response: ' . $response);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $errorNo  = curl_errno($ch);
         $errorMsg = curl_error($ch);
@@ -164,14 +168,8 @@ if (!function_exists('send_sms_otp')) {
         }
 
         if ($httpCode == 200 && !empty($response)) {
-            // Check if response contains success indicators
-            if (strpos($response, 'SUCCESS') !== false || strpos($response, 'success') !== false || strpos($response, '1') !== false) {
-                log_message('info', "[send_sms_otp] SMS sent successfully to {$mobile}");
-                return true;
-            } else {
-                log_message('error', "[send_sms_otp] SMS API returned error: {$response}");
-                return false;
-            }
+            log_message('info', "[send_sms_otp] SMS sent successfully to {$mobile}");
+            return true;
         }
 
         log_message('error', "[send_sms_otp] Failed to send SMS to {$mobile}. HTTP Code: {$httpCode}. Response: {$response}");
@@ -236,7 +234,8 @@ if (!function_exists('sendEmail')) {
         string $htmlBody,
         string $fromEmail = '',
         string $fromName  = '',
-        array  $attachments = []
+        array  $attachments = [],
+        array  $cc = []
     ): bool {
         if (!filter_var($toEmail, FILTER_VALIDATE_EMAIL)) {
             log_message('error', "[sendEmail] Invalid recipient: {$toEmail}");
@@ -267,7 +266,19 @@ if (!function_exists('sendEmail')) {
                 'to' => [['email' => $toEmail, 'name' => $toName]],
             ]],
         ];
-        
+
+        // CC: valid addresses only, no duplicates, and never the To address
+        $ccList = [];
+        foreach ($cc as $ccEmail) {
+            $ccEmail = trim((string) $ccEmail);
+            if (filter_var($ccEmail, FILTER_VALIDATE_EMAIL) && strcasecmp($ccEmail, $toEmail) !== 0) {
+                $ccList[strtolower($ccEmail)] = ['email' => $ccEmail];
+            }
+        }
+        if (!empty($ccList)) {
+            $payload['personalizations'][0]['cc'] = array_values($ccList);
+        }
+
         if (!empty($attachments)) {
             $payloadAttachments = [];
             
@@ -411,10 +422,7 @@ if (!function_exists('sendOtpMessage')) {
                 $results['mobile'] = $mobileResult;
                 log_message('info', "[sendOtpMessage] SMS OTP sent to: {$mobile}, Result: " . ($mobileResult ? 'Success' : 'Failed'));
             } else if ($isInternational) {
-                log_message('info', "[sendOtpMessage] International exhibitor - SMS skipped for mobile: {$mobile}");
-                $results['mobile'] = false;
-            } else {
-                log_message('info', "[sendOtpMessage] No mobile number found for SMS");
+                log_message('info', "[sendOtpMessage] International user - SMS skipped for mobile: {$mobile}");
                 $results['mobile'] = false;
             }
         }
@@ -699,8 +707,8 @@ if (!function_exists('getInternationalStatus')) {
     function getInternationalStatus($user): bool
     {
         if (isset($user->exhibitor_type) && !empty($user->exhibitor_type)) {
-            // ✅ FIX: If exhibitor_type is 'International', return true
-            if (strtolower($user->exhibitor_type) === 'international') {
+            $internationalCodes = ['international'];
+            if (!in_array($user->exhibitor_type, $internationalCodes)) {
                 return true;
             }
         }
