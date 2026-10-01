@@ -31,7 +31,7 @@ class AuthController extends BaseController
         }
 
         $subevents = $this->exhibitorModel->getActiveSubEvents($decrypted_id);
-        if (empty($subevents)) {
+        if (empty($subevents)) { 
            $routes->get('/comingSoon', 'AuthController::comingSoon');
         }
 

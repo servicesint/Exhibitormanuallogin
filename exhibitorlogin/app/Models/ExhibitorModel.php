@@ -46,7 +46,8 @@ class ExhibitorModel extends Model
             ->limit(1)
             ->get()
             ->getRow();
-    }
+    } 
+    
 
     public function getActiveSubEvents($event_id)
     {
