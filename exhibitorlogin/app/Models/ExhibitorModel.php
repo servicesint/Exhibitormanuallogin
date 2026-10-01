@@ -46,7 +46,8 @@ class ExhibitorModel extends Model
             ->limit(1)
             ->get()
             ->getRow();
-    }
+    } 
+    
 
     public function getActiveSubEvents($event_id)
     {
@@ -55,7 +56,7 @@ class ExhibitorModel extends Model
             ->join('company_sub_events cse', 'cse.event_id = company_events.id', 'left')
             ->select('company_events.id, company_events.event_name, cse.id as sub_event_id, cse.sub_event_name, cse.start_date, cse.end_date, cse.sub_event_logo,cse.sub_event_name')
             ->where('cse.event_id', $event_id)
-            ->where('cse.start_date >=', $today)
+            ->where('cse.end_date >=', $today)
             ->orderBy('cse.start_date', 'ASC')
             ->get()
             ->getResult();
