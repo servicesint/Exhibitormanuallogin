@@ -32,7 +32,7 @@ class AuthController extends BaseController
 
         $subevents = $this->exhibitorModel->getActiveSubEvents($decrypted_id);
         if (empty($subevents)) {
-            return redirect()->to('event/' . $enc_id)->with('fail', 'No active events found');
+           $routes->get('/comingSoon', 'AuthController::comingSoon');
         }
 
         $referreral_website = !empty($subevents[0]->url)
@@ -50,6 +50,11 @@ class AuthController extends BaseController
         }
 
         return view('event', ['subevents' => $subevents]);
+    }
+
+    public function comingSoon()
+    {
+        return view('coming_soon');
     }
 
     public function exlogin($encrypted_sub_event_id = null)
