@@ -2,17 +2,13 @@
 $uploadBaseUrl = rtrim(env('UPLOAD_BASE_URL'), '/');
 $companyLogo = !empty($company_image) ? $uploadBaseUrl . '/' . ltrim($company_image, '/') : '';
 $signature = !empty($signature) ? $uploadBaseUrl . '/' . ltrim($signature, '/') : '';
-
 $safe = function ($value) {
     return esc((string) ($value ?? ''));
 };
-
 $displayCustomerName = !empty($customer_name) ? $customer_name : 'M/s Services International';
 $displayCustomerAddress = $customer_address ?? '';
 $displayCustomerGstin = !empty($customer_gstin) ? $customer_gstin : 'N/A';
-
 $invoiceTitle = isset($invoice_title) && $invoice_title !== '' ? $invoice_title : 'PROFORMA INVOICE';
-
 $invoice_no        = $invoice_no        ?? '';
 $date              = $date              ?? '';
 $currency_text     = $currency_text     ?? '';
@@ -21,19 +17,16 @@ $event_name        = $event_name        ?? '';
 $payment_method    = $payment_method    ?? '';
 $payment_reference = $payment_reference ?? '';
 $is_same_state     = !empty($is_same_state);
-
 $subtotal = is_numeric($subtotal ?? null) ? (float) $subtotal : 0.0;
 $cgst     = is_numeric($cgst ?? null)     ? (float) $cgst     : 0.0;
 $sgst     = is_numeric($sgst ?? null)     ? (float) $sgst     : 0.0;
 $igst     = is_numeric($igst ?? null)     ? (float) $igst     : 0.0;
 $total    = is_numeric($total ?? null)    ? (float) $total    : 0.0;
-
 $items = (isset($items) && is_array($items)) ? $items : [];
 ?>
 
 <!DOCTYPE html>
 <html>
-
 <head>
     <meta charset="UTF-8">
     <style>
@@ -110,39 +103,48 @@ $items = (isset($items) && is_array($items)) ? $items : [];
             font-weight: bold;
             color: #0b5ca8;
         }
+
         .info-right {
             text-align: right;
             font-weight: bold;
             color: #0b5ca8;
         }
+
         .items-table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 10px;
         }
+
         .items-table th,
         .items-table td {
             border: 1px solid #000;
             padding: 6px;
             font-size: 12px;
         }
+
         .items-table th {
             font-weight: bold;
             text-align: center;
         }
+
         .center {
             text-align: center;
         }
+
         .right {
             text-align: right;
         }
+
         .section-heading {
             font-weight: bold;
             text-align: center;
         }
+
         .summary-row td {
             font-weight: bold;
         }
+
         .footer-table {
             width: 100%;
             margin-top: 30px;
@@ -166,7 +168,6 @@ $items = (isset($items) && is_array($items)) ? $items : [];
         }
     </style>
 </head>
-
 <body>
     <table class="header-table">
         <tr>
@@ -185,12 +186,10 @@ $items = (isset($items) && is_array($items)) ? $items : [];
             </td>
         </tr>
     </table>
-
     <div class="invoice-title"><?= $safe($invoiceTitle) ?></div>
     <?php if (!empty($event_name)): ?>
         <div class="invoice-subtitle"><?= $safe($event_name) ?></div>
     <?php endif; ?>
-
     <table class="info-table">
         <tr>
             <td style="width: 55%;" class="info-left">
@@ -212,7 +211,6 @@ $items = (isset($items) && is_array($items)) ? $items : [];
             </td>
         </tr>
     </table>
-
     <table class="items-table">
         <tr>
             <th colspan="3">PARTICULARS</th>
@@ -249,16 +247,13 @@ $items = (isset($items) && is_array($items)) ? $items : [];
                 <td class="right"><?= $safe($currency_symbol) ?> <?= number_format($lineTotal, 2) ?></td>
             </tr>
         <?php endforeach; ?>
-
         <?php for ($i = 0; $i < 3; $i++): ?>
             <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
         <?php endfor; ?>
-
         <tr class="summary-row">
             <td colspan="3"></td>
             <td class="right"><?= $safe($currency_symbol) ?> <?= number_format($subtotal, 2) ?></td>
         </tr>
-
         <?php if ($is_same_state): ?>
             <tr>
                 <td colspan="3">CGST(@ 9%)</td>
@@ -274,13 +269,11 @@ $items = (isset($items) && is_array($items)) ? $items : [];
                 <td class="right"><?= $safe($currency_symbol) ?> <?= number_format($igst, 2) ?></td>
             </tr>
         <?php endif; ?>
-
         <tr class="summary-row">
             <td colspan="3">Total</td>
             <td class="right"><?= $safe($currency_symbol) ?> <?= number_format($total, 2) ?></td>
         </tr>
     </table>
-
     <table class="footer-table">
         <tr>
             <td style="width: 50%; text-align:left;">
@@ -291,11 +284,8 @@ $items = (isset($items) && is_array($items)) ? $items : [];
             </td>
         </tr>
     </table>
-
     <div class="note">
         Note: This is a system generated invoice. No authorised signature required.
     </div>
-
 </body>
-
 </html>

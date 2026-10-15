@@ -188,16 +188,12 @@
 <body>
 
     <div class="coming-soon">
-
-
         <h1>Coming Soon</h1>
-
-
-        <div class="loader"></div>
-
+        <!-- <div class="loader"></div> -->
+<!--
         <div class="loading-text">
             Please wait...
-        </div>
+        </div> -->
 
         <div class="footer">
             &copy; <?= date('Y') ?> All Rights Reserved.

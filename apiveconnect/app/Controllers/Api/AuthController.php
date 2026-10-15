@@ -37,7 +37,6 @@ class AuthController extends BaseController
         if (!$isEmail && !$isMobile) {
             return $this->response->setJSON(['status' => false, 'message' => 'Enter a valid email address or mobile number.']);
         }
-
         $user = $this->contactModel->findContactPersonByIdentifierAndSubEvent(
             $identifier,
             $subEventId
@@ -49,7 +48,7 @@ class AuthController extends BaseController
                 'message' => 'No account matches this email or mobile number for this event.'
             ]);
         }
-        $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $otp = (string) random_int(100000, 999999);
         $this->contactModel->updateRecord(
             $user->id,
             [
@@ -61,26 +60,24 @@ class AuthController extends BaseController
             ]
         );
         $channel = $isEmail ? 'email' : 'mobile';
-        $referralWebsite = (string) ($this->request->getVar('referreral_website') ?? $this->request->getVar('referral_website') ?? '');
         log_message('info', 'OTP send attempt: ' . json_encode([
-                    'user_id'      => $user->id,
-                    'email'        => $user->email,
-                    'mobile'       => $user->mobile_number,
-                    'channel'      => $channel,
-                    'sub_event_id' => $subEventId,
-                ]));
-        $otpSent = sendOtpMessage($user, $otp, $channel, $referralWebsite, $subEventId);
+            'user_id' => $user->id,
+            'identifier' => $identifier,
+            'channel' => $channel,
+            'sub_event_id' => $subEventId,
+        ]));
+        // Branding comes from the sub-event's event (see sendOtpMessage).
+        $otpSent = sendOtpMessage($user, $otp, $channel, '', $subEventId);
         log_message('info', 'OTP send result: ' . json_encode([
-                    'user_id'     => $user->id,
-                    'channel'     => $channel,
-                    'raw_result'  => $otpSent,
-                    'result_type' => gettype($otpSent),
-                ]));
+            'user_id' => $user->id,
+            'channel' => $channel,
+            'raw_result' => $otpSent,
+            'result_type' => gettype($otpSent),
+        ]));
         if (!$otpSent) {
             log_message('error', 'sendOtpMessage failed: ' . json_encode([
                 'user' => $user,
                 'channel' => $channel,
-                'referralWebsite' => $referralWebsite,
                 'subEventId' => $subEventId,
                 'error' => is_array($otpSent)
                     ? ($otpSent['message'] ?? $otpSent['error'] ?? $otpSent)
@@ -140,7 +137,6 @@ class AuthController extends BaseController
                 'message' => 'Invalid OTP'
             ]);
         }
-
         $expiresAt = empty($user->otp_expire_at) ? false : strtotime($user->otp_expire_at);
         if (!$expiresAt || $expiresAt < time()) {
             return $this->response->setJSON([
@@ -148,7 +144,6 @@ class AuthController extends BaseController
                 'message' => 'OTP expired'
             ]);
         }
-
         $token = $this->jwtService->generateToken(['uid' => $user->id, 'exhibitor_id' => $user->exhibitor_id, 'email' => $user->email]);
         $this->contactModel->update(
             $user->id,
@@ -157,7 +152,6 @@ class AuthController extends BaseController
                 'otp' => null
             ]
         );
-
         return $this->response->setJSON([
             'status'  => 'success',
             'message' => 'OTP verified.',
@@ -203,7 +197,7 @@ class AuthController extends BaseController
                 'remaining_seconds' => $allowedAt - time()
             ]);
         }
-        $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $otp = (string) random_int(100000, 999999);
         $updateData = [
             'otp'               => $otp,
             'otp_expire_at'     => date(
@@ -216,12 +210,7 @@ class AuthController extends BaseController
         ];
         $this->contactModel->update($user->id, $updateData);
         $channel = filter_var($identifier, FILTER_VALIDATE_EMAIL) ? 'email' : 'mobile';
-        $referralWebsite = (string) (
-            $this->request->getVar('referreral_website')
-            ?? $this->request->getVar('referral_website')
-            ?? ''
-        );
-        $otpSent = sendOtpMessage($user, $otp, $channel, $referralWebsite, $subEventId);
+        $otpSent = sendOtpMessage($user, $otp, $channel, '', $subEventId);
         if (!$otpSent) {
             return $this->response->setJSON([
                 'status' => false,

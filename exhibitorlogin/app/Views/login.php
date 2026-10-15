@@ -27,70 +27,6 @@
             --brand-checkbox-bg: #4a72b8;
         }
 
-        body.theme-fireindia {
-            --brand-primary: #ed4037;
-            --brand-primary-dark: #f47634;
-            --brand-accent-bg: #F27900;
-            --brand-gradient-start: #ed4037;
-            --brand-gradient-end: #f47634;
-            --brand-login-accent: rgba(237, 64, 55, 0.15);
-            --brand-login-accent2: rgba(244, 118, 52, 0.10);
-            --brand-btn-bg: #ed4037;
-            --brand-btn-hover: #f47634;
-            --brand-btn-shadow: rgba(237, 64, 55, 0.25);
-            --brand-input-border: #ed4037;
-            --brand-input-shadow: rgba(237, 64, 55, 0.15);
-            --brand-checkbox-bg: #ed4037;
-        }
-
-        body.theme-drone {
-            --brand-primary: #105489;
-            --brand-primary-dark: #1478c7;
-            --brand-accent-bg: #e8eff5;
-            --brand-gradient-start: #105489;
-            --brand-gradient-end: #1478c7;
-            --brand-login-accent: rgba(16, 84, 137, 0.15);
-            --brand-login-accent2: rgba(20, 120, 199, 0.10);
-            --brand-btn-bg: #105489;
-            --brand-btn-hover: #1478c7;
-            --brand-btn-shadow: rgba(16, 84, 137, 0.25);
-            --brand-input-border: #1478c7;
-            --brand-input-shadow: rgba(16, 84, 137, 0.15);
-            --brand-checkbox-bg: #105489;
-        }
-
-        body.theme-bridalasia {
-            --brand-primary: #d4a373;
-            --brand-primary-dark: #b8875a;
-            --brand-accent-bg: #fdf6f0;
-            --brand-gradient-start: #d4a373;
-            --brand-gradient-end: #b8875a;
-            --brand-login-accent: rgba(212, 163, 115, 0.15);
-            --brand-login-accent2: rgba(184, 135, 90, 0.10);
-            --brand-btn-bg: #d4a373;
-            --brand-btn-hover: #b8875a;
-            --brand-btn-shadow: rgba(212, 163, 115, 0.25);
-            --brand-input-border: #d4a373;
-            --brand-input-shadow: rgba(212, 163, 115, 0.15);
-            --brand-checkbox-bg: #d4a373;
-        }
-
-        body.theme-securenation {
-            --brand-primary: #1a5c8a;
-            --brand-primary-dark: #0e3d5e;
-            --brand-accent-bg: #e8f0f8;
-            --brand-gradient-start: #1a5c8a;
-            --brand-gradient-end: #0e3d5e;
-            --brand-login-accent: rgba(26, 92, 138, 0.15);
-            --brand-login-accent2: rgba(14, 61, 94, 0.10);
-            --brand-btn-bg: #1a5c8a;
-            --brand-btn-hover: #0e3d5e;
-            --brand-btn-shadow: rgba(26, 92, 138, 0.25);
-            --brand-input-border: #1a5c8a;
-            --brand-input-shadow: rgba(26, 92, 138, 0.15);
-            --brand-checkbox-bg: #1a5c8a;
-        }
-
         body.login-page {
             min-height: 100vh;
             margin: 0;
@@ -136,7 +72,7 @@
             font-weight: 700;
             color: #1a2332;
             text-align: center;
-            margin-bottom: 6px;
+            margin-bottom: 35px;
             letter-spacing: -0.3px;
         }
 
@@ -407,60 +343,10 @@
             }
         }
     </style>
+    <?= brand_style((int) $subEvent['event_id'], (int) $subEvent['sub_event_id']) ?>
 </head>
 
-<?php
-$referralTheme = 'default';
-$referralWebsite = session()->get('referreral_website') ?? '';
-
-if (stripos($referralWebsite, 'drone') !== false) {
-    $referralTheme = 'drone';
-} elseif (stripos($referralWebsite, 'fireindia') !== false) {
-    $referralTheme = 'fireindia';
-} elseif (stripos($referralWebsite, 'bridalasia') !== false) {
-    $referralTheme = 'bridalasia';
-} elseif (stripos($referralWebsite, 'securenation') !== false) {
-    $referralTheme = 'securenation';
-}
-?>
-
-<body class="login-page theme-<?= esc($referralTheme) ?>">
-    <script>
-        (function() {
-            function getCookie(name) {
-                var value = "; " + document.cookie;
-                var parts = value.split("; " + name + "=");
-                if (parts.length == 2) return parts.pop().split(";").shift();
-                return null;
-            }
-
-            function detectTheme(value) {
-                var v = String(value || '').toLowerCase();
-                if (v.indexOf('drone') !== -1) return 'drone';
-                if (v.indexOf('fireindia') !== -1) return 'fireindia';
-                if (v.indexOf('bridalasia') !== -1) return 'bridalasia';
-                if (v.indexOf('securenation') !== -1) return 'securenation';
-                return 'default';
-            }
-
-            try {
-                var stored = getCookie('referral_website') || 
-                            localStorage.getItem('referral_website') || 
-                            '<?php echo session()->get('referreral_website') ?? ''; ?>';
-                
-                var theme = detectTheme(stored);
-                var body = document.body;
-                body.classList.remove('theme-drone', 'theme-fireindia', 'theme-bridalasia', 'theme-securenation', 'theme-default');
-                body.classList.add('theme-' + theme);
-                
-                if (stored) {
-                    localStorage.setItem('referral_website', stored);
-                }
-            } catch (e) {
-                console.log('Theme detection error:', e);
-            }
-        })();
-    </script>
+<body class="login-page">
 
     <div id="toastContainer" class="toast-container"></div>
 
@@ -470,13 +356,11 @@ if (stripos($referralWebsite, 'drone') !== false) {
                 <i class="fa-solid fa-store"></i>
             </div>
         </div>
-        <h2 class="login-title">Login</h2>
-        <!-- <p class="login-subtitle">Send a OTP to your registered email or mobile number.</p> -->
+        <h2 class="login-title" style="margin-bottom:8px;">Login</h2>
+        <p class="login-subtitle"><?= esc($subEvent['sub_event_name'] ?: $subEvent['event_name']) ?></p>
 
         <form id="otpLoginForm" autocomplete="off">
-            <?= csrf_field() ?>
             <input type="hidden" id="enc_sub_event_id" name="enc_sub_event_id" value="<?= esc($enc_sub_event_id) ?>">
-            <input type="hidden" id="referral_website" name="referral_website" value="<?= esc(session()->get('referreral_website') ?? '') ?>">
 
             <div class="login-input-container">
                 <label class="form-label" for="identifier">Email / Mobile Number</label>
@@ -511,8 +395,6 @@ if (stripos($referralWebsite, 'drone') !== false) {
 
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script>
-        const csrfName = '<?= csrf_token() ?>';
-        const csrfHash = '<?= csrf_hash() ?>';
 
         $(function() {
             let resendCount = parseInt(localStorage.getItem('otp_resend_count') || '0');
@@ -612,8 +494,6 @@ if (stripos($referralWebsite, 'drone') !== false) {
                     data: {
                         identifier: identifier,
                         enc_sub_event_id: $('#enc_sub_event_id').val(),
-                        referral_website: $('#referral_website').val(),
-                        [csrfName]: csrfHash
                     },
                     success: function(res) {
                         if (res.status === 'success') {
@@ -661,26 +541,21 @@ if (stripos($referralWebsite, 'drone') !== false) {
                         identifier: $('#identifier').val(),
                         otp: otp,
                         enc_sub_event_id: $('#enc_sub_event_id').val(),
-                        referral_website: $('#referral_website').val(),
                     },
                     success: function(res) {
                         if (res.status === 'success') {
-                            var referral = $('#referral_website').val();
                             localStorage.removeItem('otp_next_allowed_at');
                             localStorage.removeItem('otp_resend_count');
                             showToast(res.message, 'success');
-                            
-                            if (res && res.token) {
+
+                            if (res.token) {
                                 localStorage.setItem('api_token', res.token);
-                                localStorage.setItem('referral_website', referral);
+                                localStorage.setItem('login_url', window.location.href);
                                 document.cookie = 'api_token=' + res.token + '; path=/; SameSite=Strict';
-                                document.cookie = 'referral_website=' + referral + '; path=/; SameSite=Strict';
                             }
                             
                             setTimeout(function() {
-                                var token = res.token ?? '';
-                                var redirect = '<?= base_url('dashboard') ?>';
-                                window.location.href = redirect + '?token=' + token;
+                                window.location.href = '<?= base_url('dashboard') ?>';
                             }, 650);
                         } else {
                             showToast(res.message || 'Incorrect OTP. Please try again.', 'error');
@@ -736,13 +611,11 @@ if (stripos($referralWebsite, 'drone') !== false) {
                 }
             });
 
-            <?php if (session()->getFlashdata('fail')): ?>
-                showToast("<?= session()->getFlashdata('fail') ?>", 'error');
-            <?php endif; ?>
-
-            <?php if (session()->getFlashdata('success')): ?>
-                showToast("<?= session()->getFlashdata('success') ?>", 'success');
-            <?php endif; ?>
+            <?php foreach (['fail' => 'error', 'success' => 'success'] as $flashKey => $toastType): ?>
+                <?php if ($flash = session()->getFlashdata($flashKey)): ?>
+                    showToast(<?= json_encode(esc($flash), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>, '<?= $toastType ?>');
+                <?php endif; ?>
+            <?php endforeach; ?>
         });
     </script>
 </body>

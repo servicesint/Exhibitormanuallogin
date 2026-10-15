@@ -29,7 +29,7 @@ $RECYCLE.BIN/
 
 # Linux
 *~
-
+*.bak
 # KDE directory preferences
 .directory
 

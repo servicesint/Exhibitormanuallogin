@@ -2,9 +2,7 @@
 $safe = function ($value) {
     return esc((string)($value ?? ''));
 };
-
 $primary = $theme_primary ?? '#8b0000';
-
 if (!empty($badge_background)) {
     $backgroundCss = "
         background:{$badge_background};
@@ -64,7 +62,7 @@ if (!empty($badge_background)) {
 
         .company-name {
             font-family: dejavuserif;
-            font-size: 9px;
+            font-size: 10px;
             font-weight: bold;
             line-height: 1.2;
             text-transform: uppercase;
@@ -76,11 +74,9 @@ if (!empty($badge_background)) {
             background: #ffffff;
         }
     </style>
-
 </head>
 
 <body>
-
     <div class="badge-wrap">
         <table class="badge-table" cellpadding="0" cellspacing="0" width="100%">
             <tr>
@@ -125,6 +121,5 @@ if (!empty($badge_background)) {
             </tr>
         </table>
     </div>
-
 </body>
 </html>

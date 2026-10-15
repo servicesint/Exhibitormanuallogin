@@ -1,460 +1,156 @@
 <?php
 
-use Config\Services;
-use Mpdf\Mpdf;
-use App\Models\ExhibitorModel;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
-if (!function_exists('generate_pdf')) {
-    function generate_pdf(string $view, string $filename = 'file.pdf', array $data = [], $download = true)
+if (!function_exists('decode_api_token')) {
+    /**
+     * Decode the API JWT and return its payload, or null if it is missing,
+     * malformed, expired, or fails signature verification.
+     *
+     * The signature is verified with JWT_SECRET (the same secret the API
+     * signs with). If JWT_SECRET is not configured, the payload is decoded
+     * WITHOUT verification so existing logins keep working — set JWT_SECRET
+     * in .env to enforce verification.
+     */
+    function decode_api_token(?string $token): ?array
     {
-        $mpdf = new Mpdf();
-        $html = view($view, $data);
-        
-        $mpdf->WriteHTML($html);
-        $disposition = $download ? 'attachment' : 'inline';
-        return service('response')
-            ->setHeader('Content-Type', 'application/pdf')
-            ->setHeader('Content-Disposition', $disposition . '; filename="' . $filename . '"')
-            ->setBody($mpdf->Output('', 'S'));
+        $token = trim((string) $token);
+        if ($token === '' || substr_count($token, '.') !== 2) {
+            return null;
+        }
+
+        $secret = (string) env('JWT_SECRET', '');
+
+        if ($secret !== '') {
+            try {
+                return (array) JWT::decode($token, new Key($secret, 'HS256'));
+            } catch (\Throwable $e) {
+                log_message('notice', '[decode_api_token] ' . $e->getMessage());
+                return null;
+            }
+        }
+
+        $payload = json_decode((string) JWT::urlsafeB64Decode(explode('.', $token)[1]), true);
+        if (!is_array($payload)) {
+            return null;
+        }
+        if (!empty($payload['exp']) && (int) $payload['exp'] < time()) {
+            return null;
+        }
+
+        return $payload;
     }
 }
 
-if (!function_exists('getManualSidebar')) {
-    function getManualSidebar()
+if (!function_exists('brand_colors')) {
+    /** Colours for an event / sub-event from Config\EventThemes (default < event < sub-event). */
+    function brand_colors(?int $eventId = null, ?int $subEventId = null): array
+    {
+        $config = config('EventThemes');
+
+        return array_merge(
+            $config->default,
+            $config->events[$eventId] ?? [],
+            $config->subEvents[$subEventId] ?? []
+        );
+    }
+}
+
+if (!function_exists('brand_style')) {
+    /**
+     * <style> block setting the --brand-* CSS variables for an event / sub-event.
+     * Put it last in <head> so it overrides the defaults in the page's own CSS.
+     */
+    function brand_style(?int $eventId = null, ?int $subEventId = null): string
+    {
+        $c = brand_colors($eventId, $subEventId);
+        $rgba = static function (string $hex, float $alpha): string {
+            [$r, $g, $b] = sscanf(ltrim($hex, '#'), '%02x%02x%02x');
+
+            return "rgba($r, $g, $b, $alpha)";
+        };
+
+        $vars = [
+            'primary'        => $c['primary'],
+            'primary-dark'   => $c['primary_dark'],
+            'accent-bg'      => $c['accent_bg'],
+            'gradient'       => "linear-gradient(to left, {$c['primary']}, {$c['primary_dark']})",
+            'gradient-start' => $c['primary'],
+            'gradient-end'   => $c['primary_dark'],
+            'btn-bg'         => $c['primary'],
+            'btn-hover'      => $c['primary_dark'],
+            'btn-shadow'     => $rgba($c['primary'], 0.25),
+            'input-border'   => $c['primary'],
+            'input-shadow'   => $rgba($c['primary'], 0.15),
+            'checkbox-bg'    => $c['primary'],
+            'login-accent'   => $rgba($c['primary'], 0.15),
+            'login-accent2'  => $rgba($c['primary_dark'], 0.10),
+        ];
+
+        $css = '';
+        foreach ($vars as $name => $value) {
+            $css .= "--brand-$name: " . preg_replace('/[^#a-zA-Z0-9(),.% -]/', '', $value) . ';';
+        }
+
+        return "<style>:root{{$css}}</style>";
+    }
+}
+
+if (!function_exists('sub_event_info')) {
+    /**
+     * A sub-event with its parent event, or null if it does not exist.
+     * Keys: sub_event_id, sub_event_name, sub_event_logo, start_date, end_date,
+     * event_id, event_name, url.
+     */
+    function sub_event_info(int $subEventId): ?array
+    {
+        static $cache = [];
+        if (!array_key_exists($subEventId, $cache)) {
+            $cache[$subEventId] = $subEventId > 0 ? (new \App\Models\EventModel())->findSubEvent($subEventId) : null;
+        }
+
+        return $cache[$subEventId];
+    }
+}
+
+if (!function_exists('current_sub_event')) {
+    /** The logged-in exhibitor's sub-event (from the API token), or null. */
+    function current_sub_event(): ?array
+    {
+        $payload = decode_api_token(current_api_token());
+
+        return sub_event_info((int) ($payload['sub_event_id'] ?? 0));
+    }
+}
+
+if (!function_exists('current_brand_style')) {
+    /** brand_style() for the logged-in exhibitor's event / sub-event. */
+    function current_brand_style(): string
+    {
+        $subEvent = current_sub_event();
+
+        return brand_style($subEvent['event_id'] ?? null, $subEvent['sub_event_id'] ?? null);
+    }
+}
+
+if (!function_exists('current_api_token')) {
+    /**
+     * The API token from the query string (first load), Authorization header
+     * (AJAX) or api_token cookie.
+     */
+    function current_api_token(): string
     {
         $request = service('request');
-        $token = $request->getCookie('api_token');
-        if (empty($token)) {
 
-            log_message(
-                'error',
-                'getManualSidebar: api_token cookie not found'
-            );
-
-            return [];
-        }
-
-        try {
-            $jwtSecret = env('JWT_SECRET');
-            if (empty($jwtSecret)) {
-                log_message(
-                    'error',
-                    'getManualSidebar: JWT_SECRET missing'
-                );
-                return [];
-            }
-            $decoded = JWT::decode(
-                $token,
-                new Key($jwtSecret, 'HS256')
-            );
-
-        } catch (\Throwable $e) {
-            log_message(
-                'error',
-                'JWT Decode Error: ' . $e->getMessage()
-            );
-            return [];
-        }
-        $sub_event_id =
-            $payload['sub_event_id']
-            ?? $payload['subEventId']
-            ?? null;
-        if (empty($sub_event_id)) {
-            log_message(
-                'error',
-                'getManualSidebar: sub_event_id missing from token'
-            );
-            return [];
-        }
-        $db = \Config\Database::connect();
-        $builder = $db->table('manual_pages_menu m');
-        $builder->select("
-            m.id as menu_id,
-            m.menu_name,
-            p.id as page_id,
-            p.page_title,
-            p.page_url,
-            p.serial_no
-        ");
-        $builder->join(
-            'manual_pages p',
-            'p.menu_id = m.id AND p.is_deleted = 0',
-            'left'
-        );
-        $builder->where('m.is_deleted', 0);
-        $builder->where(
-            'm.sub_event_id',
-            $sub_event_id
-        );
-        $builder->orderBy(
-            'm.id',
-            'ASC'
-        );
-        $builder->orderBy(
-            'p.serial_no',
-            'ASC'
-        );
-        $result = $builder
-            ->get()
-            ->getResultArray();
-        /*
-        |--------------------------------------------------------------------------
-        | CREATE SIDEBAR ARRAY
-        |--------------------------------------------------------------------------
-        */
-
-        $menu = [];
-        foreach ($result as $row) {
-            if (!isset($menu[$row['menu_id']])) {
-                $menu[$row['menu_id']] = [
-                    'menu_id' => $row['menu_id'],
-                    'menu_name' => $row['menu_name'],
-                    'pages' => []
-                ];
-            }
-            if (!empty($row['page_id'])) {
-                $menu[$row['menu_id']]['pages'][] = [
-                    'page_id' => $row['page_id'],
-                    'page_title' => $row['page_title'],
-                    'page_url' => $row['page_url'],
-                    'serial_no' => $row['serial_no']
-                ];
+        $token = $request->getGet('token');
+        if (!$token) {
+            $header = $request->getHeaderLine('Authorization');
+            if (str_starts_with($header, 'Bearer ')) {
+                $token = substr($header, 7);
             }
         }
-        return $menu;
-    }
-}
 
-// if (!function_exists('send_sms')) {
-//     function send_sms($mobile_number, $otp, string $referralWebsite = ''): bool
-//     {
-
-//         try {
-//             $mobile_number = preg_replace('/\D/', '', $mobile_number);
-//             if (strlen($mobile_number) == 12 && substr($mobile_number, 0, 2) == '91') {
-//                 $mobile_number = substr($mobile_number, 2);
-//             }
-//             if (!preg_match('/^[6-9][0-9]{9}$/', $mobile_number)) {
-//                 log_message('error', 'Invalid mobile number: ' . $mobile_number);
-//                 return false;
-//             }
-//             if ($referralWebsite == 'drone') {
-//                 $msg = "Your Drone Expo registration OTP Code is {$otp}. This code is valid for 15 minutes. Exhibition Managed by Services International.";
-//             } else if ($referralWebsite == 'bridalasia') {
-//                 $msg = "Your Bridal Asia registration OTP Code is {$otp}. This code is valid for 15 minutes. Exhibition Managed by Services International.";
-//             } else {
-//                 $msg = "Your Drone Expo registration OTP Code is {$otp}. This code is valid for 15 minutes. Exhibition Managed by Services International.";
-//             }
-
-//             $url = "";
-
-//             $postData = [
-//                 'mobile'  => $mobile_number,
-//                 'message' => $msg,
-//             ];
-
-//             $ch = curl_init();
-//             curl_setopt_array($ch, [
-//                 CURLOPT_URL            => $url,
-//                 CURLOPT_RETURNTRANSFER => true,
-//                 CURLOPT_POST           => true,
-//                 CURLOPT_POSTFIELDS     => http_build_query($postData),
-//                 CURLOPT_TIMEOUT        => 30,
-//                 CURLOPT_SSL_VERIFYPEER => false,
-//             ]);
-//             $response = curl_exec($ch);
-//             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-//             $curlError = curl_error($ch);
-//             curl_close($ch);
-//             if ($curlError) {
-//                 log_message('error', 'SMS CURL Error: ' . $curlError);
-//                 return false;
-//             }
-//             if ($httpCode == 200) {
-//                 log_message('info', 'OTP sent successfully to ' . $mobile_number);
-//                 return true;
-//             }
-//             log_message('error', 'SMS API Response: ' . $response);
-//             return false;
-//         } catch (\Throwable $e) {
-//             log_message('error', 'send_sms Exception: ' . $e->getMessage());
-//             return false;
-//         }
-//     }
-// }
-
-function send_sms_remote($mobile, $otp, $portal)
-{
-    $ch = curl_init();
-    curl_setopt_array($ch, [
-        CURLOPT_URL => 'https://securenationexpo.com/SmsGateway/sendOtp',
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_POST => true,
-        CURLOPT_POSTFIELDS => [
-            'mobile' => $mobile,
-            'otp'    => $otp,
-            'portal' => $portal,
-        ],
-    ]);
-    $response = curl_exec($ch);
-    $error    = curl_error($ch);
-    curl_close($ch);
-    if ($error) {
-        log_message('error', $error);
-        return false;
-    }
-    $result = json_decode($response, true);
-    return $result['status'] ?? false;
-}
-
-
-if (!function_exists('resolvePortalBranding')) {
-    function resolvePortalBranding(string $referralWebsite): array
-    {
-        $defaultEmail = env('DEFAULT_FROM_EMAIL', 'noreply@example.com');
-        if (stripos($referralWebsite, 'bridalasia') !== false) {
-            return [
-                'portalName' => 'Bridal Asia',
-                'fromEmail'  => env('BRIDALASIA_FROM_EMAIL', $defaultEmail),
-                'fromName'   => env('BRIDALASIA_FROM_NAME',  'Bridal Asia'),
-                'logoUrl'    => env('BRIDALASIA_LOGO_URL',   ''),
-                'otpView'    => 'email/otp_bridal_asia',
-            ];
-        } else if (stripos($referralWebsite, 'drone') !== false) {
-            return [
-                'portalName' => 'Drone Expo',
-                'fromEmail'  => env('DRONEEXPO_FROM_EMAIL', $defaultEmail),
-                'fromName'   => env('DRONEEXPO_FROM_NAME',  'Drone Expo'),
-                'logoUrl'    => env('DRONEEXPO_LOGO_URL',   ''),
-                'otpView'    => 'email/otp_drone_expo',
-            ];
-        } else if (stripos($referralWebsite, 'fireindia') !== false) {
-            return [
-                'portalName' => 'Fire India',
-                'fromEmail'  => env('FIREINDIA_FROM_EMAIL', $defaultEmail),
-                'fromName'   => env('FIREINDIA_FROM_NAME',  'Fire India'),
-                'logoUrl'    => env('FIREINDIA_LOGO_URL',   ''),
-                'otpView'    => 'email/otp_fire_india',
-            ];
-        } else if (stripos($referralWebsite, 'Securenation') !== false) {
-            return [
-                'portalName' => 'Securenation',
-                'fromEmail'  => env('SECURENATION_FROM_EMAIL', $defaultEmail),
-                'fromName'   => env('SECURENATION_FROM_NAME',  'Securenation'),
-                'logoUrl'    => env('SECURENATION_LOGO_URL',   ''),
-                'otpView'    => 'email/otp_securenation',
-            ];
-        }
-        return [
-            'portalName' => 'Exhibitor Portal',
-            'fromEmail'  => $defaultEmail,
-            'fromName'   => env('DEFAULT_FROM_NAME', 'Exhibitor Portal'),
-            'logoUrl'    => env('DEFAULT_LOGO_URL',  ''),
-            'otpView'    => 'email/otp_default',
-        ];
-    }
-}
-if (!function_exists('sendEmail')) {
-    function sendEmail(
-        string $toEmail,
-        string $toName,
-        string $subject,
-        string $htmlBody,
-        string $fromEmail = '',
-        string $fromName  = ''
-    ): bool {
-        if (!filter_var($toEmail, FILTER_VALIDATE_EMAIL)) {
-            log_message('error', "[sendEmail] Invalid recipient: {$toEmail}");
-            return false;
-        }
-        $fromEmail = $fromEmail ?: env('DEFAULT_FROM_EMAIL', 'noreply@example.com');
-        $fromName  = $fromName  ?: env('DEFAULT_FROM_NAME',  'Exhibitor Portal');
-        $payload = [
-            'from'             => ['email' => $fromEmail, 'name' => $fromName],
-            'subject'          => $subject,
-            'content'          => [['type' => 'html', 'value' => $htmlBody]],
-            'personalizations' => [[
-                'to' => [['email' => $toEmail, 'name' => $toName]],
-            ]],
-        ];
-        $curl = curl_init();
-        curl_setopt_array($curl, [
-            CURLOPT_URL            => 'https://emailapi.netcorecloud.net/v5/mail/send',
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_ENCODING       => '',
-            CURLOPT_MAXREDIRS      => 10,
-            CURLOPT_TIMEOUT        => 30,
-            CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST  => 'POST',
-            CURLOPT_POSTFIELDS     => json_encode($payload),
-            CURLOPT_HTTPHEADER     => [
-                'api_key: '    . env('NETCORE_API_KEY'),
-                'content-type: application/json',
-            ],
-        ]);
-        $response = curl_exec($curl);
-        $err      = curl_error($curl);
-        curl_close($curl);
-        if ($err) {
-            log_message('error', "[sendEmail] cURL error: {$err}");
-            return false;
-        }
-        $res = json_decode($response);
-
-        if (!isset($res->status) || $res->status !== 'success') {
-            log_message('error', "[sendEmail] Netcore error response: {$response}");
-            return false;
-        }
-        return true;
-    }
-}
-
-if (!function_exists('sendOtpMessage')) {
-    function sendOtpMessage(
-        $user,
-        string $otp,
-        string $channel,
-        string $referralWebsite = ''
-    ): bool {
-        $session = session();
-        $branding = resolvePortalBranding($referralWebsite);
-        if ($channel === 'email') {
-            if (empty($user->email)) {
-                return false;
-            }
-            $formModel = new ExhibitorModel();
-            $form = $formModel->getSubEvents($session->get('otp_sub_event_id'));
-            if (stripos($referralWebsite, 'drone') !== false) {
-                $msg = "Your Drone Expo Login OTP Code is {$otp}. This code is valid for 15 minutes. Exhibition Managed by Services International.";
-            } elseif (stripos($referralWebsite, 'bridalasia') !== false) {
-                $msg = "Your Bridal Asia Login OTP Code is {$otp}. This code is valid for 15 minutes. Exhibition Managed by Services International.";
-            } elseif (stripos($referralWebsite, 'fireindia') !== false) {
-                $msg = "Your Fire India Login OTP Code is {$otp}. This code is valid for 15 minutes. Exhibition Managed by Services International.";
-            } elseif (stripos($referralWebsite, 'securenation') !== false) {
-                $msg = "Your Securenation Login OTP Code is {$otp}. This code is valid for 15 minutes. Exhibition Managed by Services International.";
-            } else {
-                $msg = "Your OTP Code is {$otp}. This code is valid for 15 minutes.";
-            }
-            $uploadBaseUrl = env('UPLOAD_BASE_URL');
-            $htmlBody = view($branding['otpView'], [
-                'message'              => $msg,
-                'sub_event_name'       => $form->sub_event_name,
-                'logo'                 => $uploadBaseUrl . $form->sub_event_logo,
-                'sub_event_date_image' => $uploadBaseUrl . $form->sub_event_date_image,
-            ]);
-            return sendEmail(
-                toEmail: $user->email,
-                toName: '',
-                subject: $branding['portalName'] . ' — Login OTP',
-                htmlBody: $htmlBody,
-                fromEmail: $branding['fromEmail'],
-                fromName: $branding['fromName']
-            );
-        } else {
-            if (empty($user->mobile_number)) {
-                return false;
-            }
-            return send_sms_remote(
-                $user->mobile_number,
-                $otp,
-                $referralWebsite
-            );
-        }
-        return true;
-    }
-}
-
-if (!function_exists('pr')) {
-    function pr($data)
-    {
-        echo "<pre>";
-        print_r($data);
-        echo "</pre>";
-        exit;
-    }
-}
-
-if (!function_exists('send_common_mail')) {
-    function send_common_mail($to, string $subject, string $msg, array $options = []): array
-    {
-        $apiKey = $options['api_key'] ?? env('EMAIL_API_KEY');
-        if (!$apiKey) {
-            return ['success' => false, 'message' => 'Email API key is not configured.'];
-        }
-        $normalize = function ($items) {
-            if (empty($items)) {
-                return [];
-            }
-            if (is_string($items)) {
-                $items = [[$items, '']];
-            }
-            return array_values(array_map(function ($item) {
-                if (is_string($item)) {
-                    return ['email' => $item, 'name' => ''];
-                }
-                if (is_array($item)) {
-                    return [
-                        'email' => $item['email'] ?? ($item[0] ?? ''),
-                        'name' => $item['name'] ?? ($item[1] ?? ''),
-                    ];
-                }
-                return ['email' => '', 'name' => ''];
-            }, $items));
-        };
-        $to = $normalize($to);
-        $personalization = ['to' => $to];
-        foreach (['cc', 'bcc'] as $field) {
-            if (!empty($options[$field])) {
-                $personalization[$field] = $normalize($options[$field]);
-            }
-        }
-        if (!empty($options['reply_to'])) {
-            $personalization['reply_to'] = $normalize($options['reply_to'])[0] ?? ['email' => '', 'name' => ''];
-        }
-        $payload = [
-            'from' => [
-                'email' => $options['from']['email'] ?? env('EMAIL_FROM', 'info@bridalasia.com'),
-                'name' => $options['from']['name'] ?? env('EMAIL_FROM_NAME', 'Bridal Asia'),
-            ],
-            'subject' => $subject,
-            'content' => [['type' => 'html', 'value' => $msg]],
-            'personalizations' => [$personalization],
-        ];
-        if (!empty($options['attachments'])) {
-            $payload['attachments'] = array_values(array_filter(array_map(function ($attachment) {
-                if (is_string($attachment) && file_exists($attachment)) {
-                    return ['name' => basename($attachment), 'content' => base64_encode(file_get_contents($attachment))];
-                }
-                if (is_array($attachment) && !empty($attachment['name']) && isset($attachment['content'])) {
-                    return ['name' => $attachment['name'], 'content' => base64_encode((string)$attachment['content'])];
-                }
-                return null;
-            }, $options['attachments'])));
-        }
-        $curl = curl_init();
-        curl_setopt_array($curl, [
-            CURLOPT_URL => 'https://emailapi.netcorecloud.net/v5/mail/send',
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_ENCODING => '',
-            CURLOPT_MAXREDIRS => 10,
-            CURLOPT_TIMEOUT => 30,
-            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST => 'POST',
-            CURLOPT_POSTFIELDS => json_encode($payload),
-            CURLOPT_HTTPHEADER => [
-                'api_key: ' . $apiKey,
-                'content-type: application/json',
-            ],
-        ]);
-        $response = curl_exec($curl);
-        $err = curl_error($curl);
-        curl_close($curl);
-        if ($err) {
-            return ['success' => false, 'message' => $err, 'payload' => $payload];
-        }
-        $decoded = json_decode($response, true);
-        return ['success' => isset($decoded['status']) && $decoded['status'] === 'success', 'response' => $decoded];
+        return trim((string) ($token ?: $request->getCookie('api_token')));
     }
 }

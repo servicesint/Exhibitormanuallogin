@@ -503,10 +503,7 @@ $isInternational = ($exhibitorType === 'international');
     <div class="terms">
     </div>
     <div class="note">
-        
         Note: This is a system generated invoice. No authorised signature required.
     </div>
-
 </body>
-
 </html>

@@ -15,10 +15,19 @@
 <?= $this->section('custom-script') ?>
 <script>
     const PAGE_CONTENT_URL_BASE = `${API_BASE_URL}/v1/dashboard/guidelines`;
+
     function escapeHtml(value) {
         return String(value ?? '')
             .replace(/&/g, '&amp;').replace(/</g, '&lt;')
             .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+
+    // Decodes HTML entities like &lt;p&gt; back into real tags <p>
+    function decodeHtmlEntities(str) {
+        if (!str) return '';
+        const txt = document.createElement('textarea');
+        txt.innerHTML = str;
+        return txt.value;
     }
 
     function getAuthToken() {
@@ -34,11 +43,13 @@
     async function loadPageContent(pageUrl) {
         const contentArea = document.getElementById('pageContentArea');
         contentArea.innerHTML = '<p class="text-muted">Loading...</p>';
+
         const token = getAuthToken();
         if (!token) {
             contentArea.innerHTML = '<div class="alert alert-danger">Login token missing. Please login again.</div>';
             return;
         }
+
         try {
             const response = await fetch(`${PAGE_CONTENT_URL_BASE}/${encodeURIComponent(pageUrl)}`, {
                 headers: {
@@ -46,14 +57,20 @@
                     'Accept': 'application/json'
                 }
             });
+
             const result = await response.json();
+
             if (!result.status) {
                 contentArea.innerHTML = `<div class="alert alert-danger">${escapeHtml(result.message)}</div>`;
                 return;
             }
+
+            // Decode in case the API/DB returned HTML-escaped entities
+            const decodedContent = decodeHtmlEntities(result.data.page_content);
+
             contentArea.innerHTML = `
                 <h4>${escapeHtml(result.data.page_title)}</h4>
-                <div class="page-content-body">${result.data.page_content}</div>
+                <div class="page-content-body">${decodedContent}</div>
             `;
         } catch (err) {
             console.error(err);
@@ -61,14 +78,14 @@
         }
     }
 
-    window.addEventListener('popstate', function() {
+    window.addEventListener('popstate', function () {
         const pageUrl = getPageUrlFromBrowser();
         if (pageUrl) {
             loadPageContent(pageUrl);
         }
     });
 
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         const pageUrl = getPageUrlFromBrowser();
         if (pageUrl) {
             loadPageContent(pageUrl);

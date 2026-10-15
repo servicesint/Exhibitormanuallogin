@@ -25,22 +25,27 @@
 
     .badge-header {
         display: flex;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         justify-content: space-between;
-        align-items: flex-start;
-        gap: 16px;
-        padding: 28px 32px 22px;
+        align-items: center;
+        gap: 12px;
+        padding: 24px 24px 20px;
         background: linear-gradient(135deg, #eef3fc 0%, #fafbfd 100%);
         border-bottom: 1px solid #e2e8f1;
     }
 
+    .badge-header>div:first-child {
+        min-width: 0;
+    }
+
     .badge-header h4 {
-        font-size: 1.55rem;
+        font-size: clamp(1.1rem, 1.6vw, 1.4rem);
         margin: 0 0 6px;
         color: #253345;
         line-height: 1.2;
         font-weight: 700;
         letter-spacing: 0.02em;
+        white-space: nowrap;
     }
 
     .badge-header small {
@@ -51,21 +56,33 @@
     .badge-header>div:last-child {
         display: flex;
         align-items: center;
-        flex-wrap: wrap;
-        gap: 12px;
+        flex-wrap: nowrap;
+        flex-shrink: 0;
+        gap: 10px;
+    }
+
+    /* Stack the title above the actions only on small screens. */
+    @media (max-width: 768px) {
+        .badge-header {
+            flex-wrap: wrap;
+        }
+
+        .badge-header>div:last-child {
+            flex-wrap: wrap;
+        }
     }
 
     .badge-date {
         display: inline-flex;
         align-items: center;
         gap: 7px;
-        padding: 9px 16px;
+        padding: 8px 14px;
         border-radius: 999px;
         background: #fff;
         border: 1px solid #d9e6f7;
-        color: #4a72b8;
+        color: var(--brand-primary);
         font-weight: 700;
-        font-size: 0.84rem;
+        font-size: 0.8rem;
         white-space: nowrap;
     }
 
@@ -74,10 +91,10 @@
         align-items: center;
         gap: 8px;
         border-radius: 999px;
-        padding: 11px 22px;
-        font-size: 0.9rem;
+        padding: 10px 18px;
+        font-size: 0.84rem;
         font-weight: 700;
-        background: #4a72b8;
+        background: var(--brand-primary);
         border: none;
         color: #fff;
         cursor: pointer;
@@ -86,7 +103,7 @@
     }
 
     .badge-add-btn:hover {
-        background: #3d5f9c;
+        background: var(--brand-primary-dark);
         transform: translateY(-1px);
         color: #fff;
     }
@@ -111,6 +128,36 @@
 
     .badge-alert i {
         margin-right: 8px;
+    }
+
+    /* Normalise admin-entered note HTML so headings/large fonts can't blow out the box. */
+    #badgesNoteText {
+        display: block;
+        max-height: 180px;
+        overflow-y: auto;
+    }
+
+    #badgesNoteText * {
+        font-size: 0.9rem !important;
+        font-family: inherit !important;
+        line-height: 1.55 !important;
+        color: inherit !important;
+        margin: 0 0 6px !important;
+        font-weight: 400 !important;
+    }
+
+    #badgesNoteText strong,
+    #badgesNoteText b {
+        font-weight: 700 !important;
+    }
+
+    #badgesNoteText> :last-child {
+        margin-bottom: 0 !important;
+    }
+
+    #badgesNoteText img {
+        max-width: 100%;
+        height: auto;
     }
 
     .table-responsive {
@@ -183,12 +230,12 @@
 
     .btn-edit {
         background: #eaf0fb;
-        color: #4a72b8;
+        color: var(--brand-primary);
     }
 
     .btn-edit:hover {
         background: #dbe6f8;
-        color: #3d5f9c;
+        color: var(--brand-primary-dark);
     }
 
     .btn-delete {
@@ -288,13 +335,13 @@
         border-radius: 8px !important;
         margin-left: 4px;
         border: 1px solid #e2e8f1 !important;
-        color: #4a72b8 !important;
+        color: var(--brand-primary) !important;
         background: #fff !important;
     }
 
     .dataTables_paginate .paginate_button.current {
-        background: #4a72b8 !important;
-        border-color: #4a72b8 !important;
+        background: var(--brand-primary) !important;
+        border-color: var(--brand-primary) !important;
         color: #fff !important;
     }
 
@@ -368,12 +415,12 @@
         padding: 11px 24px;
         font-size: 0.9rem;
         font-weight: 700;
-        background: #4a72b8;
+        background: var(--brand-primary);
         border: none;
     }
 
     #badgeModal .btn-primary:hover {
-        background: #3d5f9c;
+        background: var(--brand-primary-dark);
     }
 
     #badgeModal .btn-primary:disabled {
@@ -945,58 +992,58 @@
         }
 
         async function downloadBadgePdf(encryptedId, displayName) {
-            const token = getAuthToken();
-            if (!token) {
-                showToast('Login token missing. Please login again.', 'danger');
-                return;
-            }
-            if (!encryptedId) {
-                showToast('Invalid badge reference.', 'danger');
-                return;
-            }
-            const url = `${BADGE_API_BASE_URL}/v1/exhibitor-badges/${encodeURIComponent(encryptedId)}/download`;
+    const token = getAuthToken();
+    if (!token) {
+        showToast('Login token missing. Please login again.', 'danger');
+        return;
+    }
+    if (!encryptedId) {
+        showToast('Invalid badge reference.', 'danger');
+        return;
+    }
+    const url = `${BADGE_API_BASE_URL}/v1/exhibitor-badges/${encodeURIComponent(encryptedId)}/download`;
 
-            if (window.showLoader) window.showLoader('Preparing badge download…');
+    if (window.showLoader) window.showLoader('Preparing badge download…');
 
-            try {
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Accept': 'application/pdf',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                });
-                if (response.status === 401) {
-                    showToast('Session expired. Please login again.', 'danger');
-                    return;
-                }
-                if (!response.ok) {
-                    let message = 'Unable to download badge.';
-                    try {
-                        const errJson = await response.json();
-                        message = errJson.message || message;
-                    } catch (e) {}
-                    showToast(message, 'danger');
-                    return;
-                }
-                const blob = await response.blob();
-                const blobUrl = window.URL.createObjectURL(blob);
-                const safeName = (displayName || 'exhibitor').trim().replace(/\s+/g, '_');
-                const a = document.createElement('a');
-                a.href = blobUrl;
-                a.download = `Badge-${safeName}.pdf`;
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-                setTimeout(() => window.URL.revokeObjectURL(blobUrl), 1000);
-            } catch (error) {
-                console.error(error);
-                showToast('Network error while downloading badge.', 'danger');
-            } finally {
-                if (window.hideLoader) window.hideLoader();
+    try {
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/pdf',
+                'X-Requested-With': 'XMLHttpRequest'
             }
+        });
+        if (response.status === 401) {
+            showToast('Session expired. Please login again.', 'danger');
+            return;
         }
+        if (!response.ok) {
+            let message = 'Unable to download badge.';
+            try {
+                const errJson = await response.json();
+                message = errJson.message || message;
+            } catch (e) {}
+            showToast(message, 'danger');
+            return;
+        }
+        const blob = await response.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        const safeName = (displayName || 'exhibitor').trim().replace(/\s+/g, '_');
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = `Badge-${safeName}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => window.URL.revokeObjectURL(blobUrl), 1000);
+    } catch (error) {
+        console.error(error);
+        showToast('Network error while downloading badge.', 'danger');
+    } finally {
+        if (window.hideLoader) window.hideLoader();
+    }
+}
 
         async function fetchBadges() {
             const token = getAuthToken();

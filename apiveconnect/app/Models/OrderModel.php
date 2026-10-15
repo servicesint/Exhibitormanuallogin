@@ -41,7 +41,6 @@ class OrderModel extends Model
 
     public function createOrderFromCart(int $vendorId, int $exhbitior_contact_person, int $subEventId, array $cartItems, array $totals, bool $isInternational, array $extra = []): ?int
     {
-        
         $this->db->transStart();
         $orderNumber = $this->generateOrderNumber();
         $orderId = $this->insert([
@@ -97,7 +96,7 @@ class OrderModel extends Model
     public function getOrdersByVendor(int $vendorId): array
     {
         return $this->where('exhibitor_id', $vendorId)
-        ->where('is_complimentary', 0)
+            ->where('is_complimentary', 0)
             ->orderBy('created_at', 'DESC')
             ->findAll();
     }
@@ -108,14 +107,15 @@ class OrderModel extends Model
             ->where('id', $id)
             ->orderBy('id', 'DESC')
             ->first();
-
         if (!$order) {
             return null;
         }
+
         $orderItemsModel = new OrderItemModel();
         $order['items'] = $orderItemsModel->where('order_id', $order['id'])->where('order_number', $order['order_number'])
             ->orderBy('id', 'DESC')
             ->findAll();
+
         return $order;
     }
 

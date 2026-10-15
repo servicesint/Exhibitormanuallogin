@@ -71,7 +71,6 @@
             }
             $input.val(formattedValue);
         });
-        initializeDropZones();
         window.initIntlMobileFields = function() {
             const fields = document.querySelectorAll('.intl-mobile');
             fields.forEach(field => {
@@ -94,9 +93,6 @@
             childList: true,
             subtree: true
         });
-        $('.salutation-input-container').each(function() {
-            initializeSalutationInput(this);
-        });
         $('.copy-btn').copyText();
     });
 
@@ -114,7 +110,9 @@
 
         navLinks.each(function() {
             const link = $(this);
-            const linkHref = link.attr("href").replace(/\/+$/, '');
+            const href = link.attr("href");
+            if (!href || href.startsWith('#') || href.startsWith('javascript:')) return;
+            const linkHref = href.replace(/\/+$/, '');
 
             const url = new URL(linkHref, window.location.origin);
             const pathWithoutHost = url.pathname;
