@@ -103,7 +103,7 @@
         padding: 10px 18px;
         border-radius: 999px;
         background: #eaf0fb;
-        color: #4a72b8;
+        color: var(--brand-primary);
         font-weight: 600;
         font-size: 0.86rem;
         text-decoration: none;
@@ -261,6 +261,11 @@
                         <i class="bi bi-download"></i> Download reference image
                     </a>
                 `;
+
+                // If the image URL is broken, show a message instead of a broken-image icon.
+                container.querySelector('.ref-image-wrap img').addEventListener('error', function() {
+                    container.innerHTML = '<div class="ref-empty">Reference image could not be displayed.</div>';
+                });
 
                 document.getElementById('refImageWrap').addEventListener('click', function() {
                     document.getElementById('refImageModalImg').src = imageUrl;

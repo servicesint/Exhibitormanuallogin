@@ -17,6 +17,9 @@
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.14.1/themes/base/jquery-ui.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@17.0.19/build/css/intlTelInput.css" />
     <link rel="stylesheet" href="<?php echo base_url('assets/css/main.css'); ?>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap">
     <style>
         html {
             overflow-y: scroll;
@@ -206,6 +209,13 @@
             --brand-gradient: linear-gradient(to left, #ed4037, #f47634);
         }
  
+        body.theme-bridal {
+            --brand-primary: #6d1f3a;
+            --brand-primary-dark: #4a1226;
+            --brand-accent-bg: #f6ece6;
+            --brand-gradient: linear-gradient(135deg, #7a2442 0%, #4a1226 100%);
+        }
+
         body.theme-drone {
             --brand-primary: #105489;
             --brand-primary-dark: #1478c7;
@@ -251,6 +261,8 @@
         .form-closed-message .text-muted {
             color: #6c757d;
         }
+
+        /* Disabled button styles */
         button[type="submit"]:disabled,
         input[type="submit"]:disabled,
         .btn-submit.disabled,
@@ -272,6 +284,8 @@
             cursor: not-allowed;
             pointer-events: none;
         }
+
+        /* ----- Global action loader ----- */
         #globalLoaderOverlay {
             display: none;
             position: fixed;
@@ -309,6 +323,468 @@
             font-size: 14px;
             color: #333;
         }
+        /* ----- End global action loader ----- */
+
+        body.theme-luxury {
+            --lux-gold: #c5a059;
+            --lux-gold-light: #e6d3a8;
+            --lux-gold-soft: rgba(197, 160, 89, 0.14);
+            --lux-ivory: #f8f6f1;
+            --lux-line: #e9e3d7;
+            --lux-text: #1c2430;
+            --lux-muted: #737a86;
+            --lux-radius: 14px;
+            --lux-shadow: 0 1px 2px rgba(15, 23, 34, 0.04), 0 8px 24px rgba(15, 23, 34, 0.06);
+            --lux-shadow-lg: 0 20px 50px rgba(15, 23, 34, 0.14);
+            --lux-serif: 'Cormorant Garamond', Georgia, serif;
+            --lux-sans: 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
+        }
+
+        body.theme-luxury {
+            background: var(--lux-ivory) !important;
+            color: var(--lux-text);
+            font-family: var(--lux-sans) !important;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body.theme-luxury h1, body.theme-luxury h2, body.theme-luxury h3, body.theme-luxury h4 {
+            font-family: var(--lux-serif) !important;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+        }
+
+        body.theme-luxury h5, body.theme-luxury h6 { font-family: var(--lux-sans); font-weight: 700; }
+
+        body.theme-luxury ::selection { background: var(--lux-gold-light); color: #1c2430; }
+
+        body.theme-luxury ::-webkit-scrollbar { width: 8px; height: 8px; }
+        body.theme-luxury ::-webkit-scrollbar-thumb { background: #cfc6b4; border-radius: 8px; }
+        body.theme-luxury ::-webkit-scrollbar-track { background: transparent; }
+
+        body.theme-luxury .sidebar {
+            background-image:
+                linear-gradient(180deg, rgba(0, 0, 0, 0.10) 0%, rgba(0, 0, 0, 0.38) 100%),
+                var(--brand-gradient) !important;
+            border-right: 1px solid rgba(197, 160, 89, 0.35);
+            box-shadow: 4px 0 30px rgba(15, 23, 34, 0.18);
+        }
+
+        body.theme-luxury .sidebar .nav-link {
+            font-weight: 500;
+            font-size: 0.92rem;
+            border-radius: 10px;
+            margin: 2px 10px;
+            width: auto;
+            position: relative;
+            transition: background 0.25s ease, color 0.25s ease;
+        }
+
+        body.theme-luxury .sidebar .nav-link:hover {
+            background: rgba(255, 255, 255, 0.10) !important;
+        }
+
+        body.theme-luxury .sidebar .nav-link.active {
+            background: rgba(255, 255, 255, 0.16) !important;
+            box-shadow: inset 0 0 0 1px rgba(230, 211, 168, 0.35);
+        }
+
+        body.theme-luxury .sidebar .nav-link.active::before {
+            content: '';
+            position: absolute;
+            left: -10px;
+            top: 8px;
+            bottom: 8px;
+            width: 3px;
+            border-radius: 0 3px 3px 0;
+            background: var(--lux-gold);
+        }
+
+        body.theme-luxury .sidebar .nav-link.active i,
+        body.theme-luxury .sidebar .nav-link:hover i {
+            color: var(--lux-gold-light);
+        }
+
+        body.theme-luxury .sidebar .submenu,
+        body.theme-luxury .sidebar .submenu .nav,
+        body.theme-luxury .sidebar .submenu ul,
+        body.theme-luxury .sidebar .submenu li {
+            background: transparent !important;
+        }
+
+        body.theme-luxury .sidebar .submenu {
+            background: rgba(0, 0, 0, 0.18) !important;
+            border-left: 2px solid rgba(197, 160, 89, 0.45);
+            border-radius: 10px;
+            margin: 4px 10px 6px 18px;
+            padding: 4px 0;
+        }
+
+        body.theme-luxury .sidebar .submenu .nav-link {
+            color: rgba(255, 255, 255, 0.85) !important;
+            font-size: 0.86rem;
+            margin: 1px 6px;
+        }
+
+        body.theme-luxury .sidebar .submenu .nav-link:hover {
+            background: rgba(255, 255, 255, 0.10) !important;
+            color: #fff !important;
+        }
+
+        body.theme-luxury .sidebar .submenu .text-muted {
+            color: rgba(255, 255, 255, 0.65) !important;
+            font-style: italic;
+        }
+
+        body.theme-luxury .sidebar .menu-arrow { color: var(--lux-gold-light); }
+
+        body.theme-luxury .status-circle {
+            width: 20px;
+            height: 20px;
+            min-width: 20px;
+            font-size: 11px;
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.12);
+        }
+        body.theme-luxury .status-circle.completed { background-color: #2e7d5b !important; }
+        body.theme-luxury .status-circle.pending { background-color: #a9443b !important; }
+
+        body.theme-luxury .top-navbar {
+            border-bottom: 1px solid rgba(197, 160, 89, 0.55);
+            box-shadow: 0 6px 24px rgba(15, 23, 34, 0.12);
+            position: sticky;
+            top: 0;
+            z-index: 1020;
+        }
+
+        body.theme-luxury .top-navbar #headerEventName {
+            font-family: var(--lux-serif) !important;
+            font-size: 1.45rem;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+        }
+
+        body.theme-luxury .top-navbar .profile-img {
+            border: 2px solid var(--lux-gold-light);
+            border-radius: 50%;
+            padding: 2px;
+            background: #fff;
+        }
+
+        body.theme-luxury .main-content { background: var(--lux-ivory); }
+
+        body.theme-luxury .card,
+        body.theme-luxury .modal-content,
+        body.theme-luxury .dropdown-menu {
+            border: 1px solid var(--lux-line) !important;
+            border-radius: var(--lux-radius) !important;
+            box-shadow: var(--lux-shadow);
+        }
+
+        body.theme-luxury .card-header {
+            background: transparent;
+            border-bottom: 1px solid var(--lux-line);
+        }
+
+        body.theme-luxury .modal-content { box-shadow: var(--lux-shadow-lg); }
+        body.theme-luxury .modal-header { border-bottom: 1px solid var(--lux-line); }
+        body.theme-luxury .modal-footer { border-top: 1px solid var(--lux-line); }
+        body.theme-luxury .modal-title { font-family: var(--lux-serif); font-size: 1.5rem; font-weight: 600; }
+
+        body.theme-luxury .dropdown-item { border-radius: 8px; }
+        body.theme-luxury .dropdown-item:hover { background: var(--lux-gold-soft); }
+
+        body.theme-luxury .btn {
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            border-radius: 10px;
+            transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
+        }
+
+        body.theme-luxury .btn:not(:disabled):not(.disabled):hover { transform: translateY(-1px); }
+
+        body.theme-luxury .btn-primary {
+            background: var(--brand-gradient) !important;
+            border: 1px solid transparent !important;
+            color: #fff !important;
+            box-shadow: 0 6px 16px rgba(15, 23, 34, 0.16);
+        }
+
+        body.theme-luxury .btn-primary:hover,
+        body.theme-luxury .btn-dark:hover {
+            box-shadow: 0 10px 22px rgba(15, 23, 34, 0.22), inset 0 0 0 1px rgba(197, 160, 89, 0.7);
+        }
+
+        body.theme-luxury .btn-outline-primary:hover,
+        body.theme-luxury .btn-outline-dark:hover,
+        body.theme-luxury .btn-outline-secondary:hover {
+            border-color: var(--lux-gold) !important;
+        }
+
+        body.theme-luxury .form-control,
+        body.theme-luxury .form-select,
+        body.theme-luxury .select2-container--default .select2-selection--single,
+        body.theme-luxury .select2-container--default .select2-selection--multiple {
+            border: 1px solid var(--lux-line) !important;
+            border-radius: 10px !important;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        body.theme-luxury .form-control:focus,
+        body.theme-luxury .form-select:focus,
+        body.theme-luxury .select2-container--focus .select2-selection {
+            border-color: var(--lux-gold) !important;
+            box-shadow: 0 0 0 4px var(--lux-gold-soft) !important;
+        }
+
+        body.theme-luxury .form-control[readonly],
+        body.theme-luxury .form-control:disabled,
+        body.theme-luxury .form-select:disabled {
+            background-color: #f4f1ea !important;
+        }
+
+        body.theme-luxury .form-control.is-invalid { border-color: #a9443b !important; }
+
+        body.theme-luxury label, body.theme-luxury .form-label { font-weight: 600; font-size: 0.88rem; }
+
+        body.theme-luxury .form-check-input:checked {
+            background-color: var(--brand-primary);
+            border-color: var(--brand-primary);
+        }
+
+        body.theme-luxury .table thead th,
+        body.theme-luxury table.dataTable thead th {
+            background: #f3efe6 !important;
+            color: var(--lux-muted) !important;
+            font-size: 0.74rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            border-bottom: 1px solid var(--lux-line) !important;
+        }
+
+        body.theme-luxury .table td,
+        body.theme-luxury table.dataTable tbody td {
+            border-color: var(--lux-line) !important;
+            vertical-align: middle;
+        }
+
+        body.theme-luxury .table-hover tbody tr:hover > *,
+        body.theme-luxury table.dataTable tbody tr:hover > * {
+            background: rgba(197, 160, 89, 0.06) !important;
+        }
+
+        body.theme-luxury .badge { border-radius: 999px; letter-spacing: 0.03em; }
+        body.theme-luxury .alert { border-radius: var(--lux-radius); }
+
+        body.theme-luxury .readonly-message {
+            background: #fbf6ea;
+            border: 1px solid var(--lux-gold-light);
+            border-left: 4px solid var(--lux-gold);
+        }
+
+        body.theme-luxury .readonly-message i { color: var(--lux-gold); }
+
+        body.theme-luxury .swal2-popup {
+            border-radius: 18px !important;
+            font-family: var(--lux-sans) !important;
+            box-shadow: var(--lux-shadow-lg) !important;
+        }
+
+        body.theme-luxury .swal2-title { font-family: var(--lux-serif) !important; font-weight: 600 !important; }
+
+        body.theme-luxury .swal2-confirm {
+            background: var(--brand-gradient) !important;
+            border-radius: 10px !important;
+            font-weight: 600 !important;
+        }
+
+        body.theme-luxury .swal2-cancel { border-radius: 10px !important; }
+
+        body.theme-luxury .jq-toast-wrap .jq-toast-single {
+            border-radius: 12px;
+            font-family: var(--lux-sans);
+            box-shadow: var(--lux-shadow-lg);
+            border-left: 3px solid var(--lux-gold);
+        }
+
+        body.theme-luxury #globalLoaderOverlay { background: rgba(248, 246, 241, 0.7); backdrop-filter: blur(3px); }
+        body.theme-luxury #globalLoaderOverlay .global-loader-box {
+            border: 1px solid var(--lux-line);
+            border-radius: var(--lux-radius);
+            box-shadow: var(--lux-shadow-lg);
+        }
+
+        @media (max-width: 767.98px) {
+            body.theme-luxury .top-navbar #headerEventName { font-size: 1.15rem; }
+            body.theme-luxury .sidebar .nav-link { margin: 2px 6px; }
+        }
+
+        img, video, iframe { max-width: 100%; }
+
+        body.page-guidelines .main-content > :not(.top-navbar) {
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        body.page-guidelines .main-content > :not(.top-navbar) img {
+            max-width: 100% !important;
+            height: auto !important;
+        }
+
+        body.page-guidelines .main-content > :not(.top-navbar) table {
+            display: block;
+            max-width: 100% !important;
+            width: auto !important;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        body.page-guidelines .main-content > :not(.top-navbar) iframe,
+        body.page-guidelines .main-content > :not(.top-navbar) video,
+        body.page-guidelines .main-content > :not(.top-navbar) embed,
+        body.page-guidelines .main-content > :not(.top-navbar) object {
+            max-width: 100% !important;
+        }
+
+        @media (max-width: 767.98px) {
+            body.page-guidelines .main-content > :not(.top-navbar) {
+                padding-left: 10px !important;
+                padding-right: 10px !important;
+            }
+
+            body.page-guidelines .main-content > :not(.top-navbar) * {
+                max-width: 100%;
+                box-sizing: border-box;
+            }
+
+            body.page-guidelines .main-content > :not(.top-navbar) [style*="width"]:not(img):not(table):not(td):not(th) {
+                width: auto !important;
+            }
+
+            body.page-guidelines .main-content > :not(.top-navbar) [style*="margin-left"],
+            body.page-guidelines .main-content > :not(.top-navbar) [style*="padding-left"] {
+                margin-left: 0 !important;
+                padding-left: 0 !important;
+            }
+
+            body.page-guidelines .main-content > :not(.top-navbar) [style*="float"] {
+                float: none !important;
+            }
+
+            body.page-guidelines .main-content > :not(.top-navbar) td,
+            body.page-guidelines .main-content > :not(.top-navbar) th {
+                min-width: 110px;
+                font-size: 0.85rem;
+                padding: 6px 8px;
+            }
+
+            body.page-guidelines .main-content > :not(.top-navbar) iframe {
+                width: 100% !important;
+                height: auto;
+                aspect-ratio: 16 / 9;
+            }
+
+            body.page-guidelines .main-content h1,
+            body.page-guidelines .main-content h1 * { font-size: clamp(1.1rem, 5.5vw, 1.45rem) !important; }
+            body.page-guidelines .main-content h2,
+            body.page-guidelines .main-content h2 * { font-size: clamp(1.05rem, 5vw, 1.3rem) !important; }
+            body.page-guidelines .main-content h3,
+            body.page-guidelines .main-content h3 * { font-size: clamp(1rem, 4.6vw, 1.15rem) !important; }
+            body.page-guidelines .main-content h4,
+            body.page-guidelines .main-content h4 *,
+            body.page-guidelines .main-content h5,
+            body.page-guidelines .main-content h5 *,
+            body.page-guidelines .main-content h6,
+            body.page-guidelines .main-content h6 * { font-size: clamp(0.95rem, 4.2vw, 1.05rem) !important; }
+            body.page-guidelines .main-content p,
+            body.page-guidelines .main-content li {
+                font-size: 0.95rem;
+                line-height: 1.6;
+            }
+
+            body.page-guidelines .main-content ul,
+            body.page-guidelines .main-content ol {
+                padding-left: 1.2rem;
+            }
+        }
+
+        .main-content { min-width: 0; }
+
+        .table-responsive { -webkit-overflow-scrolling: touch; }
+
+        @media (max-width: 767.98px) {
+            .top-navbar {
+                padding-left: 10px !important;
+                padding-right: 10px !important;
+                gap: 8px;
+            }
+
+            .top-navbar .dropdown > span {
+                max-width: 110px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                display: inline-block;
+                vertical-align: middle;
+                font-size: 0.85rem;
+            }
+
+            .top-navbar .profile-img {
+                width: 34px;
+                height: 34px;
+            }
+
+            .form-control,
+            .form-select,
+            select,
+            textarea,
+            input[type="text"],
+            input[type="email"],
+            input[type="number"],
+            input[type="tel"],
+            input[type="date"] {
+                font-size: 16px;
+            }
+
+            .table { font-size: 0.85rem; }
+
+            .dataTables_wrapper,
+            .dt-container {
+                width: 100% !important;
+                overflow-x: auto;
+            }
+
+            .modal-dialog { margin: 0.5rem; }
+
+            .modal-body { padding: 14px; }
+
+            .swal2-popup {
+                width: 94vw !important;
+                padding: 1.1rem !important;
+            }
+
+            .swal2-title { font-size: 1.25rem !important; }
+
+            .swal2-actions { flex-wrap: wrap; gap: 6px; }
+
+            .readonly-message { padding: 12px 14px; font-size: 0.9rem; }
+
+            .online-forms-status { gap: 10px; padding: 10px 12px; }
+
+            .jq-toast-wrap { left: 10px !important; right: 10px !important; width: auto !important; }
+
+            h1 { font-size: clamp(1.2rem, 6vw, 1.6rem); }
+            h2 { font-size: clamp(1.1rem, 5.4vw, 1.4rem); }
+            h3 { font-size: clamp(1.05rem, 5vw, 1.25rem); }
+            h4 { font-size: clamp(1rem, 4.6vw, 1.15rem); }
+            h5 { font-size: clamp(0.95rem, 4.2vw, 1.05rem); }
+
+            h1, h2, h3, h4, h5, h6 {
+                overflow-wrap: anywhere;
+                word-break: break-word;
+                hyphens: auto;
+                line-height: 1.3;
+            }
+        }
     </style>
 </head>
  
@@ -327,18 +803,58 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
     <script>
         (function() {
             function detectTheme(value) {
-                var v = String(value || '').toLowerCase();
+                var v = String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
                 if (v.indexOf('drone') !== -1) return 'drone';
                 if (v.indexOf('fireindia') !== -1) return 'fireindia';
+                if (v.indexOf('bridal') !== -1) return 'bridal';
                 return 'default';
             }
             try {
-                var stored = localStorage.getItem('referral_website');
+                var token = localStorage.getItem('api_token') || sessionStorage.getItem('api_token') || '';
+                var key = ':' + token.slice(-16);
+                localStorage.removeItem('event_theme');
+                localStorage.removeItem('event_luxury');
+                var stored = localStorage.getItem('event_theme' + key) || localStorage.getItem('referral_website');
                 var theme = detectTheme(stored);
                 var body = document.body;
-                body.classList.remove('theme-drone', 'theme-fireindia', 'theme-default');
+                body.classList.remove('theme-drone', 'theme-fireindia', 'theme-bridal', 'theme-default', 'theme-luxury');
                 body.classList.add('theme-' + theme);
+                if (token && localStorage.getItem('event_luxury' + key) === '1') {
+                    body.classList.add('theme-luxury');
+                }
             } catch (e) {
+                // localStorage unavailable (privacy mode etc.) - keep default.
+            }
+            if (/\/guidelines\//.test(window.location.pathname)) {
+                document.body.classList.add('page-guidelines');
+
+                var fitGuidelineText = function() {
+                    if (window.innerWidth >= 768) return;
+                    var root = document.querySelector('.main-content');
+                    if (!root) return;
+                    var maxSize = Math.max(20, Math.min(28, window.innerWidth * 0.07));
+                    root.querySelectorAll('*').forEach(function(el) {
+                        if (el.closest('.top-navbar')) return;
+                        var size = parseFloat(window.getComputedStyle(el).fontSize);
+                        if (size > 24) {
+                            el.style.setProperty('font-size', maxSize + 'px', 'important');
+                            el.style.setProperty('line-height', '1.25', 'important');
+                        }
+                    });
+                };
+                var fitTimer = null;
+                var scheduleFit = function() {
+                    clearTimeout(fitTimer);
+                    fitTimer = setTimeout(fitGuidelineText, 50);
+                };
+                document.addEventListener('DOMContentLoaded', function() {
+                    scheduleFit();
+                    var root = document.querySelector('.main-content');
+                    if (root && window.MutationObserver) {
+                        new MutationObserver(scheduleFit).observe(root, { childList: true, subtree: true });
+                    }
+                });
+                window.addEventListener('orientationchange', scheduleFit);
             }
         })();
     </script>
@@ -351,7 +867,7 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
 
     <div class="wrapper">
         <div id="sidebar" class="sidebar d-flex flex-column">
-            <ul class="nav flex-column" id="sidebarMenuList">
+            <ul class="nav flex-column">
                 <li class="nav-item"><a class="nav-link active" href="<?= base_url('dashboard'); ?>"><i class="bi bi-house"></i><span class="nav-text">My Account</span></a></li>
                 <li class="nav-item"><a class="nav-link" href="<?= base_url('profile'); ?>"><i class="bi bi-people"></i><span class="nav-text">Profile</span><span id="status-profile" class="status-circle pending"><i class="bi bi-x-lg"></i></span></a></li>
                 <li class="nav-item" id="casualGstNavItem" style="display:none;"><a class="nav-link" href="<?= base_url('casual-gst'); ?>"><i class="bi bi-file-earmark-text"></i><span class="nav-text">Casual GST Details</span><span id="status-casual_gst" class="status-circle pending"><i class="bi bi-x-lg"></i></span></a></li>
@@ -376,6 +892,23 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
                 </li>
             </ul>
         </div>
+        <script>
+            (function() {
+                try {
+                    var token = localStorage.getItem('api_token') || sessionStorage.getItem('api_token') || '';
+                    var cached = JSON.parse(localStorage.getItem('form_menu_visibility:' + token.slice(-16)) || 'null');
+                    if (!cached) return;
+                    ['fasciaNavItem', 'referenceImageNavItem', 'additionalFurnitureNavItem', 'exhibitorBadgesNavItem', 'visitorInvitationNavItem'].forEach(function(id) {
+                        var el = document.getElementById(id);
+                        if (el) el.style.display = cached[id] ? '' : 'none';
+                    });
+                    var navText = document.getElementById('fasciaNavText');
+                    var navLink = document.getElementById('fasciaNavLink');
+                    if (navText && cached.fasciaNavText) navText.textContent = cached.fasciaNavText;
+                    if (navLink && cached.fasciaNavHref) navLink.href = cached.fasciaNavHref;
+                } catch (e) {}
+            })();
+        </script>
         <div class="main-content">
             <nav class="top-navbar">
                 <button class="toggle-btn" id="toggleSidebar">☰</button>
@@ -446,6 +979,24 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
                 alert(message);
             }
         }
+
+        /* ----- Global action loader: showLoader()/hideLoader() -----
+           Use these around ANY download / submit / edit / update action
+           on any page (fetch, $.ajax, etc.) so the user sees a loader
+           until the response comes back.
+
+           Example (fetch):
+               window.showLoader('Saving...');
+               try {
+                   const res = await fetch(url, { method: 'POST', ... });
+                   ...
+               } finally {
+                   window.hideLoader();
+               }
+
+           A counter is used so nested/parallel calls don't hide the
+           loader early (loader stays visible until every call finishes).
+        ------------------------------------------------------------- */
         (function() {
             let activeCount = 0;
             const overlay = document.getElementById('globalLoaderOverlay');
@@ -463,10 +1014,16 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
                     overlay.classList.remove('active');
                 }
             };
+
+            // Force-hide, ignoring the counter (use only if something got stuck)
             window.forceHideLoader = function() {
                 activeCount = 0;
                 if (overlay) overlay.classList.remove('active');
             };
+
+            // Convenience wrapper for fetch() calls: shows loader automatically,
+            // hides it once the request settles (success or failure).
+            // Usage: const res = await window.fetchWithLoader(url, options, 'Saving...');
             window.fetchWithLoader = async function(url, options, message) {
                 window.showLoader(message);
                 try {
@@ -476,8 +1033,32 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
                 }
             };
         })();
+        /* ----- End global action loader ----- */
+
+        /* =====================================================================
+           GLOBAL AUTO-LOADER (project-wide)
+           -------------------------------------------------------------------
+           Automatically shows the loader for ANY add / update / delete /
+           status-change / download request made anywhere in the project,
+           without needing to touch individual page files:
+
+             - Native fetch(): every non-GET request (POST/PUT/PATCH/DELETE)
+               automatically triggers the loader. GET requests are skipped
+               by default (used for silent background data loads like menus,
+               dropdowns, submission status, etc.) so the loader doesn't
+               flash on every page load.
+             - jQuery $.ajax(): same rule, PLUS any GET request that asks
+               for a blob response (i.e. file/PDF downloads) also triggers
+               the loader.
+
+           Any page can still opt a specific GET call INTO the loader by
+           passing { showLoader: true } in fetch options, or opt a non-GET
+           call OUT by passing { showLoader: false }.
+        ===================================================================== */
         (function() {
             const LOADER_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];
+
+            // ---- Patch native fetch() ----
             const originalFetch = window.fetch.bind(window);
             window.fetch = function(input, init) {
                 init = init || {};
@@ -497,7 +1078,12 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
                     window.hideLoader();
                 });
             };
+
+            // ---- jQuery $.ajax() hook is registered separately, right after
+            // jquery.min.js loads (see script block just below the jQuery
+            // <script src> tag) — jQuery isn't loaded yet at this point.
         })();
+        /* ----- End global auto-loader ----- */
 
         function clearAllCookies() {
             document.cookie.split(';').forEach(cookie => {
@@ -512,6 +1098,9 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
         function downloadPdf(url, fileName) {
             const token = getAuthToken();
             if (!token) return alert('Please log in again.');
+            // No manual showLoader() here — the global $.ajax hook below
+            // detects xhrFields.responseType === 'blob' and shows the
+            // loader automatically for this GET request.
             $.ajax({
                 url: url,
                 method: 'GET',
@@ -626,49 +1215,71 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
         }
 
         function applyFasciaNavItem(fasciaCategory) {
-            const navItem = document.getElementById('fasciaNavItem');
             const navLink = document.getElementById('fasciaNavLink');
             const navText = document.getElementById('fasciaNavText');
-            const referenceImageNavItem = document.getElementById('referenceImageNavItem');
-
-            if (!navItem || !navLink || !navText) return;
-
-            if (!isFormMenuVisible('fascia')) {
-                navItem.classList.add('nav-item-hidden');
-                navItem.style.display = 'none';
-                if (referenceImageNavItem) {
-                    referenceImageNavItem.classList.add('nav-item-hidden');
-                    referenceImageNavItem.style.display = 'none';
-                }
-                return;
-            }
-
-            navItem.classList.remove('nav-item-hidden');
-            if (referenceImageNavItem) {
-                referenceImageNavItem.classList.remove('nav-item-hidden');
-            }
+            if (!navLink || !navText) return;
 
             const category = parseInt(fasciaCategory, 10);
-
             if (category === 2) {
                 navText.textContent = 'Upload Stall Design';
                 navLink.href = `${BASE_URL}/fascia`;
-                navItem.style.display = '';
             } else if (category === 1 || category === 3) {
                 navText.textContent = 'Fascia';
                 navLink.href = `${BASE_URL}/upload-stand-design`;
-                navItem.style.display = '';
-            } else {
-                navItem.style.display = 'none';
             }
+            renderFormMenu();
+        }
 
-            if (referenceImageNavItem) {
-                if (category === 2) {
-                    referenceImageNavItem.style.display = 'none';
-                } else {
-                    referenceImageNavItem.style.display = '';
-                }
-            }
+        const FORM_MENU_CACHE_KEY = 'form_menu_visibility';
+        let formMenuDataReady = false;
+
+        function getFormMenuCacheKey() {
+            return FORM_MENU_CACHE_KEY + ':' + getAuthToken().slice(-16);
+        }
+
+        function computeFormMenuVisibility() {
+            const profile = window.profileData;
+            const category = parseInt(window.fasciaCategory, 10);
+            const fasciaOn = isFormMenuVisible('fascia');
+            return {
+                fasciaNavItem: fasciaOn && [1, 2, 3].includes(category),
+                fasciaNavText: document.getElementById('fasciaNavText')?.textContent || '',
+                fasciaNavHref: document.getElementById('fasciaNavLink')?.getAttribute('href') || '#',
+                referenceImageNavItem: fasciaOn && category !== 2,
+                additionalFurnitureNavItem: isFormMenuVisible('additional_furniture'),
+                exhibitorBadgesNavItem: isFormMenuVisible('exhibitor_badges'),
+                visitorInvitationNavItem: isFormMenuVisible('invitation_tickets') && (!profile || isVisitorInvitationAllowed(profile))
+            };
+        }
+
+        function applyFormMenuVisibility(visibility) {
+            ['fasciaNavItem', 'referenceImageNavItem', 'additionalFurnitureNavItem', 'exhibitorBadgesNavItem', 'visitorInvitationNavItem'].forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                const show = !!visibility[id];
+                el.classList.toggle('nav-item-hidden', !show);
+                el.style.display = show ? '' : 'none';
+            });
+            const navText = document.getElementById('fasciaNavText');
+            const navLink = document.getElementById('fasciaNavLink');
+            if (navText && visibility.fasciaNavText) navText.textContent = visibility.fasciaNavText;
+            if (navLink && visibility.fasciaNavHref) navLink.href = visibility.fasciaNavHref;
+        }
+
+        function applyCachedFormMenu() {
+            try {
+                const cached = JSON.parse(localStorage.getItem(getFormMenuCacheKey()) || 'null');
+                if (cached) applyFormMenuVisibility(cached);
+            } catch (e) {}
+        }
+
+        function renderFormMenu() {
+            if (!formMenuDataReady) return;
+            const visibility = computeFormMenuVisibility();
+            applyFormMenuVisibility(visibility);
+            try {
+                localStorage.setItem(getFormMenuCacheKey(), JSON.stringify(visibility));
+            } catch (e) {}
         }
         const FORM_LABELS = {
             fascia: 'Fascias',
@@ -687,11 +1298,24 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
             additional_furniture: 'additional_due_date'
         };
 
+        function parseDueDate(value) {
+            const str = String(value || '').trim();
+            if (!str || /^0{4}-0{2}-0{2}/.test(str)) return null;
+            let m = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+            if (m) return new Date(+m[1], +m[2] - 1, +m[3], 23, 59, 59);
+            m = str.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})/);
+            if (m) return new Date(+m[3], +m[2] - 1, +m[1], 23, 59, 59);
+            if (window.moment) {
+                const mm = moment(str);
+                if (mm.isValid()) return mm.endOf('day').toDate();
+            }
+            return null;
+        }
+
         function isDueDatePassed(formName) {
             const dueDates = window.onlineFormsDueDates || {};
-            if (!dueDates[formName]) return false;
-            const dueDate = new Date(dueDates[formName] + 'T23:59:59');
-            return new Date() > dueDate;
+            const dueDate = dueDates[formName] ? parseDueDate(dueDates[formName]) : null;
+            return !!dueDate && new Date() > dueDate;
         }
 
         function extractDueDatesFromProfile(profile) {
@@ -731,28 +1355,18 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
             if (!data) return;
             window.onlineFormsEnableDisable = data.online_forms_enable_disable || null;
             window.onlineFormsOpenClose = data.online_forms_open_close || null;
+            applyEventTheme(data.event);
+            if (data.event?.website) {
+                try {
+                    localStorage.setItem('event_website', data.event.website);
+                } catch (e) {}
+            }
             applyOnlineFormsOverride();
             updateOnlineFormsStatus();
         }
 
         function applyOnlineFormsOverride() {
-            if (!window.onlineFormsOpenClose) return;
-            Object.keys(ONLINE_FORMS_NAV_MAP).forEach(key => {
-                const isVisible = isFormMenuVisible(key);
-                ONLINE_FORMS_NAV_MAP[key].forEach(navId => {
-                    const el = document.getElementById(navId);
-                    if (!el) return;
-                    if (isVisible) {
-                        el.classList.remove('nav-item-hidden');
-                    } else {
-                        el.classList.add('nav-item-hidden');
-                        el.style.display = 'none';
-                    }
-                    if (isVisible && navId !== 'fasciaNavItem' && navId !== 'referenceImageNavItem') {
-                        el.style.display = '';
-                    }
-                });
-            });
+            renderFormMenu();
         }
 
         function updateOnlineFormsStatus() {
@@ -861,7 +1475,6 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
         function applyCurrentFormAccess() {
             const path = window.location.pathname.replace(/\/+$/, '');
             const formRoutes = {
-                fascia: ['/fascia', '/upload-stand-design'],
                 exhibitor_badges: ['/exhibitor-badges'],
                 additional_furniture: ['/additional-furniture']
             };
@@ -914,6 +1527,22 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
             updateOnlineFormsStatus();
         }
 
+        function applyEventTheme(event) {
+            const key = ':' + getAuthToken().slice(-16);
+            const isLuxury = event?.luxury === true;
+            document.body.classList.toggle('theme-luxury', isLuxury);
+            try {
+                localStorage.setItem('event_luxury' + key, isLuxury ? '1' : '0');
+            } catch (e) {}
+            const theme = event?.theme;
+            if (!['fireindia', 'drone', 'bridal', 'default'].includes(theme)) return;
+            document.body.classList.remove('theme-drone', 'theme-fireindia', 'theme-bridal', 'theme-default');
+            document.body.classList.add('theme-' + theme);
+            try {
+                localStorage.setItem('event_theme' + key, theme);
+            } catch (e) {}
+        }
+
         function applyBridalAsiaMenu(profile) {
             const navItem = document.getElementById('casualGstNavItem');
             if (!navItem) return;
@@ -932,22 +1561,7 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
         }
 
         function applyVisitorInvitationVisibility(profile) {
-            const navItem = document.getElementById('visitorInvitationNavItem');
-            if (!navItem) return;
-            const eventName = String(profile?.event_name || '').trim();
-            const exhibitorType = String(profile?.exhibitor_type || '').trim().toLowerCase();
-            const alwaysHiddenEvents = ['Drone Expo'];
-            const internationalRestrictedEvents = ['Fire India', 'Drone Expo', 'Secure Nation'];
-            const isAlwaysHidden = alwaysHiddenEvents.includes(eventName);
-            const isInternationalRestricted = internationalRestrictedEvents.includes(eventName) && exhibitorType === 'international';
-
-            if (isAlwaysHidden || isInternationalRestricted || !isFormMenuVisible('invitation_tickets')) {
-                navItem.classList.add('nav-item-hidden');
-                navItem.style.display = 'none';
-            } else {
-                navItem.classList.remove('nav-item-hidden');
-                navItem.style.display = '';
-            }
+            renderFormMenu();
         }
 
         function guardVisitorInvitationPage(profile) {
@@ -997,7 +1611,9 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
         async function handleLogout(e) {
             e.preventDefault();
             const token = getAuthToken();
-            const referralWebsite = localStorage.getItem('referral_website');
+            const referralWebsite = localStorage.getItem('event_website') ||
+                localStorage.getItem('referral_website') ||
+                `${BASE_URL}/login`;
             const logoutBtn = document.getElementById('logoutBtn');
             if (logoutBtn) {
                 logoutBtn.classList.add('disabled');
@@ -1005,6 +1621,8 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
             }
             try {
                 if (token) {
+                    // POST method is auto-detected by the global fetch hook,
+                    // so the loader shows/hides automatically here.
                     await fetch(ENDPOINTS.logout, {
                         method: 'POST',
                         loaderMessage: 'Logging out…',
@@ -1030,31 +1648,32 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
 
         document.addEventListener('DOMContentLoaded', async () => {
             try {
+                applyCachedFormMenu();
                 loadGuidelinesMenu();
-                await initOnlineFormsConfig();
-                const fasciaData = await loadFasciaCategory();
+                const [, fasciaData, profile] = await Promise.all([
+                    initOnlineFormsConfig(),
+                    loadFasciaCategory(),
+                    loadHeaderProfile()
+                ]);
                 if (fasciaData) {
                     window.fasciaCategory = fasciaData.fascia_category;
                     window.fasciaOptions = fasciaData.fascia_options;
                     applyFasciaNavItem(fasciaData.fascia_category);
                 }
-                const profile = await loadHeaderProfile();
                 if (profile) {
                     window.profileData = profile;
                     applyHeaderProfile(profile);
                     applyBridalAsiaMenu(profile);
-                    applyVisitorInvitationVisibility(profile);
                     guardVisitorInvitationPage(profile);
                 }
+                formMenuDataReady = true;
+                renderFormMenu();
                 applyCurrentFormAccess();
                 await loadSubmissionStatus();
                 const logoutBtn = document.getElementById('logoutBtn');
                 if (logoutBtn) {
                     logoutBtn.addEventListener('click', handleLogout);
                 }
-                applyOnlineFormsOverride();
-                if (profile) applyVisitorInvitationVisibility(profile);
-
                 window.__layoutConfigReady = true;
                 document.dispatchEvent(new CustomEvent('layoutConfigReady'));
             } catch (error) {
@@ -1098,8 +1717,16 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script>
+        /* ----- jQuery $.ajax() global loader hook -----
+           Placed here (immediately after jQuery loads) because window.jQuery
+           is undefined earlier in the page — the head/inline scripts above
+           run before this jquery.min.js <script src> tag executes.
+           Covers $.ajax, $.get, $.post, .load(), etc. project-wide, e.g. the
+           downloadPdf() PDF/file download requests further up in this file.
+        ------------------------------------------------- */
         (function() {
             const LOADER_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];
+
             jQuery(document).ajaxSend(function(event, jqXHR, settings) {
                 const method = (settings.type || settings.method || 'GET').toUpperCase();
                 const isBlobDownload = settings.xhrFields && settings.xhrFields.responseType === 'blob';
@@ -1112,6 +1739,7 @@ $themedLogo = $eventLogos[$referralTheme] ?? $eventLogos['default'];
                     window.showLoader(settings.loaderMessage);
                 }
             });
+
             jQuery(document).ajaxComplete(function(event, jqXHR, settings) {
                 if (settings._loaderShown && window.hideLoader) {
                     window.hideLoader();

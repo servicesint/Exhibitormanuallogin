@@ -11,7 +11,7 @@
     .ticket-card {
         background: #fff;
         border-radius: 22px;
-        box-shadow: 0 14px 36px rgba(21, 50, 101, 0.10);
+        box-shadow: 0 14px 36px rgba(15, 23, 42, 0.08);
         overflow: hidden;
         border: 1px solid #dfe6f2;
     }
@@ -23,14 +23,15 @@
         align-items: flex-start;
         gap: 16px;
         padding: 28px 32px 22px;
-        background: linear-gradient(135deg, #eef3fc 0%, #fafbfd 100%);
+        background: #f4f6fa;
+        background: linear-gradient(135deg, color-mix(in srgb, var(--brand-primary) 8%, #fff) 0%, #fafbfd 100%);
         border-bottom: 1px solid #e2e8f1;
     }
 
     .ticket-kicker {
         display: inline-block;
         margin-bottom: 8px;
-        color: #4a72b8;
+        color: var(--brand-primary);
         font-size: 0.8rem;
         font-weight: 700;
         letter-spacing: 0.1em;
@@ -67,8 +68,9 @@
         padding: 9px 16px;
         border-radius: 999px;
         background: #fff;
-        border: 1px solid #d9e6f7;
-        color: #4a72b8;
+        border: 1px solid #e2e8f1;
+        border-color: color-mix(in srgb, var(--brand-primary) 22%, #fff);
+        color: var(--brand-primary);
         font-weight: 700;
         font-size: 0.86rem;
         white-space: nowrap;
@@ -82,7 +84,7 @@
         padding: 11px 22px;
         font-size: 0.9rem;
         font-weight: 700;
-        background: #4a72b8;
+        background: var(--brand-primary);
         border: none;
         color: #fff;
         cursor: pointer;
@@ -91,7 +93,7 @@
     }
 
     .apply-btn:hover {
-        background: #3d5f9c;
+        background: var(--brand-primary-dark);
         transform: translateY(-1px);
     }
 
@@ -141,6 +143,7 @@
         border-bottom: 1px solid #f1f4f9;
         color: #2b3a4f;
         vertical-align: top;
+        overflow-wrap: anywhere;
     }
 
     .ticket-history-table tr:last-child td {
@@ -208,7 +211,7 @@
     }
 
     #ticketModal .modal-title i {
-        color: #4a72b8;
+        color: var(--brand-primary);
     }
 
     #ticketModal .modal-body {
@@ -230,7 +233,7 @@
     }
 
     .ticket-section-title i {
-        color: #5b7bab;
+        color: var(--brand-primary);
         font-size: 1.02rem;
     }
 
@@ -279,7 +282,8 @@
     .ticket-select:focus {
         outline: none;
         box-shadow: none;
-        border-color: #93b4e8;
+        border-color: #9aa8bd;
+        border-color: color-mix(in srgb, var(--brand-primary) 50%, #fff);
         background: #fff;
     }
 
@@ -316,7 +320,8 @@
     }
 
     .qty-box:focus-within {
-        border-color: #93b4e8;
+        border-color: #9aa8bd;
+        border-color: color-mix(in srgb, var(--brand-primary) 50%, #fff);
         background: #fff;
     }
 
@@ -325,8 +330,9 @@
         height: 34px;
         border-radius: 8px;
         border: none;
-        background: #eaf0fb;
-        color: #4a72b8;
+        background: #eef1f6;
+        background: color-mix(in srgb, var(--brand-primary) 10%, #fff);
+        color: var(--brand-primary);
         font-size: 1.02rem;
         font-weight: 700;
         cursor: pointer;
@@ -335,7 +341,8 @@
     }
 
     .qty-btn:hover {
-        background: #dbe6f8;
+        background: #e2e8f1;
+        background: color-mix(in srgb, var(--brand-primary) 18%, #fff);
     }
 
     .qty-btn.disabled-btn {
@@ -372,7 +379,8 @@
     }
 
     .ticket-note {
-        background: #f2f5fb;
+        background: #f4f6fa;
+        background: color-mix(in srgb, var(--brand-primary) 5%, #fff);
         border: 1px solid #e2e8f1;
         border-radius: 13px;
         padding: 13px 15px;
@@ -394,7 +402,7 @@
         padding: 11px 22px;
         font-size: 0.9rem;
         font-weight: 700;
-        background: #4a72b8;
+        background: var(--brand-primary);
         border: none;
         color: #fff;
         cursor: pointer;
@@ -402,7 +410,7 @@
     }
 
     .ticket-btn:hover {
-        background: #3d5f9c;
+        background: var(--brand-primary-dark);
     }
 
     .ticket-btn:disabled {
@@ -428,14 +436,40 @@
         background-color: #e9ecef;
     }
 
+    /* Tablet: the large modal is only 500px wide here, too narrow for three selects in a row */
+    @media (max-width: 991.98px) {
+        .ticket-three-col {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+
     @media (max-width: 700px) {
+        .ticket-page-wrapper {
+            padding: 16px 12px 32px;
+        }
+
+        .ticket-card {
+            border-radius: 16px;
+        }
+
         .ticket-card-head {
             flex-direction: column;
             align-items: stretch;
+            padding: 20px 18px 18px;
+        }
+
+        .ticket-title {
+            font-size: 1.3rem;
         }
 
         .ticket-head-right {
             align-items: stretch;
+        }
+
+        .ticket-summary-pill {
+            white-space: normal;
+            justify-content: center;
+            text-align: center;
         }
 
         .apply-btn {
@@ -445,6 +479,93 @@
         .ticket-two-col,
         .ticket-three-col {
             grid-template-columns: 1fr;
+            gap: 0;
+        }
+
+        /* History table becomes one card per request */
+        .ticket-history-table thead {
+            display: none;
+        }
+
+        .ticket-history-table,
+        .ticket-history-table tbody,
+        .ticket-history-table tr,
+        .ticket-history-table td {
+            display: block;
+            width: 100%;
+        }
+
+        .ticket-history-table tr {
+            padding: 10px 18px;
+            border-bottom: 1px solid #f1f4f9;
+        }
+
+        .ticket-history-table tr:last-child {
+            border-bottom: none;
+        }
+
+        .ticket-history-table td {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 6px 0;
+            border-bottom: none;
+            text-align: right;
+        }
+
+        .ticket-history-table td::before {
+            content: attr(data-label);
+            flex-shrink: 0;
+            color: #5c6b81;
+            font-weight: 600;
+            text-align: left;
+        }
+
+        .ticket-history-table td.ticket-history-empty {
+            display: block;
+            padding: 28px 0;
+            text-align: center;
+        }
+
+        .ticket-history-table td.ticket-history-empty::before {
+            content: none;
+        }
+
+        .ticket-history-table tr:hover td {
+            background: none;
+        }
+    }
+
+    @media (max-width: 575.98px) {
+        #ticketModal .modal-header {
+            padding: 16px 18px;
+        }
+
+        #ticketModal .modal-body {
+            padding: 18px;
+        }
+
+        #ticketModal .modal-footer {
+            padding: 12px 18px;
+        }
+
+        #ticketModal .modal-footer > .btn {
+            flex: 1 1 100%;
+        }
+
+        .ticket-btn {
+            min-width: 0;
+        }
+
+        .qty-box {
+            max-width: none;
+        }
+
+        /* 16px stops iOS zooming the page when a field is focused */
+        .ticket-input,
+        .ticket-select,
+        .qty-input {
+            font-size: 16px;
         }
     }
 </style>
@@ -480,12 +601,11 @@
                             <th>Quantity</th>
                             <th>Location</th>
                             <th>Pincode</th>
-                            
                         </tr>
                     </thead>
                     <tbody id="ticketHistoryBody">
                         <tr>
-                            <td colspan="5" class="ticket-history-empty">Loading your requests...</td>
+                            <td colspan="4" class="ticket-history-empty">Loading your requests...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -756,7 +876,7 @@
                     $("#totalQtyPill").html(`<i class="bi bi-ticket-perforated"></i> Total Quantity requested: ${totalQty}`);
                     const $body = $("#ticketHistoryBody");
                     if (!requests.length) {
-                        $body.html('<tr><td colspan="5" class="ticket-history-empty">No ticket requests submitted yet. Click "Apply for Tickets" to get started.</td></tr>');
+                        $body.html('<tr><td colspan="4" class="ticket-history-empty">No ticket requests submitted yet. Click "Apply for Tickets" to get started.</td></tr>');
                         existingRequest = null;
                         isUpdateMode = false;
                         updateApplyButton(false);
@@ -768,11 +888,10 @@
                         const status = String(row.status || 'pending').toLowerCase();
                         html += `
                             <tr>
-                                <td>${formatDate(row.created_at)}</td>
-                                <td>${escapeHtml(row.quantity)}</td>
-                                <td>${escapeHtml(row.location || '-')}</td>
-                                <td>${escapeHtml(row.pincode || '-')}</td>
-                               
+                                <td data-label="Date">${formatDate(row.created_at)}</td>
+                                <td data-label="Quantity">${escapeHtml(row.quantity)}</td>
+                                <td data-label="Location">${escapeHtml(row.location || '-')}</td>
+                                <td data-label="Pincode">${escapeHtml(row.pincode || '-')}</td>
                             </tr>`;
                     });
                     $body.html(html);
@@ -794,7 +913,7 @@
                     }
                 },
                 error() {
-                    $("#ticketHistoryBody").html('<tr><td colspan="5" class="ticket-history-empty">Failed to load your requests.</td></tr>');
+                    $("#ticketHistoryBody").html('<tr><td colspan="4" class="ticket-history-empty">Failed to load your requests.</td></tr>');
                 }
             });
         }
@@ -864,7 +983,7 @@
                 },
                 dataType: 'json',
                 success(response) {
-                    const countries = response?.data || [];
+                    const countries = Array.isArray(response?.data) ? response.data : [];
                     const $country = $("#addressCountry");
                     const india = countries.find(
                         c => String(c.name || '').trim().toLowerCase() === ALLOWED_COUNTRY_NAME

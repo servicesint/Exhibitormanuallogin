@@ -46,21 +46,43 @@ class ExhibitorModel extends Model
             ->limit(1)
             ->get()
             ->getRow();
-    } 
-    
+    }
 
     public function getActiveSubEvents($event_id)
     {
         $today = date('Y-m-d');
+
         return $this->db->table('company_events')
-            ->join('company_sub_events cse', 'cse.event_id = company_events.id', 'left')
-            ->select('company_events.id, company_events.event_name, cse.id as sub_event_id, cse.sub_event_name, cse.start_date, cse.end_date, cse.sub_event_logo,cse.sub_event_name')
+            ->select('
+            company_events.id,
+            company_events.event_name,
+            cse.id AS sub_event_id,
+            cse.sub_event_name,
+            cse.start_date,
+            cse.end_date,
+            cse.sub_event_logo
+        ')
+            ->join('company_sub_events cse', 'cse.event_id = company_events.id')           // INNER JOIN
+            ->join('manual_setups ms', 'ms.sub_event_id = cse.id')                         // setup hona zaruri
+            ->join('companies c', 'c.id = cse.company_id')                                 // company hona zaruri
             ->where('cse.event_id', $event_id)
             ->where('cse.end_date >=', $today)
+
+            ->where('ms.manual_welcome_note !=', '')
+            ->where('c.company_name !=', '')
+            ->where('c.company_logo !=', '')
+            ->where('cse.sub_event_name !=', '')
+            ->where('cse.venue !=', '')
+            ->where('cse.venue_city !=', '')
+            ->where('cse.start_date IS NOT NULL', null, false)
+            ->where('cse.end_date IS NOT NULL', null, false)
+            ->where('cse.full_date !=', '')
+
             ->orderBy('cse.start_date', 'ASC')
             ->get()
             ->getResult();
     }
+
     public function getSubEvents($event_id)
     {
         $today = date('Y-m-d');
@@ -68,7 +90,7 @@ class ExhibitorModel extends Model
             ->join('company_sub_events cse', 'cse.event_id = company_events.id', 'left')
             ->select('company_events.id, company_events.event_name, cse.id as sub_event_id, cse.sub_event_name, cse.start_date, cse.end_date, cse.sub_event_logo,cse.sub_event_name,cse.sub_event_date_image')
             ->where('cse.id', $event_id)
-            ->where('cse.start_date >=', $today)
+            ->where('cse.end_date <=', $today)
             ->orderBy('cse.start_date', 'ASC')
             ->get()
             ->getRow();
@@ -130,7 +152,6 @@ class ExhibitorModel extends Model
 
     public function saveProfile(int $exhibitorId, array $data): bool
     {
-
         $db = $this->db;
         $db->transStart();
         $exhibitorData = [];

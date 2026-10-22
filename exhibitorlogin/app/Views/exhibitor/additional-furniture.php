@@ -189,19 +189,19 @@
     }
 
     .furn-actions .btn-success {
-        background: #4a72b8;
-        border-color: #4a72b8;
+        background: var(--brand-primary);
+        border-color: var(--brand-primary);
         color: #fff;
     }
 
     .furn-actions .btn-success:hover {
-        background: #3d5f9c;
+        background: var(--brand-primary-dark);
     }
 
     .furn-actions .btn-outline-dark {
         background: #fff;
         border-color: #d9e6f7;
-        color: #4a72b8;
+        color: var(--brand-primary);
     }
 
     .furn-actions .btn-outline-dark:hover {
@@ -298,7 +298,7 @@
 
     .pending-order-item .order-total {
         font-weight: 600;
-        color: #4a72b8;
+        color: var(--brand-primary);
     }
 
     .pending-order-item .order-date {
@@ -431,7 +431,7 @@
     .furn-table .input-group .btn {
         border: none;
         background: #eaf0fb;
-        color: #4a72b8;
+        color: var(--brand-primary);
         font-weight: 700;
         border-radius: 0;
     }
@@ -462,13 +462,13 @@
         border-radius: 999px !important;
         padding: 8px 16px !important;
         font-weight: 700;
-        background: #4a72b8 !important;
+        background: var(--brand-primary) !important;
         border: none !important;
         color: #fff !important;
     }
 
     .btn-add:hover {
-        background: #3d5f9c !important;
+        background: var(--brand-primary-dark) !important;
     }
 
     .badge.bg-secondary {
@@ -477,7 +477,7 @@
         font-size: 0.74rem;
         padding: 5px 11px;
         background: #eaf0fb !important;
-        color: #4a72b8 !important;
+        color: var(--brand-primary) !important;
     }
 
     .top-bar {
@@ -620,11 +620,11 @@
     }
 
     #checkoutButton {
-        background: #4a72b8;
+        background: var(--brand-primary);
     }
 
     #checkoutButton:hover:not(:disabled) {
-        background: #3d5f9c;
+        background: var(--brand-primary-dark);
     }
 
     #quotationButton {
@@ -718,11 +718,11 @@
         padding: 10px 22px;
         font-weight: 700;
         border: none;
-        background: #4a72b8;
+        background: var(--brand-primary);
     }
 
     #neftSubmitBtn:hover:not(:disabled) {
-        background: #3d5f9c;
+        background: var(--brand-primary-dark);
     }
 
     #neftSubmitBtn:disabled,
@@ -837,7 +837,7 @@
         border-radius: 8px;
         border: 1px solid #e2e8f1;
         background: #fff;
-        color: #4a72b8;
+        color: var(--brand-primary);
         font-size: 0.82rem;
         font-weight: 600;
         transition: background 0.15s ease, color 0.15s ease;
@@ -853,8 +853,8 @@
     }
 
     .pagination-modern .page-btn.active {
-        background: #4a72b8;
-        border-color: #4a72b8;
+        background: var(--brand-primary);
+        border-color: var(--brand-primary);
         color: #fff;
     }
 
@@ -1119,15 +1119,216 @@
         padding: 4px 14px !important;
         font-size: 0.8rem !important;
         font-weight: 600 !important;
-        background: #4a72b8 !important;
+        background: var(--brand-primary) !important;
         border: none !important;
         color: #fff !important;
         margin-top: 8px;
     }
 
     .btn-download-receipt:hover {
-        background: #3d5f9c !important;
+        background: var(--brand-primary-dark) !important;
         color: #fff !important;
+    }
+
+    @media (max-width: 767.98px) {
+        .content-area {
+            padding: 12px 10px 28px;
+        }
+
+        .furn-wrapper {
+            padding: 18px 14px 22px;
+            border-radius: 16px;
+        }
+
+        #furnitureSection {
+            overflow: visible;
+        }
+
+        #inventoryTable,
+        #inventoryTable tbody {
+            display: block;
+            width: 100%;
+        }
+
+        #inventoryTable thead {
+            display: none;
+        }
+
+        #inventoryTable tbody tr {
+            display: grid !important;
+            grid-template-columns: 56px 1fr auto;
+            grid-template-areas:
+                "img name name"
+                "img price price"
+                "qty qty action";
+            align-items: center;
+            gap: 8px 12px;
+            padding: 12px !important;
+            margin: 0 0 10px !important;
+            border: 1px solid #eef2f8 !important;
+            border-radius: 14px;
+            background: #fff;
+            box-shadow: none !important;
+        }
+
+        #inventoryTable tbody tr td {
+            display: block !important;
+            width: auto !important;
+            min-width: 0;
+            padding: 0 !important;
+            margin: 0 !important;
+            border: none !important;
+            text-align: left !important;
+            background: transparent !important;
+        }
+
+        #inventoryTable tbody tr td::before,
+        #inventoryTable tbody tr td::after {
+            content: none !important;
+            display: none !important;
+        }
+
+        #inventoryTable tbody tr td:nth-child(1) { grid-area: img; }
+        #inventoryTable tbody tr td:nth-child(2) { grid-area: name; max-width: none; }
+        #inventoryTable tbody tr td:nth-child(3) { grid-area: price; }
+        #inventoryTable tbody tr td:nth-child(4) { grid-area: qty; }
+        #inventoryTable tbody tr td:nth-child(5) { grid-area: action; justify-self: end; }
+
+        #inventoryTable .item-name-truncate {
+            font-size: 0.9rem;
+            white-space: normal;
+            overflow: visible;
+            text-overflow: clip;
+        }
+
+        #inventoryTable .btn-add {
+            padding: 8px 22px !important;
+        }
+
+        #inventoryTable tbody tr td[colspan] {
+            grid-area: auto;
+            grid-column: 1 / -1;
+        }
+
+        #inventoryTable tbody tr:has(td[colspan]) {
+            display: block;
+            border: none;
+            padding: 0;
+        }
+
+        #inventoryTable .item-name-truncate {
+            display: block;
+            line-height: 1.35;
+        }
+
+        #inventoryTable .input-group {
+            max-width: 120px !important;
+        }
+
+        #ordersPage .table {
+            min-width: 620px;
+        }
+
+        .cart-total p {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        #checkoutButton,
+        #quotationButton {
+            margin-bottom: 8px;
+        }
+
+        .furn-header h4 {
+            font-size: 1.15rem;
+            text-align: center;
+        }
+
+        .furn-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .furn-actions .btn {
+            width: 100%;
+            padding: 9px 10px;
+            font-size: 0.85rem;
+        }
+
+        .furniture-optout-row > div {
+            flex-direction: column;
+            align-items: stretch !important;
+        }
+
+        .furniture-end {
+            white-space: normal;
+            justify-content: center;
+            padding: 9px 14px;
+            font-size: 0.85rem;
+        }
+
+        .furn-img-wrap {
+            width: 56px;
+            height: 56px;
+        }
+
+        .top-bar {
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .additional-furniture-cart-item {
+            flex-wrap: wrap;
+        }
+
+        .cart-item-info {
+            flex-wrap: wrap;
+            min-width: 0;
+        }
+
+        .cart-item-actions {
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .neft-card {
+            padding: 16px 14px;
+        }
+
+        .neft-card .text-end .btn {
+            width: 100%;
+        }
+
+        .pending-order-item .text-end {
+            text-align: left !important;
+            margin-top: 10px;
+            width: 100%;
+        }
+
+        #orderDetailModal .modal-header,
+        #orderDetailModal .modal-body {
+            padding: 16px;
+        }
+
+        #ordersPagination {
+            justify-content: center !important;
+        }
+
+        .pagination-modern {
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .furniture-optedout-card {
+            margin: 20px auto;
+            padding: 30px 18px;
+        }
+
+        .image-preview-box {
+            padding: 12px;
+        }
     }
 </style>
 
@@ -1149,7 +1350,7 @@
                         <span id="pendingCountBadge" class="badge bg-danger ms-1 d-none">0</span>
                     </button>
                     <button class="btn btn-success" onclick="showOrders()">Past Orders</button>
-                    <button class="btn btn-outline-dark" onclick="showNeft()">NEFT Transfer</button>
+                    <button class="btn btn-outline-dark" onclick="showNeft()">BANK</button>
                 </div>
             </div>
 
@@ -1256,9 +1457,9 @@
         <div id="neftPage" class="d-none">
             <div class="top-bar">
                 <button onclick="showMain()" class="btn btn-light">← Back</button>
-                <h5>NEFT Transfer</h5>
+                <h5>BANK Transfer</h5>
             </div>
-            <form class="neft-form" id="neftForm" action="">
+            <form class="neft-form" id="neftForm" action="" novalidate>
                 <div class="neft-card">
                     <div class="row">
                         <div class="col-md-4 mb-3">
@@ -1272,7 +1473,7 @@
                             <input type="text" class="form-control" name="quotation_amount" id="neftQuotationAmount" readonly>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label>Amount Transfer</label>
+                            <label>Actual Amount Transfer</label>
                             <input type="text" class="form-control" name="amount_transfer" id="neftAmountTransfer">
                             <small id="neftExpectedAmountHint" class="text-muted d-block mt-1"></small>
                         </div>
@@ -1285,13 +1486,21 @@
                             </select>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label>Difference Amount</label>
-                            <input type="text" class="form-control" id="neftDifferenceAmount" readonly>
+                            <label>TDS Deducted Amount</label>
+                            <input type="text" class="form-control" name="difference_amount" id="neftDifferenceAmount" inputmode="decimal">
+                            <small id="neftTdsHint" class="text-muted d-block mt-1"></small>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="neftTransferDate">
+                                Transfer Date<i class="bi bi-info-circle ms-1" style="cursor:pointer;" data-bs-toggle="tooltip" data-bs-placement="top" title="Mention here on which date you have transferred the money"></i>
+                            </label>
+                            <input type="date" class="form-control" name="transfer_date" id="neftTransferDate" max="<?= date('Y-m-d') ?>" required>
                         </div>
                         <div class="col-md-4 mb-3">
                             <label>Reference No.</label>
                             <input type="text" class="form-control" name="reference_no" id="neftReferenceNo">
                         </div>
+
                     </div>
                     <!-- Kept in DOM (backend may still expect the field) but hidden from user -->
                     <div class="mb-3" style="display:none;">
@@ -1355,29 +1564,87 @@
     (function() {
         'use strict';
 
-        function checkAdditionalFurnitureStatus() {
-            let status = 'enabled_open';
-            if (window.getFormStatus) {
-                status = window.getFormStatus('additional_furniture');
-            } else if (window.onlineFormsEnableDisable) {
-                const enabled = parseInt(window.onlineFormsEnableDisable.additional_furniture, 10) === 1;
-                const open = parseInt(window.onlineFormsOpenClose.additional_furniture, 10) === 1;
-                if (!enabled) status = 'disabled';
-                else if (!open) status = 'enabled_closed';
+        function parseDueDate(value) {
+            const str = String(value || '').trim();
+            if (!str || /^0{4}-0{2}-0{2}/.test(str)) return null;
+            let m = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+            if (m) return new Date(+m[1], +m[2] - 1, +m[3], 23, 59, 59);
+            m = str.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})/);
+            if (m) return new Date(+m[3], +m[2] - 1, +m[1], 23, 59, 59);
+            if (window.moment) {
+                const mm = moment(str);
+                if (mm.isValid()) return mm.endOf('day').toDate();
             }
+            return null;
+        }
+
+        function isFurnitureDueDatePassed() {
+            const dueDate = window.onlineFormsDueDates && window.onlineFormsDueDates.additional_furniture;
+            const due = dueDate ? parseDueDate(dueDate) : null;
+            return !!due && due < new Date();
+        }
+
+        function getFurnitureFormStatus() {
+            const status = window.getFormStatus ? window.getFormStatus('additional_furniture') : 'enabled_open';
+            if (status !== 'disabled' && isFurnitureDueDatePassed()) {
+                return 'expired';
+            }
+            return status;
+        }
+
+        function isFurnitureReadOnly() {
+            const status = getFurnitureFormStatus();
+            return status === 'enabled_closed' || status === 'expired';
+        }
+
+        // Disable purchase controls. Called again after the furniture list renders,
+        // because the rows load asynchronously after the status check.
+        function lockFurnitureControls() {
+            document.querySelectorAll('#furnitureTableBody .btn-add, #furnitureTableBody .input-group button, .furn-actions .btn:not(.btn-success), #checkoutButton, #quotationButton, #neftSubmitBtn, .btn-remove-cart, .btn-download-receipt-pending, #pendingOrdersBody button').forEach(function(btn) {
+                btn.classList.add('disabled-btn');
+                btn.disabled = true;
+            });
+            document.querySelectorAll('#furnitureTableBody .qty-input, #furnitureOptOutCheckbox, #neftForm input, #neftForm select, #neftForm textarea').forEach(function(input) {
+                input.disabled = true;
+            });
+            document.querySelectorAll('.furn-actions .btn:not(.btn-success), .furniture-optout-check, .furniture-section-wrapper, #cartPage, #neftPage, #pendingOrdersBody').forEach(function(el) {
+                el.classList.add('form-readonly');
+            });
+
+            const onBlockedPage = ['cartPage', 'neftPage'].some(function(id) {
+                const el = document.getElementById(id);
+                return el && !el.classList.contains('d-none');
+            });
+            if (onBlockedPage && window.showMain) window.showMain();
+
+            const pendingModalEl = document.getElementById('pendingOrdersModal');
+            if (pendingModalEl && pendingModalEl.classList.contains('show') && window.bootstrap) {
+                bootstrap.Modal.getInstance(pendingModalEl)?.hide();
+            }
+        }
+
+        function blockIfReadOnly() {
+            if (!isFurnitureReadOnly()) return false;
+            lockFurnitureControls();
+            showToast(getFurnitureFormStatus() === 'expired' ?
+                'Due date has passed. You can only view your past orders.' :
+                'View only mode. You can only view your past orders.', 'warning');
+            return true;
+        }
+
+        let furnitureStatusNotified = false;
+
+        function checkAdditionalFurnitureStatus() {
+            const status = getFurnitureFormStatus();
             if (status === 'disabled') {
-                if (window.showToast) {
-                    window.showToast('Additional Furniture form is currently disabled.', 'error');
-                } else {
-                    alert('Additional Furniture form is currently disabled.');
-                }
+                showToast('Additional Furniture form is currently disabled.', 'error');
                 setTimeout(function() {
-                    window.location.href = window.BASE_URL || '/dashboard';
+                    window.redirectToDashboard ? window.redirectToDashboard() : (window.location.href = '<?= base_url('dashboard') ?>');
                 }, 1500);
                 return false;
             }
 
-            if (status === 'enabled_closed' || status === 'expired') {
+            if (isFurnitureReadOnly()) {
                 const msgDiv = document.getElementById('readonlyMessage');
                 if (msgDiv) {
                     if (status === 'expired') {
@@ -1385,35 +1652,13 @@
                     }
                     msgDiv.style.display = 'block';
                 }
-
-                document.querySelectorAll('.btn-add').forEach(function(btn) {
-                    btn.classList.add('disabled-btn');
-                    btn.setAttribute('disabled', true);
-                });
-
-                document.querySelectorAll('.qty-btn').forEach(function(btn) {
-                    btn.classList.add('disabled-btn');
-                    btn.setAttribute('disabled', true);
-                });
-
-                document.querySelectorAll('.qty-input').forEach(function(input) {
-                    input.setAttribute('readonly', true);
-                    input.setAttribute('disabled', true);
-                });
-
-                document.querySelectorAll('.furn-actions .btn-light').forEach(function(btn) {
-                    btn.classList.add('disabled-btn');
-                    btn.setAttribute('disabled', true);
-                });
-
-                document.getElementById('cartSection').classList.add('form-readonly');
-                if (window.showToast) {
-                    const msg = status === 'expired' ?
+                lockFurnitureControls();
+                if (!furnitureStatusNotified) {
+                    furnitureStatusNotified = true;
+                    showToast(status === 'expired' ?
                         'Due date has passed. View only mode.' :
-                        'View only mode. You can view your past orders only.';
-                    window.showToast(msg, 'warning');
+                        'View only mode. You can view your past orders only.', 'warning');
                 }
-                return true;
             }
             return true;
         }
@@ -1441,7 +1686,8 @@
         const API_BASE_URL = '<?= env('API_BASE_URL') ?>';
         const UPLOAD_BASE_URL = '<?= env('UPLOAD_BASE_URL') ?>';
         const LOGIN_URL = '<?= base_url('login') ?>';
-        const APP_BASE_URL = window.location.origin;
+        const PAYMENT_SUCCESS_URL = '<?= base_url('payment/success') ?>';
+        const PAYMENT_FAILED_URL = '<?= base_url('payment/failed') ?>';
         const ENDPOINTS = {
             furniture: `${API_BASE_URL}/v1/cart/furniture`,
             add: `${API_BASE_URL}/v1/cart/add`,
@@ -1454,7 +1700,8 @@
             pendingOrders: `${API_BASE_URL}/v1/orders/pending`,
             downloadQuotation: (qid) => `${API_BASE_URL}/v1/dashboard/download_quotation/${qid}`,
         };
-        const PLACEHOLDER_IMG = 'https://via.placeholder.com/80';
+        const PLACEHOLDER_IMG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80'%3E%3Crect width='80' height='80' fill='%23eef1f5'/%3E%3Cpath d='M22 54l12-15 9 11 6-7 9 11z' fill='%23b9c2cf'/%3E%3Ccircle cx='52' cy='28' r='5' fill='%23b9c2cf'/%3E%3C/svg%3E";
+        const PAYMENT_DISPLAY_NAME = () => (window.profileData && window.profileData.event_name) || 'Services International';
         const state = {
             token: localStorage.getItem('api_token'),
             currencySymbol: '₹',
@@ -1607,6 +1854,7 @@
         }
 
         async function showCart() {
+            if (blockIfReadOnly()) return;
             hideAll();
             dom.cartPage?.classList.remove('d-none');
             await loadCartItems();
@@ -1619,6 +1867,7 @@
         }
 
         function showNeft() {
+            if (blockIfReadOnly()) return;
             hideAll();
             dom.neftPage?.classList.remove('d-none');
             loadQuotations();
@@ -1626,6 +1875,7 @@
         window.showNeft = showNeft;
 
         async function showPendingOrders() {
+            if (blockIfReadOnly()) return;
             const modal = new bootstrap.Modal(document.getElementById('pendingOrdersModal'));
             modal.show();
             await loadPendingOrders();
@@ -1739,6 +1989,7 @@
         }
 
         window.retryPayment = async function(orderId, orderNumber) {
+            if (blockIfReadOnly()) return;
             try {
                 showToast(`Redirecting to payment for order #${orderNumber}...`, 'info');
 
@@ -1747,8 +1998,8 @@
                     body: {
                         payment_method: 'razorpay',
                         order_id: orderId,
-                        success_url: APP_BASE_URL + '/payment/success',
-                        failed_url: APP_BASE_URL + '/payment/failed',
+                        success_url: PAYMENT_SUCCESS_URL,
+                        failed_url: PAYMENT_FAILED_URL,
                         callback_url: ORDER_ENDPOINTS.razorpayCallback
                     },
                 });
@@ -1768,7 +2019,7 @@
                     key: data.razorpay_key,
                     amount: data.amount,
                     currency: data.currency,
-                    name: 'Your Company Name',
+                    name: PAYMENT_DISPLAY_NAME(),
                     description: `Order Payment - ${orderNumber}`,
                     order_id: data.razorpay_order_id,
                     handler: async function(response) {
@@ -1804,7 +2055,7 @@
                         }
                     },
                     theme: {
-                        color: '#3399cc'
+                        color: brandColor()
                     }
                 };
                 const razorpay = new Razorpay(options);
@@ -1835,7 +2086,7 @@
         }
 
         const ALLOWED_DIFFERENCE_PERCENTS = [2, 10];
-        const DIFF_TOLERANCE = 0.5;
+        const DIFF_TOLERANCE = 1;
         const GST_RATE = 0.18;
 
         function getSelectedDeductionType() {
@@ -1848,40 +2099,54 @@
         }
 
         function getBaseAmount(quotationAmount) {
-    if (!quotationAmount || isNaN(quotationAmount)) return null;
-    return quotationAmount / (1 + GST_RATE);
-}
-
-function getExpectedNeftAmount(quotationAmount, tdsPercent) {
-    const base = getBaseAmount(quotationAmount);
-    if (base === null) return null;
-    const tds = parseFloat(tdsPercent) || 0;
-    const tdsAmount = base * tds / 100;
-    const gstAmount = base * GST_RATE;
-    return round2(base - tdsAmount + gstAmount);
-}
-
-function getExpectedDifference(quotationAmount, tdsPercent) {
-    const expected = getExpectedNeftAmount(quotationAmount, tdsPercent);
-    if (expected === null) return null;
-    return round2(quotationAmount - expected);
-}
-
-function matchDifferencePercent(quotationAmount, differenceAmount) {
-    const base = getBaseAmount(quotationAmount);
-    if (base === null) return null;
-    for (const pct of ALLOWED_DIFFERENCE_PERCENTS) {
-        const expected = round2(base * pct / 100);
-        if (amountsMatch(differenceAmount, expected)) {
-            return pct;
+            if (!quotationAmount || isNaN(quotationAmount)) return null;
+            return round2(quotationAmount / (1 + GST_RATE));
         }
-    }
-    return null;
-}
+
+        function getExpectedNeftAmount(quotationAmount, tdsPercent) {
+            const base = getBaseAmount(quotationAmount);
+            if (base === null) return null;
+            const tds = parseFloat(tdsPercent) || 0;
+            const tdsAmount = base * tds / 100;
+            const gstAmount = base * GST_RATE;
+            return round2(base - tdsAmount + gstAmount);
+        }
+
+        function getExpectedDifference(quotationAmount, tdsPercent) {
+            const expected = getExpectedNeftAmount(quotationAmount, tdsPercent);
+            if (expected === null) return null;
+            return round2(quotationAmount - expected);
+        }
+
+        function matchDifferencePercent(quotationAmount, differenceAmount) {
+            const base = getBaseAmount(quotationAmount);
+            if (base === null) return null;
+            for (const pct of ALLOWED_DIFFERENCE_PERCENTS) {
+                const expected = round2(base * pct / 100);
+                if (amountsMatch(differenceAmount, expected)) {
+                    return pct;
+                }
+            }
+            return null;
+        }
 
         function amountsMatch(a, b, tolerance = DIFF_TOLERANCE) {
             if (a === null || b === null || isNaN(a) || isNaN(b)) return false;
             return Math.abs(a - b) <= tolerance;
+        }
+
+        function renderNeftTdsHint() {
+            const hint = document.getElementById('neftTdsHint');
+            if (!hint) return;
+            const quotationAmount = parseFloat(document.getElementById('neftQuotationAmount').value);
+            const base = getBaseAmount(quotationAmount);
+            if (!base) {
+                hint.textContent = '';
+                return;
+            }
+            const sym = state.currencySymbol || '₹';
+            // hint.textContent = `Amount before GST: ${sym}${round2(base)} | TDS ` +
+            //  ALLOWED_DIFFERENCE_PERCENTS.map(pct => `${pct}% = ${sym}${round2(base * pct / 100)}`).join(', ');
         }
 
         function setNeftSubmitEnabled(enabled) {
@@ -1890,8 +2155,6 @@ function matchDifferencePercent(quotationAmount, differenceAmount) {
             btn.disabled = !enabled;
             btn.classList.toggle('disabled-btn', !enabled);
         }
-
-       
 
         function updateDeductionTypeUI() {
             refreshNeftHintAndValidation();
@@ -1905,6 +2168,74 @@ function matchDifferencePercent(quotationAmount, differenceAmount) {
             neftValidationDebounce = setTimeout(runNeftValidation, 400);
         }
 
+        function evaluateNeftAmounts(quotationAmount, amountTransfer, differenceAmount, deductionType) {
+            if (amountsMatch(differenceAmount, 0)) {
+                if (!amountsMatch(round2(amountTransfer), quotationAmount)) {
+                    return {
+                        ok: false,
+                        field: null,
+                        message: 'Transfer is less than the Quotation Amount. Select TDS and enter the TDS amount in Difference Amount.',
+                        silent: true
+                    };
+                }
+                return {
+                    ok: true,
+                    isZeroDifference: true,
+                    matchedPercent: 0
+                };
+            }
+
+            if (differenceAmount < 0) {
+                return {
+                    ok: false,
+                    field: 'difference',
+                    message: 'Difference Amount cannot be negative.'
+                };
+            }
+
+            if (!deductionType) {
+                return {
+                    ok: false,
+                    field: null,
+                    message: 'Please select a deduction type.',
+                    silent: true
+                };
+            }
+
+            if (deductionType === 'others') {
+                return {
+                    ok: false,
+                    field: null,
+                    message: 'This deduction type cannot be submitted online. Please contact your event coordinator.'
+                };
+            }
+
+            const matchedPercent = matchDifferencePercent(quotationAmount, differenceAmount);
+            if (matchedPercent === null) {
+                return {
+                    ok: false,
+                    field: 'difference',
+                    message: 'Difference Amount must be exactly 2% or 10% TDS of the amount before GST.'
+                };
+            }
+
+            const base = getBaseAmount(quotationAmount);
+            const expectedTransfer = round2(base - differenceAmount + round2(base * GST_RATE));
+            if (!amountsMatch(round2(amountTransfer), expectedTransfer)) {
+                return {
+                    ok: false,
+                    field: 'amount',
+                    message: `Actual Amount Transfer should be ${state.currencySymbol || '₹'}${expectedTransfer} for this TDS amount.`
+                };
+            }
+
+            return {
+                ok: true,
+                isZeroDifference: false,
+                matchedPercent
+            };
+        }
+
         function runNeftValidation() {
             const amountField = document.getElementById('neftAmountTransfer');
             const diffField = document.getElementById('neftDifferenceAmount');
@@ -1914,75 +2245,47 @@ function matchDifferencePercent(quotationAmount, differenceAmount) {
             const deductionTypeSelect = document.getElementById('neftDeductionType');
             const amountTransfer = parseFloat(amountField.value);
             const hasAmountEntered = amountField.value.trim() !== '' && !isNaN(amountTransfer);
+            const differenceAmount = round2(parseFloat(diffField.value) || 0);
+
+            amountField.classList.remove('is-invalid');
+            diffField.classList.remove('is-invalid');
+            if (hintEl) hintEl.textContent = '';
 
             if (!quotationAmount || !hasAmountEntered) {
-                if (diffField) diffField.value = '';
-                if (hintEl) hintEl.textContent = '';
-                amountField.classList.remove('is-invalid');
                 if (deductionTypeSelect) deductionTypeSelect.disabled = false;
                 setNeftSubmitEnabled(false);
                 neftLastToastState = null;
                 return;
             }
 
-            const differenceAmount = round2(quotationAmount - amountTransfer);
-            if (diffField) diffField.value = differenceAmount;
+            const isFullPayment = amountsMatch(differenceAmount, 0) && amountsMatch(round2(amountTransfer), quotationAmount);
+            if (deductionTypeSelect) deductionTypeSelect.disabled = isFullPayment;
 
-            if (differenceAmount === 0) {
-                if (deductionTypeSelect) deductionTypeSelect.disabled = true;
-                if (hintEl) hintEl.textContent = '';
-                amountField.classList.remove('is-invalid');
+            const check = evaluateNeftAmounts(quotationAmount, amountTransfer, differenceAmount, deductionType);
+
+            if (check.ok) {
                 setNeftSubmitEnabled(true);
                 neftLastToastState = null;
                 return;
-            } else {
-                if (deductionTypeSelect) deductionTypeSelect.disabled = false;
             }
 
-            if (deductionType === 'others') {
-                if (hintEl) hintEl.textContent = '';
-                amountField.classList.remove('is-invalid');
-                setNeftSubmitEnabled(false);
+            setNeftSubmitEnabled(false);
 
-                const stateKey = 'others';
-                if (neftLastToastState !== stateKey) {
-                    showToast('This deduction type cannot be submitted online. Please contact your event coordinator.', 'danger');
-                    neftLastToastState = stateKey;
-                }
-                return;
-            }
+            if (check.field === 'amount') amountField.classList.add('is-invalid');
+            if (check.field === 'difference') diffField.classList.add('is-invalid');
 
-            if (!deductionType) {
-                if (hintEl) hintEl.textContent = 'Please select a deduction type.';
-                amountField.classList.remove('is-invalid');
-                setNeftSubmitEnabled(false);
+            if (check.silent) {
+                if (hintEl) hintEl.textContent = check.message;
                 neftLastToastState = null;
                 return;
             }
 
-            const matchedPercent = matchDifferencePercent(quotationAmount, differenceAmount);
-
-            if (matchedPercent !== null) {
-                if (hintEl) hintEl.textContent = '';
-                amountField.classList.remove('is-invalid');
-                setNeftSubmitEnabled(true);
-                neftLastToastState = null;
-            } else {
-                if (hintEl) hintEl.textContent = '';
-                amountField.classList.add('is-invalid');
-                setNeftSubmitEnabled(false);
-
-                const stateKey = `mismatch:${differenceAmount}`;
-                if (neftLastToastState !== stateKey) {
-                    showToast(
-                        'Invalid amount. Please check the Amount Transfer value entered.',
-                        'danger'
-                    );
-                    neftLastToastState = stateKey;
-                }
+            const stateKey = `${check.message}:${amountTransfer}:${differenceAmount}`;
+            if (neftLastToastState !== stateKey) {
+                showToast(check.message, 'danger');
+                neftLastToastState = stateKey;
             }
         }
-
 
         async function loadNeftQuotationDetails(qid) {
             const amountField = document.getElementById('neftAmountTransfer');
@@ -1994,6 +2297,7 @@ function matchDifferencePercent(quotationAmount, differenceAmount) {
 
             if (!qid) {
                 document.getElementById('neftQuotationAmount').value = '';
+                renderNeftTdsHint();
                 amountField.value = '';
                 if (diffField) diffField.value = '';
                 document.getElementById('neftReferenceNo').value = '';
@@ -2014,7 +2318,9 @@ function matchDifferencePercent(quotationAmount, differenceAmount) {
 
             const quote = result.data?.quote;
             const quotationAmount = parseFloat(quote?.amount) || 0;
-            document.getElementById('neftQuotationAmount').value = quotationAmount || '';
+            const quotationField = document.getElementById('neftQuotationAmount');
+            quotationField.value = quotationAmount || '';
+            renderNeftTdsHint();
 
             if (deductionTypeSelect) deductionTypeSelect.value = '';
             amountField.value = '';
@@ -2024,8 +2330,8 @@ function matchDifferencePercent(quotationAmount, differenceAmount) {
             setNeftSubmitEnabled(false);
         }
 
-
         document.getElementById('neftAmountTransfer').addEventListener('input', refreshNeftHintAndValidation);
+        document.getElementById('neftDifferenceAmount').addEventListener('input', refreshNeftHintAndValidation);
         document.getElementById('neftDeductionType')?.addEventListener('change', updateDeductionTypeUI);
 
         document.querySelectorAll('input[name="deduction_type"]').forEach(function(radio) {
@@ -2052,27 +2358,6 @@ function matchDifferencePercent(quotationAmount, differenceAmount) {
                 return;
             }
 
-            const differenceAmount = round2(quotationAmount - amountTransfer);
-            const isZeroDifference = differenceAmount === 0;
-
-            if (!isZeroDifference && !deductionType) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Deduction type required',
-                    text: 'Please select a deduction type.'
-                });
-                return;
-            }
-
-            if (!isZeroDifference && deductionType === 'others') {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Cannot submit',
-                    text: 'This deduction type cannot be submitted online. Please contact your event coordinator.'
-                });
-                return;
-            }
-
             if (!amountTransfer || isNaN(amountTransfer)) {
                 Swal.fire({
                     icon: 'warning',
@@ -2082,21 +2367,40 @@ function matchDifferencePercent(quotationAmount, differenceAmount) {
                 return;
             }
 
-            let matchedPercent = 0;
-            if (!isZeroDifference) {
-                matchedPercent = matchDifferencePercent(quotationAmount, differenceAmount);
+            const differenceAmount = round2(parseFloat(document.getElementById('neftDifferenceAmount').value) || 0);
+            const check = evaluateNeftAmounts(quotationAmount, amountTransfer, differenceAmount, deductionType);
 
-                if (matchedPercent === null) {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Amount mismatch',
-                        html: `The Amount Transfer entered does not match an accepted deduction amount.<br><br>
+            if (!check.ok) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Cannot submit',
+                    html: `${check.message}<br><br>
                <strong>Difference Amount: ${state.currencySymbol} ${differenceAmount}</strong>`
-                    });
-                    return;
-                }
+                });
+                return;
             }
-
+            const transferDateField = document.getElementById('neftTransferDate');
+            const transferDate = transferDateField.value;
+            if (!transferDate) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Transfer date required',
+                    text: 'Please select the transfer date.'
+                });
+                transferDateField.focus();
+                return;
+            }
+            if (transferDate > transferDateField.max) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Invalid transfer date',
+                    text: 'Transfer date cannot be in the future.'
+                });
+                transferDateField.focus();
+                return;
+            }
+            const isZeroDifference = check.isZeroDifference;
+            const matchedPercent = check.matchedPercent;
             if (!referenceNo.trim()) {
                 Swal.fire({
                     icon: 'warning',
@@ -2109,6 +2413,7 @@ function matchDifferencePercent(quotationAmount, differenceAmount) {
 
             const payload = {
                 qid: parseInt(qid),
+                transfer_date: transferDate,
                 amount_transfer: amountTransfer,
                 deduction_type: isZeroDifference ? 'na' : deductionType,
                 tds_percent: matchedPercent,
@@ -2130,28 +2435,22 @@ function matchDifferencePercent(quotationAmount, differenceAmount) {
             btn.innerHTML = 'Submit';
 
             if (!result || !result.status) {
-                showToast(result?.message || 'Failed to save NEFT transfer', 'danger');
+                showToast(result?.message || 'Failed to save BANK transfer', 'danger');
                 setNeftSubmitEnabled(true);
                 return;
             }
 
-            showToast('NEFT transfer saved successfully', 'success');
+            showToast('BANK transfer saved successfully', 'success');
             document.getElementById('neftForm').reset();
             document.getElementById('neftExpectedAmountHint').textContent = '';
             document.getElementById('neftDifferenceAmount').value = '';
+            renderNeftTdsHint();
             neftLastToastState = null;
             const deductionTypeSelect = document.getElementById('neftDeductionType');
             if (deductionTypeSelect) deductionTypeSelect.value = '';
             setNeftSubmitEnabled(false);
             await loadQuotations();
         }
-
-        function changeQty(btn, change) {
-            const input = btn.parentElement.querySelector('input');
-            let value = (parseInt(input.value, 10) || 1) + change;
-            input.value = Math.max(1, value);
-        }
-        window.changeQty = changeQty;
 
         function buildFurnitureRow(item) {
             const imageUrl = resolveImage(item.item_image);
@@ -2223,14 +2522,8 @@ function matchDifferencePercent(quotationAmount, differenceAmount) {
             input.value = newValue;
             updateDecreaseButtonState(input);
         }
-        document.addEventListener('input', function(e) {
-            if (e.target.matches('.input-group input[type="number"]')) {
-                let val = parseInt(e.target.value, 10);
-                if (isNaN(val) || val < 1) {
-                    e.target.value = 1;
-                }
-            }
-        });
+        window.changeQty = changeQty;
+
         document.addEventListener('keypress', function(e) {
             if (e.target.matches('.qty-input')) {
                 if (!/[0-9]/.test(e.key)) {
@@ -2320,27 +2613,17 @@ function matchDifferencePercent(quotationAmount, differenceAmount) {
         }
 
         async function checkFurnitureOptOutStatus() {
-            try {
-                const result = await apiCall(ENDPOINTS.furniture);
-                if (!result || !result.status) {
-                    return;
-                }
-                const isOptedOut = Number(result.data?.is_need_additional_furniture) === 0;
-                if (isOptedOut) {
-                    showFurnitureOptedOutState();
-                } else {
-                    showFurnitureEnabledState();
-                }
-
-                if (!isOptedOut) {
-                    loadFurnitureList();
-                }
-            } catch (error) {
-
+            const result = await loadFurnitureList();
+            if (result && result.status && !state.isOptedOut) {
+                showFurnitureEnabledState();
             }
         }
 
         async function handleFurnitureOptOutChange(e) {
+            if (blockIfReadOnly()) {
+                e.target.checked = false;
+                return;
+            }
             if (!e.target.checked) {
                 e.target.checked = true;
                 return;
@@ -2390,22 +2673,26 @@ function matchDifferencePercent(quotationAmount, differenceAmount) {
             </td></tr>`;
 
             const result = await apiCall(ENDPOINTS.furniture);
-            if (!result) return;
+            if (!result) return null;
 
             const isOptedOut = Number(result.data?.is_need_additional_furniture) === 0;
             if (isOptedOut) {
                 showFurnitureOptedOutState();
-                return;
+                return result;
             }
 
             if (!result.status || !result.data?.inventory?.length) {
                 dom.furnitureTableBody.innerHTML = `
                 <tr><td colspan="5" class="text-center text-muted py-4">No furniture items available.</td></tr>`;
-                return;
+                return result;
             }
 
             state.currencySymbol = result.data.currency_symbol || '₹';
             dom.furnitureTableBody.innerHTML = result.data.inventory.map(buildFurnitureRow).join('');
+            if (isFurnitureReadOnly()) {
+                lockFurnitureControls();
+            }
+            return result;
         }
 
         function buildCartRow(item) {
@@ -2420,11 +2707,11 @@ function matchDifferencePercent(quotationAmount, differenceAmount) {
                 <div class="additional-furniture-cart-item" data-cart-id="${item.id}">
                     <div class="cart-item-info">
                         <div class="${imgClass}" style="position:relative;">
-                            <img src="${imageUrl}" alt="${item.item_name}">
+                            <img src="${imageUrl}" alt="${escapeHtml(item.item_name)}">
                             ${isOutOfStock ? '<div class="out-of-stock-overlay" style="font-size:0.5rem;">Out of<br>Stock</div>' : ''}
                         </div>
                         <div>
-                            <strong>${item.item_name}</strong>
+                            <strong>${escapeHtml(item.item_name)}</strong>
                             <div class="cart-item-meta">${money(item.price)} × ${item.quantity}</div>
                             ${outOfStockNote}
                         </div>
@@ -2461,7 +2748,7 @@ function matchDifferencePercent(quotationAmount, differenceAmount) {
                 item.is_deleted === true || item.is_deleted === 1 || item.is_deleted === '1'
             );
             state.cartHasOutOfStock = hasOutOfStockItem;
-            if (hasOutOfStockItem || state.isOptedOut) {
+            if (hasOutOfStockItem || state.isOptedOut || isFurnitureReadOnly()) {
                 dom.checkoutButton.disabled = true;
                 dom.quotationButton.disabled = true;
             } else {
@@ -2503,6 +2790,10 @@ function matchDifferencePercent(quotationAmount, differenceAmount) {
         }) {
             if (state.isOptedOut) {
                 showToast('You have opted out of additional furniture.', 'warning');
+                return;
+            }
+            if (isFurnitureReadOnly()) {
+                showToast('Additional Furniture is in view only mode. New purchases are not allowed.', 'warning');
                 return;
             }
             const result = await apiCall(ENDPOINTS.add, {
@@ -2563,6 +2854,10 @@ function matchDifferencePercent(quotationAmount, differenceAmount) {
                 showToast('You have opted out of additional furniture.', 'warning');
                 return;
             }
+            if (isFurnitureReadOnly()) {
+                showToast('Additional Furniture is in view only mode. New purchases are not allowed.', 'warning');
+                return;
+            }
             if (state.cartHasOutOfStock) {
                 showToast('Please remove out-of-stock items from your cart before proceeding.', 'danger');
                 return;
@@ -2576,8 +2871,8 @@ function matchDifferencePercent(quotationAmount, differenceAmount) {
                 method: 'POST',
                 body: {
                     payment_method: 'razorpay',
-                    success_url: window.location.origin + '/payment/success',
-                    failed_url: window.location.origin + '/payment/failed',
+                    success_url: PAYMENT_SUCCESS_URL,
+                    failed_url: PAYMENT_FAILED_URL,
                     callback_url: ORDER_ENDPOINTS.razorpayCallback
                 },
             });
@@ -2599,7 +2894,7 @@ function matchDifferencePercent(quotationAmount, differenceAmount) {
                 key: data.razorpay_key,
                 amount: data.amount,
                 currency: data.currency,
-                name: 'Your Company Name',
+                name: PAYMENT_DISPLAY_NAME(),
                 description: 'Order Payment',
                 order_id: data.razorpay_order_id,
                 handler: async function(response) {
@@ -2638,7 +2933,7 @@ function matchDifferencePercent(quotationAmount, differenceAmount) {
                     }
                 },
                 theme: {
-                    color: '#3399cc'
+                    color: brandColor()
                 }
             };
             const razorpay = new Razorpay(options);
@@ -2773,6 +3068,10 @@ function matchDifferencePercent(quotationAmount, differenceAmount) {
         async function generateQuotation() {
             if (state.isOptedOut) {
                 showToast('You have opted out of additional furniture.', 'warning');
+                return;
+            }
+            if (isFurnitureReadOnly()) {
+                showToast('Additional Furniture is in view only mode. New purchases are not allowed.', 'warning');
                 return;
             }
             if (state.cartHasOutOfStock) {
@@ -2913,7 +3212,7 @@ function matchDifferencePercent(quotationAmount, differenceAmount) {
         function buildOrderDetailHtml(order) {
             const currencySym = order.currency === 'USD' ? '$' : '₹';
             const itemsRows = (order.items || []).map(item => {
-                const imageUrl = item.item_image ? (UPLOAD_BASE_URL + item.item_image) : 'https://via.placeholder.com/60';
+                const imageUrl = item.item_image ? (UPLOAD_BASE_URL + item.item_image) : PLACEHOLDER_IMG;
                 return `
         <tr>
             <td><img src="${imageUrl}" alt="${item.item_name}" style="width:50px;height:50px;object-fit:cover;"></td>
@@ -2952,11 +3251,19 @@ function matchDifferencePercent(quotationAmount, differenceAmount) {
             <div class="col-md-6">
                 <strong>Payment Method:</strong> ${order.payment_method.toUpperCase()}
             </div>
-            ${order.payment_reference ? `
+             ${order.payment_reference ? `
             <div class="col-md-6 text-md-end">
                 <strong>Reference:</strong> ${order.payment_reference}
             </div>` : ''}
         </div>` : ''}
+               ${order.settlement_date ? `
+        <div class="row mt-2">
+            <div class="col-md-6">
+                <strong>Transfer Date:</strong> ${escapeHtml(order.settlement_date)}
+            </div>
+        </div>` : ''}
+           
+     
         ${order.amount_transferred ? `
         <div class="row mt-2">
             <div class="col-md-6">
@@ -3101,6 +3408,12 @@ function matchDifferencePercent(quotationAmount, differenceAmount) {
             bindImageHoverEvents();
             dom.furnitureOptOutCheckbox?.addEventListener('change', handleFurnitureOptOutChange);
             document.addEventListener('click', (event) => {
+                const purchaseAction = event.target.closest('.btn-add, .btn-remove-cart, #checkoutButton, #quotationButton, .btn-download-receipt-pending');
+                if (purchaseAction && blockIfReadOnly()) {
+                    event.preventDefault();
+                    return;
+                }
+
                 const addBtn = event.target.closest('.btn-add');
                 if (addBtn) {
                     const row = addBtn.closest('tr');
@@ -3171,18 +3484,19 @@ function matchDifferencePercent(quotationAmount, differenceAmount) {
 
             document.addEventListener('submit', (event) => {
                 if (event.target.id !== 'neftForm') return;
+                if (blockIfReadOnly()) {
+                    event.preventDefault();
+                    return;
+                }
                 submitNeftForm(event);
             });
 
             document.addEventListener('change', (event) => {
                 if (event.target.id === 'neftQuotationSelect') {
+                    if (blockIfReadOnly()) return;
                     loadNeftQuotationDetails(event.target.value);
                 }
             });
-        }
-
-        function initializeDropZones() {
-            return;
         }
 
         window.showMain = showMain;

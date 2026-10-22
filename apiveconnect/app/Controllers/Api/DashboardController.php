@@ -23,6 +23,8 @@ class DashboardController extends BaseController
 {
     protected $db;
 
+    private const LUXURY_EVENT_IDS = [];
+
     public function initController(RequestInterface $request, ResponseInterface $response, LoggerInterface $logger)
     {
         parent::initController($request, $response, $logger);
@@ -51,23 +53,19 @@ class DashboardController extends BaseController
         if (empty($subEventId)) {
             return null;
         }
-
         $row = $this->db->table('manual_setups')
             ->select('event_id')
             ->where('sub_event_id', $subEventId)
             ->get()
             ->getRow();
-
         if ($row && !empty($row->event_id)) {
             return (int) $row->event_id;
         }
-
         $row = $this->db->table('company_sub_events')
             ->select('event_id')
             ->where('id', $subEventId)
             ->get()
             ->getRow();
-
         return ($row && !empty($row->event_id)) ? (int) $row->event_id : null;
     }
 
@@ -168,11 +166,8 @@ class DashboardController extends BaseController
             }
         }
 
-        // --- FIXED THE BUG HERE ---
         foreach (['first_name', 'last_name', 'mobile_number', 'email', 'address', 'stall_layout'] as $field) {
             if (array_key_exists($field, $post) && isset($columnMap[strtolower($field)])) {
-                // ONLY overwrite if the submitted value is NOT empty. 
-                // This prevents an empty string from deleting an existing file path.
                 if (!empty($post[$field])) {
                     $data[$columnMap[strtolower($field)]] = $post[$field];
                 }
@@ -249,6 +244,7 @@ class DashboardController extends BaseController
         $jwt = $this->getJwtContext();
         $vendorId = $jwt['vendorId'];
         $subEventId = $jwt['subEventId'];
+     
         $eventId = $jwt['eventId'];
         if (!$vendorId) {
             return $this->response
@@ -259,9 +255,10 @@ class DashboardController extends BaseController
             ->join('exhibitors as e', 'e.id = ecp.exhibitor_id', 'left')
             ->join('stall_categories as sc', 'sc.exhibitor_id = ecp.exhibitor_id', 'left')
             ->join('manual_setups as ms', 'ms.sub_event_id = sc.sub_event_id', 'left')
-            ->select('e.id as exhibitor_id, e.stall_type_id, e.exhibitor_type, sc.electricity_requirement, sc.stall_layout as fascia_design, sc.status as fascia_design_status, sc.stall_open_side, sc.fascia_board_text, sc.salutation, sc.first_name, sc.last_name, sc.fabricator_company_name, sc.mobile_number, sc.email, sc.reason, sc.other_reason, ms.manual_fascia_note')
+            ->select('e.id as exhibitor_id, e.stall_type_id, e.exhibitor_type, sc.electricity_requirement, sc.stall_layout as fascia_design, sc.status as fascia_design_status, sc.stall_open_side, sc.fascia_board_text, sc.salutation, sc.first_name, sc.last_name, sc.fabricator_company_name, sc.mobile_number, sc.email, sc.reason, sc.other_reason, ms.manual_fascia_note, ms.fascia_due_date')
             ->where('ecp.id', $vendorId)
             ->get()->getRowArray();
+            
         $exhibitorId = $exhibitor['exhibitor_id'] ?? null;
         if (!$exhibitorId) {
             return $this->response
@@ -277,6 +274,12 @@ class DashboardController extends BaseController
             $builder->where('sc.event_id', $eventId);
         }
         $row = $builder->get()->getRowArray();
+        $sub_event_dates = $this->db->table('company_sub_events')
+            ->select('end_date')
+            ->where('id', $subEventId)
+            ->get()
+            ->getRowArray();
+            
         $data = [];
         if ($row) {
             $data = [
@@ -307,6 +310,9 @@ class DashboardController extends BaseController
                 'code' => 200,
                 'message' => 'Fascia data fetched successfully.',
                 'data' => $data,
+                'date' => !empty($exhibitor['fascia_due_date']) && !str_starts_with((string) $exhibitor['fascia_due_date'], '0000')
+                    ? $exhibitor['fascia_due_date']
+                    : ($sub_event_dates['end_date'] ?? ''),
                 'raw_text' => $exhibitor['manual_fascia_note'] ?? ''
             ]);
     }
@@ -384,14 +390,11 @@ class DashboardController extends BaseController
         }
         $existing = $builder->get()->getRowArray();
         $file = $this->request->getFile('fascia_design');
-
         $isNewFileUploaded = false;
-
         if ($file && $file->isValid() && !$file->hasMoved()) {
             if (!empty($existing['stall_layout'])) {
                 UploadHelper::delete($existing['stall_layout'], 'fascias');
             }
-            // SAVE THE FILE PATH TEMPORARILY
             $post['stall_layout'] = UploadHelper::upload($file, 'fascias', 'fascia_design');
             $post['fascia_design_status'] = '1';
             $isNewFileUploaded = true;
@@ -429,9 +432,6 @@ class DashboardController extends BaseController
         if ($eventId) {
             $extraData['event_id'] = $eventId;
         }
-
-        // Har naye file upload par status ko 'pending' pe reset karo,
-        // taaki admin ko dubara review karna pade
         if ($isNewFileUploaded) {
             $extraData['status'] = 'pending';
         }
@@ -851,19 +851,15 @@ class DashboardController extends BaseController
             }
             $subtotal = round($subtotal, 2);
             $tax      = round($subtotal * 0.18, 2);
-
             $subEvent = $this->db->table('manual_setups')
                 ->where('sub_event_id', $subEventId)
                 ->get()
                 ->getRow();
-
             $subEvents = $this->db->table('company_sub_events')
                 ->where('id', $subEventId)
                 ->get()
                 ->getRow();
-
             $exhibitorInfo = $this->getExhibitorTaxInfo($vendorId);
-
             $gstBreakdown = $this->resolveGstBreakdown(
                 $tax,
                 $exhibitorInfo['name'] ?? null,
@@ -875,12 +871,10 @@ class DashboardController extends BaseController
             $igst = $gstBreakdown['igst'];
             $isSameState = $gstBreakdown['is_same_state'];
             $total = round($subtotal + $cgst + $sgst + $igst, 2);
-
             $eventName = '';
             if (!empty($subEvents->sub_event_name)) {
                 $eventName = $subEvents->sub_event_name;
             }
-
             $yearStart = (int) date('y');
             if ((int) date('m') < 4) {
                 $yearStart--;
@@ -889,7 +883,6 @@ class DashboardController extends BaseController
             $qid       = rand(1000, 9999);
             $invoiceNo = 'SI/PI/' . sprintf('%02d-%02d', $yearStart, $yearEnd) . '/' . $qid;
             $date      = date('d.m.Y');
-
             $quoteData = [
                 'event_id'     => $subEventId,
                 'exhibitor_id' => $vendorId,
@@ -912,7 +905,6 @@ class DashboardController extends BaseController
                         'data'    => null
                     ]);
             }
-
             foreach ($items as $item) {
                 $detailData = [
                     'qid'           => $qid,
@@ -927,15 +919,12 @@ class DashboardController extends BaseController
                 ];
                 $this->db->table('quotes_details')->insert($detailData);
             }
-
             $cartModel->clearCart($vendorId, $subEventId);
-
             $companyInfo = $this->db->table('companies')
                 ->select('company_name, company_logo')
                 ->where('id', 1)
                 ->get()
                 ->getRowArray();
-
             $invoiceData = [
                 'invoice_no'       => $invoiceNo,
                 'signature'        => $subEvent->signature ?? '',
@@ -958,7 +947,6 @@ class DashboardController extends BaseController
                 'customer_gstin'   => $exhibitorInfo['gst_number'] ?? 'N/A',
                 'customer_address' => $exhibitorInfo['address'] ?? '',
             ];
-
             $html = $this->quotationInvoiceHtml($invoiceData);
             $tempDir = WRITEPATH . 'mpdf';
             if (!is_dir($tempDir)) {
@@ -977,7 +965,6 @@ class DashboardController extends BaseController
             $mpdf->WriteHTML($html);
             $fileName = 'Additional-Furniture-Quotation-' . str_replace('/', '-', $invoiceNo) . '.pdf';
             $pdfContent = $mpdf->Output($fileName, Destination::STRING_RETURN);
-
             return $this->response
                 ->setStatusCode(200)
                 ->setHeader('Content-Type', 'application/pdf')
@@ -1169,12 +1156,6 @@ class DashboardController extends BaseController
                 ->setJSON(['status' => false, 'code' => 422, 'message' => 'Reference number is required.', 'data' => null]);
         }
 
-        if ($deductionType === 'others') {
-            return $this->response
-                ->setStatusCode(422)
-                ->setJSON(['status' => false, 'code' => 422, 'message' => 'This deduction type cannot be submitted online. Please contact your event coordinator.', 'data' => null]);
-        }
-
         try {
             $quote = $this->db->table('quotes')
                 ->where('qid', $qid)
@@ -1189,14 +1170,19 @@ class DashboardController extends BaseController
             }
 
             // Server-side re-validation of the TDS math — never trust client-computed values for money.
-            $quotationAmount = (float) $quote->amount;   // full quotation amount incl. GST (Total)
-            $baseAmount      = (float) $quote->q_amount; // base amount (pre-GST) — TDS & GST are calculated on this
+            $quotationAmount = (float) $quote->amount;
+            $baseAmount      = round($quotationAmount / 1.18, 2);
             $amountTransfer  = $amountTransfer !== null ? (float) $amountTransfer : $quotationAmount;
-            $differenceAmount = round($quotationAmount - $amountTransfer, 2);
+            $differenceAmount = round((float) ($input['difference_amount'] ?? 0), 2);
 
-            $allowedPercents = [2, 10];
-            $tolerance = 0.5;
+            $tolerance = 1;
             $isZeroDifference = abs($differenceAmount) <= $tolerance;
+
+            if ($isZeroDifference && abs($quotationAmount - $amountTransfer) > $tolerance) {
+                return $this->response
+                    ->setStatusCode(422)
+                    ->setJSON(['status' => false, 'code' => 422, 'message' => 'Amount Transfer does not match the Quotation Amount.', 'data' => null]);
+            }
 
             // Deduction type is only required when the transferred amount doesn't match the quotation exactly.
             if (!$isZeroDifference) {
@@ -1214,12 +1200,12 @@ class DashboardController extends BaseController
 
             $allowedPercents = [2, 10];
             $matchedPercent = null;
-
             if ($isZeroDifference) {
                 $matchedPercent = 0;
                 $deductionType  = $deductionType ?: 'na';
             } else {
                 foreach ($allowedPercents as $pct) {
+                    // TDS % is applied on the base (pre-GST) amount, not the GST-inclusive total.
                     $expected = round($baseAmount * $pct / 100, 2);
                     if (abs($differenceAmount - $expected) <= $tolerance) {
                         $matchedPercent = $pct;
@@ -1230,10 +1216,16 @@ class DashboardController extends BaseController
                 if ($matchedPercent === null) {
                     return $this->response
                         ->setStatusCode(422)
+                        ->setJSON(['status' => false, 'code' => 422, 'message' => 'Difference Amount must be 2% or 10% TDS of the amount before GST.', 'data' => null]);
+                }
+
+                $expectedTransfer = round($baseAmount - $differenceAmount + round($baseAmount * 0.18, 2), 2);
+                if (abs($amountTransfer - $expectedTransfer) > $tolerance) {
+                    return $this->response
+                        ->setStatusCode(422)
                         ->setJSON(['status' => false, 'code' => 422, 'message' => 'Amount Transfer does not match an accepted deduction amount.', 'data' => null]);
                 }
             }
-
             $tdsPercent = $matchedPercent;
             $reasonForDifference = $isZeroDifference
                 ? 'Full amount transferred — no deduction.'
@@ -1243,9 +1235,7 @@ class DashboardController extends BaseController
                     'INR ',
                     $differenceAmount
                 );
-
             $this->db->transBegin();
-
             $updateData = [
                 'ref_no'         => $referenceNo,
                 'amount'         => $amountTransfer,
@@ -1299,9 +1289,7 @@ class DashboardController extends BaseController
                 'payment_reference'     => $referenceNo,
                 'quotation_amount'      => $quotationAmount,
                 'amount_transferred'    => $amountTransfer,
-                'igst_percent'          => (int) $isInternational ? 18 : 0,
-                'gst_percent'           => (int) $isInternational ? 0 : 18,
-                'tds'           => $tdsPercent,
+                'tds'                   => $tdsPercent,
                 'reason_for_difference' => $reasonForDifference,
                 'order_status'          => 'pending',
                 'created_at'            => date('Y-m-d H:i:s'),
@@ -1314,13 +1302,11 @@ class DashboardController extends BaseController
                     ->setStatusCode(500)
                     ->setJSON(['status' => false, 'code' => 500, 'message' => 'Failed to create order record.', 'data' => null]);
             }
-
             $orderId = $this->db->insertID();
             $quoteDetails = $this->db->table('quotes_details')
                 ->where('qid', $qid)
                 ->get()
                 ->getResultArray();
-
             foreach ($quoteDetails as $detail) {
                 $orderItemData = [
                     'order_id'     => $orderId,
@@ -1341,7 +1327,7 @@ class DashboardController extends BaseController
                 ->setJSON([
                     'status'  => true,
                     'code'    => 200,
-                    'message' => 'Bank transfer saved successfully.',
+                    'message' => 'BANK transfer saved successfully.',
                     'data'    => [
                         'qid'                   => $qid,
                         'ref_no'                => $referenceNo,
@@ -1356,7 +1342,7 @@ class DashboardController extends BaseController
                 ]);
         } catch (\Exception $e) {
             $this->db->transRollback();
-            log_message('error', 'Bank transfer error: ' . $e->getMessage());
+            log_message('error', 'BANK transfer error: ' . $e->getMessage());
             return $this->response
                 ->setStatusCode(500)
                 ->setJSON(['status' => false, 'code' => 500, 'message' => 'Failed to save Bank transfer.', 'data' => null]);
@@ -1372,12 +1358,10 @@ class DashboardController extends BaseController
                 return $json;
             }
         }
-
         $post = $this->request->getPost();
         if (is_array($post) && $post !== []) {
             return $post;
         }
-
         $rawBody = (string) file_get_contents('php://input');
         if ($rawBody !== '') {
             parse_str($rawBody, $parsedBody);
@@ -1579,13 +1563,12 @@ class DashboardController extends BaseController
                     ],
                 ]),
             ]);
-
             return $this->response
                 ->setStatusCode(200)
                 ->setJSON([
                     'status'  => true,
                     'code'    => 200,
-                    'message' => 'Razorpay order created successfully.',
+                    'message' => 'Online order created successfully.',
                     'data'    => [
                         'order_id'             => $orderId,
                         'razorpay_order_id'    => $razorpayOrder['id'],
@@ -1605,7 +1588,7 @@ class DashboardController extends BaseController
                 ->setJSON([
                     'status'  => false,
                     'code'    => 500,
-                    'message' => 'Unable to create Razorpay order.',
+                    'message' => 'Unable to create Online order.',
                     'data'    => null,
                 ]);
         }
@@ -1615,7 +1598,6 @@ class DashboardController extends BaseController
         if (!$url) {
             return $url;
         }
-
         $host = parse_url($url, PHP_URL_HOST);
         if (!$host) {
             return $url;
@@ -1638,7 +1620,6 @@ class DashboardController extends BaseController
             $order['enc_id'] = encryptData($order['id']);
         }
         unset($order);
-
         return $this->response
             ->setStatusCode(200)
             ->setJSON([
@@ -1651,11 +1632,8 @@ class DashboardController extends BaseController
 
     public function order_detail()
     {
-
-
         $jwt = $this->getJwtContext();
         $vendorId = $jwt['exhibitor_id'];
-
         if (!$vendorId) {
             return $this->response
                 ->setStatusCode(401)
@@ -1666,13 +1644,11 @@ class DashboardController extends BaseController
         );
         $orderModel = new OrderModel();
         $order      = $orderModel->getLastOrderWithItems($vendorId, $id);
-
         if (!$order) {
             return $this->response
                 ->setStatusCode(404)
                 ->setJSON(['status' => false, 'code' => 404, 'message' => 'No orders found.', 'data' => null]);
         }
-
         return $this->response
             ->setStatusCode(200)
             ->setJSON([
@@ -1718,8 +1694,9 @@ class DashboardController extends BaseController
                 $signatureValid = $this->verifyRazorpaySignature($razorpayOrderId, $razorpayPaymentId, $razorpaySignature);
             }
             if (!$signatureValid) {
-                throw new SignatureVerificationError('Razorpay signature could not be verified.');
+                throw new SignatureVerificationError('Online signature could not be verified.');
             }
+
             $orderModel = new OrderModel();
             $order = $orderModel->where('razorpay_order_id', $razorpayOrderId)->first();
             if (!$order) {
@@ -1735,12 +1712,15 @@ class DashboardController extends BaseController
                 }
                 return redirect()->to($failureUrl);
             }
+
+            // Fetch the full raw payment entity directly from Razorpay.
             $fullPaymentDetails = null;
             try {
                 $fullPaymentDetails = $api->payment->fetch($razorpayPaymentId)->toArray();
             } catch (\Throwable $e) {
-                log_message('error', 'Failed to fetch full Razorpay payment details: ' . $e->getMessage());
+                log_message('error', 'Failed to fetch full Online payment details: ' . $e->getMessage());
             }
+
             $this->saveOrderPaymentDetails((int) $order['id'], [
                 'payment_status'       => 'paid',
                 'payment_method'       => 'online',
@@ -1759,9 +1739,9 @@ class DashboardController extends BaseController
                     ]),
                 'paid_at'              => date('Y-m-d H:i:s'),
             ]);
+
             $cartModel = new CartModel();
             $cartModel->clearCart($order['exhibitor_id'], $order['sub_event_id']);
-
             $subEvent = $this->db->table('company_sub_events')
                 ->select('end_date')
                 ->where('id', $order['sub_event_id'])
@@ -1780,7 +1760,6 @@ class DashboardController extends BaseController
                     $this->sendConstructionWindowVendorNotifications($order);
                 });
             }
-
             $successUrl = getenv('RAZORPAY_SUCCESS_URL');
             if ($isAjax) {
                 return $this->response
@@ -1794,7 +1773,7 @@ class DashboardController extends BaseController
             }
             return redirect()->to($successUrl);
         } catch (SignatureVerificationError $e) {
-            log_message('error', 'Razorpay payment verification failed. Order: ' . ($razorpayOrderId ?? 'unknown') . ' Payment: ' . ($razorpayPaymentId ?? 'unknown') . ' Error: ' . $e->getMessage());
+            log_message('error', 'Online payment verification failed. Order: ' . ($razorpayOrderId ?? 'unknown') . ' Payment: ' . ($razorpayPaymentId ?? 'unknown') . ' Error: ' . $e->getMessage());
             $orderModel = new OrderModel();
             if ($razorpayOrderId) {
                 $order = $orderModel->where('razorpay_order_id', $razorpayOrderId)->first();
@@ -1847,7 +1826,6 @@ class DashboardController extends BaseController
                 log_message('error', '[sendConstructionWindowPaymentEmails] Missing sub_event_id on order: ' . ($order['id'] ?? 'unknown'));
                 return;
             }
-
             $db = \Config\Database::connect();
             $subEvent = $db->table('company_sub_events')
                 ->select('id, sub_event_name, end_date')
@@ -1876,8 +1854,7 @@ class DashboardController extends BaseController
                 ->where('oi.order_id', $order['id'])
                 ->get()
                 ->getResultArray();
-
-            $vendorEmail = $order['email'] ?? null;
+            $vendorEmail = $order['email'] ?? $this->findOrderContactPerson($order)['email'] ?? null;
             $vendorName  = $order['vendor_name'] ?? $order['exhibitor_name'] ?? 'Exhibitor';
             $operationsEmail = $manualsetup['notification_email'] ?? null;
             $orderNumber = $order['order_number'] ?? $order['id'] ?? '';
@@ -2662,7 +2639,6 @@ class DashboardController extends BaseController
             // --- NEW: badge summary block ---
             $badgesCreated = count($data);
             $badgesLeft = $badgeLimit > 0 ? max(0, $badgeLimit - $badgesCreated) : null; // null = unlimited
-            // --- END NEW ---
 
             return $this->response->setJSON([
                 'status'  => true,
@@ -2706,12 +2682,10 @@ class DashboardController extends BaseController
         $enabled = (int) $enabled;
         $open    = (int) $open;
 
-        // A closed form is hidden and cannot be accessed.
         if ($open === 0) {
             return 'disabled';
         }
 
-        // An enabled, open form can be edited; a disabled, open form is view-only.
         if ($enabled === 1) {
             return 'enabled_open';
         }
@@ -3956,7 +3930,6 @@ class DashboardController extends BaseController
                         'data'    => null
                     ]);
             }
-
             if (empty($qid)) {
                 return $this->response
                     ->setStatusCode(422)
@@ -3967,13 +3940,11 @@ class DashboardController extends BaseController
                         'data'    => null
                     ]);
             }
-
             $quote = $this->db->table('quotes')
                 ->where('qid', $qid)
                 ->where('exhibitor_id', $vendorId)
                 ->get()
                 ->getRowArray();
-
             if (!$quote) {
                 return $this->response
                     ->setStatusCode(404)
@@ -3984,12 +3955,10 @@ class DashboardController extends BaseController
                         'data'    => null
                     ]);
             }
-
             $detailRows = $this->db->table('quotes_details')
                 ->where('qid', $qid)
                 ->get()
                 ->getResultArray();
-
             $items = array_map(function ($row) {
                 return [
                     'id'            => $row['item_id'],
@@ -4001,36 +3970,31 @@ class DashboardController extends BaseController
                     'item_image'    => $row['item_image'] ?? null,
                 ];
             }, $detailRows);
-
             $isInternational = $this->resolveIsInternational($vendorId);
             $currencySymbol  = $quote['currency'] ?: ($isInternational ? '$' : '₹');
             $currencyText    = $isInternational ? 'USD' : 'INR';
-
             $contactModel = new ExhibitorContactPersonModel();
             $profile      = $contactModel->getProfile($vendorId);
-
             $subtotal  = (float) $quote['q_amount'];
             $total     = (float) $quote['amount'];
-            $taxAmount = round($total - $subtotal, 2);
+            // A NEFT submit used to overwrite quotes.amount with the amount transferred (net of TDS), which made the tax come out
+            // short by the TDS. For those quotes (status 2) rebuild it from the base; GST is always 18% (see generate_quotation).
+            $isNeftSubmitted = (int) ($quote['status'] ?? 0) === 2;
+            $taxAmount = $isNeftSubmitted ? round($subtotal * 0.18, 2) : round($total - $subtotal, 2);
             $invoiceNo = $quote['ref_no'];
             $date      = !empty($quote['added_date'])
                 ? date('d.m.Y', strtotime($quote['added_date']))
                 : date('d.m.Y');
-
             $quoteSubEventId = $quote['event_id'] ?? null;
-
             $subEvent = $this->db->table('manual_setups')
                 ->where('sub_event_id', $quoteSubEventId)
                 ->get()
                 ->getRow();
-
             $subEvents = $this->db->table('company_sub_events')
                 ->where('id', $quoteSubEventId)
                 ->get()
                 ->getRow();
-
             $exhibitorInfo = $this->getExhibitorTaxInfo($vendorId);
-
             $gstBreakdown = $this->resolveGstBreakdown(
                 $taxAmount,
                 $exhibitorInfo['name'] ?? null,
@@ -4041,15 +4005,15 @@ class DashboardController extends BaseController
             $sgst = $gstBreakdown['sgst'];
             $igst = $gstBreakdown['igst'];
             $isSameState = $gstBreakdown['is_same_state'];
-
+            if ($isNeftSubmitted) {
+                $total = round($subtotal + $cgst + $sgst + $igst, 2);
+            }
             $eventName = !empty($subEvents->sub_event_name) ? $subEvents->sub_event_name : '';
-
             $companyInfo = $this->db->table('companies')
                 ->select('company_name, company_logo')
                 ->where('id', 1)
                 ->get()
                 ->getRowArray();
-
             $invoiceData = [
                 'invoice_no'       => $invoiceNo,
                 'signature'        => $subEvent->signature ?? '',
@@ -4072,9 +4036,7 @@ class DashboardController extends BaseController
                 'customer_gstin'   => $exhibitorInfo['gst_number'] ?? 'N/A',
                 'customer_address' => $exhibitorInfo['address'] ?? '',
             ];
-
             $html = $this->quotationInvoiceHtml($invoiceData);
-
             $tempDir = WRITEPATH . 'mpdf';
             if (!is_dir($tempDir)) {
                 mkdir($tempDir, 0777, true);
@@ -4132,7 +4094,6 @@ class DashboardController extends BaseController
             $exhibitor = $this->db->table('exhibitor_contact_persons as ecp')
                 ->join('exhibitors as e', 'ecp.exhibitor_id = e.id', 'left')
                 ->select('e.stall_type_id')
-                ->where('ecp.id', $exhibitorId)
                 ->where('ecp.sub_event_id', $subEventId)
                 ->where('ecp.is_deleted', 0)
                 ->get()
@@ -4174,14 +4135,12 @@ class DashboardController extends BaseController
 
             $uploadBaseUrl = env('UPLOAD_BASE_URL', '');
             $imagePath = $manualSetup['shell_space_reference_img'];
-
             if (filter_var($imagePath, FILTER_VALIDATE_URL)) {
                 $imageUrl = $imagePath;
             } else {
                 $imagePath = ltrim($imagePath, '/');
                 $imageUrl = rtrim($uploadBaseUrl, '/') . '/' . $imagePath;
             }
-
             return $this->response->setStatusCode(200)->setJSON([
                 'status' => true,
                 'code' => 200,
@@ -4193,7 +4152,6 @@ class DashboardController extends BaseController
             ]);
         } catch (\Exception $e) {
             log_message('error', '[getReferenceImage] Exception: ' . $e->getMessage());
-
             return $this->response->setStatusCode(500)->setJSON([
                 'status' => false,
                 'code' => 500,
@@ -4208,7 +4166,6 @@ class DashboardController extends BaseController
         $vendorId    = $jwt['vendorId'];
         $subEventId  = $jwt['subEventId'];
         $exhibitorId = $jwt['exhibitor_id'];
-
         if (!$vendorId || !$subEventId) {
             return $this->response->setStatusCode(401)->setJSON([
                 'status'  => false,
@@ -4732,8 +4689,49 @@ class DashboardController extends BaseController
             'data' => [
                 'online_forms_enable_disable' => $enableDisable,
                 'online_forms_open_close'     => $openClose,
+                'event'                       => $this->getEventTheme($jwt['eventId'] ?? null),
             ],
         ]);
+    }
+
+    private function getEventTheme($eventId): array
+    {
+        $event = null;
+        if (!empty($eventId)) {
+            $event = $this->db->table('company_events')
+                ->where('id', $eventId)
+                ->get()
+                ->getRowArray();
+        }
+
+        $website = null;
+        foreach (['website', 'website_url', 'event_website', 'event_url', 'site_url', 'url', 'domain'] as $column) {
+            if (!empty($event[$column])) {
+                $website = trim($event[$column]);
+                break;
+            }
+        }
+        if ($website && !preg_match('#^https?://#i', $website)) {
+            $website = 'https://' . ltrim($website, '/');
+        }
+
+        $eventName = strtolower(preg_replace('/[^a-z0-9]/i', '', $event['event_name'] ?? ''));
+        $theme = 'default';
+        if (str_contains($eventName, 'drone')) {
+            $theme = 'drone';
+        } elseif (str_contains($eventName, 'fireindia')) {
+            $theme = 'fireindia';
+        } elseif (str_contains($eventName, 'bridal')) {
+            $theme = 'bridal';
+        }
+
+        return [
+            'event_id'   => $event['id'] ?? $eventId,
+            'event_name' => $event['event_name'] ?? null,
+            'theme'      => $theme,
+            'luxury'     => $theme === 'bridal' || in_array((int) ($event['id'] ?? $eventId), self::LUXURY_EVENT_IDS, true),
+            'website'    => $website,
+        ];
     }
 
     public function updateOnlineFormsSettings()
@@ -4830,6 +4828,7 @@ class DashboardController extends BaseController
                     ]
                 ]);
             }
+
             $fasciaOptions = json_decode($manualSetup['fascia_options'], true);
             $fasciaCategory = null;
             if (isset($fasciaOptions['shell_space']) && $fasciaOptions['shell_space'] == 1) {
@@ -5067,7 +5066,6 @@ class DashboardController extends BaseController
                 ->where('l.is_deleted', 0)
                 ->get()
                 ->getRowArray();
-            /* print_r($template); die; */
             if (!$template || empty($template['content'])) {
                 return $this->response->setStatusCode(404)->setJSON([
                     'status'  => false,
@@ -5094,18 +5092,13 @@ class DashboardController extends BaseController
             ];
 
             $html = str_replace(array_keys($placeholders), array_values($placeholders), $template['content']);
-
             $fileName = 'welcome-letter-' . time() . '.pdf';
-
-            // --- FIX: Pass custom margin options to force it into 1 page ---
             $pdfOptions = [
                 'margin_left'   => 10,
                 'margin_right'  => 10,
                 'margin_top'    => 10,
                 'margin_bottom' => 10,
             ];
-
-            // Pass the $pdfOptions array as the 4th parameter
             return PdfHelper::download($this->response, $html, $fileName, $pdfOptions);
         } catch (\Throwable $e) {
             log_message(
@@ -5163,17 +5156,17 @@ class DashboardController extends BaseController
             try {
                 $pendingOrder = $this->db->table('quotes')
                     ->select('
-                id,
-                qid,
-                ref_no,
-                amount,
-                q_amount,
-                status,
-                remarks,
-                added_date,
-                exhibitor_id,
-                currency
-            ')
+                            id,
+                            qid,
+                            ref_no,
+                            amount,
+                            q_amount,
+                            status,
+                            remarks,
+                            added_date,
+                            exhibitor_id,
+                            currency
+                        ')
                     ->where('exhibitor_id', $exhibitorId)
                     ->whereIn('status', $pendingStatusCodes)
                     ->orderBy('id', 'DESC')
@@ -5191,7 +5184,6 @@ class DashboardController extends BaseController
             }
 
             if (empty($pendingOrder)) {
-                // No order yet — fall back to live exhibitor type
                 $isInternational = $this->resolveIsInternational($exhibitorId);
                 return $this->response
                     ->setStatusCode(200)
@@ -5205,9 +5197,7 @@ class DashboardController extends BaseController
                     ]);
             }
 
-            // currency column now stores the symbol directly ('₹' or '$')
             $currencySymbol = $pendingOrder['currency'] ?: '₹';
-
             $statusLabels = [
                 0 => 'draft',
                 1 => 'sent',
@@ -5251,94 +5241,229 @@ class DashboardController extends BaseController
                 ]);
         }
     }
-
-    public function furnitureOptOut()
+    public function editRequest()
     {
-        try {
-            $jwt = $this->getJwtContext();
-            $vendorId   = $jwt['vendorId'] ?? null;
-            $subEventId = $jwt['subEventId'] ?? null;
-            if (!$vendorId || !$subEventId) {
-                return $this->response->setStatusCode(401)->setJSON([
-                    'status'  => false,
-                    'code'    => 401,
-                    'message' => 'Unauthorized.',
-                    'data'    => null,
-                ]);
-            }
-            $exhibitor = $this->db->table('exhibitor_contact_persons as ecp')
-                ->join('exhibitors as e', 'ecp.exhibitor_id = e.id', 'left')
-                ->select('e.id as exhibitor_id, e.sub_event_id, e.is_need_additional_furniture')
-                ->where('ecp.id', $vendorId)
-                ->where('e.sub_event_id', $subEventId)
-                ->get()->getRowArray();
+        $jwt = $this->getJwtContext();
 
-            if (!$exhibitor) {
-                return $this->response->setStatusCode(404)->setJSON([
-                    'status'  => false,
-                    'code'    => 404,
-                    'message' => 'Exhibitor not found for this sub-event.',
-                    'data'    => null,
-                ]);
-            }
-            $post = $this->request->getJSON(true) ?? $this->request->getPost();
-            $isNeedFurniture = $post['is_need_additional_furniture'] ?? null;
-            if ($isNeedFurniture === null || !in_array((string) $isNeedFurniture, ['0', '1'], true)) {
-                return $this->response->setStatusCode(422)->setJSON([
-                    'status'  => false,
-                    'code'    => 422,
-                    'message' => 'is_need_additional_furniture must be 0 or 1.',
-                    'data'    => null,
-                ]);
-            }
-            $isNeedFurniture = (int) $isNeedFurniture;
-            if ((int) $exhibitor['is_need_additional_furniture'] === $isNeedFurniture) {
-                return $this->response->setStatusCode(200)->setJSON([
-                    'status'  => true,
-                    'code'    => 200,
-                    'message' => 'Preference already saved.',
-                    'data'    => [
-                        'is_need_additional_furniture' => $isNeedFurniture,
-                    ],
-                ]);
-            }
+        $exhibitorContactId = $jwt['vendorId'] ?? null;
+        $exhibitorId        = $jwt['exhibitor_id'] ?? null;
+        $subEventId         = $jwt['subEventId'] ?? null;
+        $event_id         = $jwt['eventId'] ?? null;
 
-            $updated = $this->db->table('exhibitors')
-                ->where('id', $exhibitor['exhibitor_id'])
-                ->where('sub_event_id', $subEventId)
-                ->update([
-                    'is_need_additional_furniture' => $isNeedFurniture,
-                    'updated_at' => date('Y-m-d H:i:s'),
-                ]);
-
-            if ($updated === false) {
-                return $this->response->setStatusCode(500)->setJSON([
-                    'status'  => false,
-                    'code'    => 500,
-                    'message' => 'Unable to save your preference.',
-                    'data'    => null,
-                ]);
-            }
-
-            return $this->response->setStatusCode(200)->setJSON([
-                'status'  => true,
-                'code'    => 200,
-                'message' => $isNeedFurniture === 0
-                    ? 'Preference saved successfully.'
-                    : 'Additional furniture re-enabled successfully.',
-                'data'    => [
-                    'is_need_additional_furniture' => $isNeedFurniture,
-                ],
-            ]);
-        } catch (\Throwable $e) {
-            log_message('error', 'furnitureOptOut failed: ' . $e->getMessage() . ' | ' . $e->getFile() . ':' . $e->getLine());
-            return $this->response->setStatusCode(500)->setJSON([
+        if (!$exhibitorContactId || !$exhibitorId) {
+            return $this->response->setJSON([
                 'status'  => false,
-                'code'    => 500,
-                'message' => 'Something went wrong while saving your preference.',
-                'data'    => null,
+                'message' => 'Unauthorized.',
+            ])->setStatusCode(401);
+        }
+
+        $data   = $this->request->getJSON(true);
+        $detail = trim($data['detail'] ?? '');
+
+        if ($detail === '') {
+            return $this->response->setJSON([
+                'status'  => false,
+                'message' => 'Detail is required.',
+            ])->setStatusCode(422);
+        }
+
+        $exhibitor = $this->db->table('exhibitor_contact_persons as ecp')
+            ->join('exhibitors as e', 'e.id = ecp.exhibitor_id', 'left')
+            ->select('e.organisation_name, e.brand_name, ecp.first_name, ecp.last_name, ecp.email, ecp.country_code, ecp.mobile_number')
+            ->where('ecp.id', $exhibitorContactId)
+            ->get()
+            ->getRowArray();
+
+        if (!$exhibitor) {
+            return $this->response->setJSON([
+                'status'  => false,
+                'message' => 'Exhibitor not found.',
+            ])->setStatusCode(404);
+        }
+
+        $contactPerson = trim(($exhibitor['first_name'] ?? '') . ' ' . ($exhibitor['last_name'] ?? ''));
+        $contactNumber = trim(($exhibitor['country_code'] ?? '') . ' ' . ($exhibitor['mobile_number'] ?? ''));
+        $contactEmail  = $exhibitor['email'] ?? '';
+
+        $setupRow = $this->db->table('manual_setups')
+            ->select('notification_email')
+            ->where('sub_event_id', $subEventId)
+            ->get()
+            ->getRowArray();
+
+        $event_name = $this->db->table('company_events')
+            ->select('event_name')
+            ->where('id', $event_id)
+            ->get()
+            ->getRowArray();
+
+        $recipients = [];
+
+        if (!empty($setupRow['notification_email'])) {
+            $recipients = array_filter(
+                array_map('trim', explode(',', $setupRow['notification_email']))
+            );
+
+            $recipients = array_values(
+                array_filter(
+                    $recipients,
+                    fn($email) => filter_var($email, FILTER_VALIDATE_EMAIL)
+                )
+            );
+        }
+
+        if (empty($recipients)) {
+            log_message(
+                'warning',
+                'No valid notification_email found in manual_setup for sub_event_id: ' . $subEventId
+            );
+
+            return $this->response->setJSON([
+                'status'  => false,
+                'message' => 'Request could not be sent: no notification recipients configured.',
+            ])->setStatusCode(500);
+        }
+
+        $subject = 'Profile Edit Request — ' .
+            ($exhibitor['organisation_name'] ?? $exhibitor['brand_name'] ?? 'Exhibitor');
+
+        $htmlBody = "
+<div style='font-family: \"Segoe UI\", Arial, sans-serif; background-color: #f4f6f8; padding: 30px 0; margin: 0;'>
+  <table role='presentation' width='100%' cellpadding='0' cellspacing='0' style='max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08);'>
+
+    <!-- Header -->
+    <tr>
+      <td style='background-color: #1a2b49; padding: 24px 32px;'>
+        <h1 style='color: #ffffff; font-size: 20px; margin: 0; font-weight: 600;'>Exhibitor Change Request</h1>
+      </td>
+    </tr>
+
+    <!-- Body -->
+    <tr>
+      <td style='padding: 32px;'>
+
+        <table role='presentation' width='100%' cellpadding='0' cellspacing='0' style='margin-bottom: 24px;'>
+          <tr>
+            <td style='padding: 8px 0; color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; width: 160px;'>Organisation</td>
+            <td style='padding: 8px 0; color: #111827; font-size: 15px; font-weight: 500;'>" . htmlspecialchars($exhibitor['organisation_name'] ?? '') . "</td>
+          </tr>
+          <tr>
+            <td style='padding: 8px 0; color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;'>Brand</td>
+            <td style='padding: 8px 0; color: #111827; font-size: 15px; font-weight: 500;'>" . htmlspecialchars($exhibitor['brand_name'] ?? '') . "</td>
+          </tr>
+          <tr>
+            <td style='padding: 8px 0; color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; vertical-align: top;'>Exhibitor Name</td>
+            <td style='padding: 8px 0; color: #111827; font-size: 15px;'>
+              <span style='font-weight: 500;'>" . htmlspecialchars($contactPerson) . "</span><br>
+             
+            </td>
+          </tr>
+          <tr>
+            <td style='padding: 8px 0; color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; vertical-align: top;'>Email</td>
+            <td style='padding: 8px 0; color: #111827; font-size: 15px;'>
+              <span style='color: #4b5563; font-size: 14px;'>" . htmlspecialchars($contactEmail) . "</span>
+            </td>
+          </tr>
+          <tr>
+            <td style='padding: 8px 0; color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; vertical-align: top;'>Mobile Number</td>
+            <td style='padding: 8px 0; color: #111827; font-size: 15px;'>
+              <span style='color: #4b5563; font-size: 14px;'>" . htmlspecialchars($contactNumber) . "</span>
+            </td>
+          </tr>
+        </table>
+
+        <div style='border-top: 1px solid #e5e7eb; padding-top: 20px;'>
+          <p style='margin: 0 0 10px 0; color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;'>Requested Change</p>
+          <div style='background-color: #f9fafb; border-left: 3px solid #1a2b49; padding: 16px 18px; border-radius: 4px; color: #111827; font-size: 15px; line-height: 1.6;'>
+            " . nl2br(htmlspecialchars($detail)) . "
+          </div>
+        </div>
+
+      </td>
+    </tr>
+
+    <!-- Footer -->
+    <tr>
+      <td style='background-color: #f9fafb; padding: 18px 32px; border-top: 1px solid #e5e7eb;'>
+        <p style='margin: 0; color: #9ca3af; font-size: 12px;'>This is an automated notification regarding an exhibitor profile change request.</p>
+      </td>
+    </tr>
+
+  </table>
+</div>
+";
+
+        $failedRecipients = [];
+        $errors = [];
+
+        foreach ($recipients as $recipientEmail) {
+            try {
+                $ok = sendEmail(
+                    toEmail: $recipientEmail,
+                    toName: $recipientEmail,
+                    subject: $subject,
+                    htmlBody: $htmlBody,
+                    fromEmail: $event_name['event_name'],
+                    fromName: $event_name['event_name']
+                );
+
+                if (!$ok) {
+                    $failedRecipients[] = $recipientEmail;
+                    $errors[] = [
+                        'recipient' => $recipientEmail,
+                        'message'   => 'Email sending failed.',
+                    ];
+                }
+            } catch (\Throwable $e) {
+                $failedRecipients[] = $recipientEmail;
+
+                $errors[] = [
+                    'recipient' => $recipientEmail,
+                    'message'   => $e->getMessage(),
+                    'error'     => $e->getFile() . ':' . $e->getLine(),
+                ];
+
+                log_message(
+                    'error',
+                    'Edit request email exception for ' . $recipientEmail . ': ' . $e->getMessage()
+                );
+            }
+        }
+
+        if (count($failedRecipients) === count($recipients)) {
+            log_message(
+                'error',
+                'Edit request email failed for all recipients: ' .
+                    implode(', ', $failedRecipients)
+            );
+
+            return $this->response->setJSON([
+                'status'            => false,
+                'message'           => 'Email failed for all recipients.',
+                'failed_recipients' => $failedRecipients,
+                'errors'            => $errors,
+            ])->setStatusCode(500);
+        }
+
+        if (!empty($failedRecipients)) {
+            log_message(
+                'warning',
+                'Edit request email failed for some recipients: ' .
+                    implode(', ', $failedRecipients)
+            );
+
+            return $this->response->setJSON([
+                'status'            => true,
+                'message'           => 'Profile edit request sent successfully to some recipients.',
+                'failed_recipients' => $failedRecipients,
+                'errors'            => $errors,
             ]);
         }
+
+        return $this->response->setJSON([
+            'status'  => true,
+            'message' => 'Profile edit request sent successfully.',
+        ]);
     }
     public function pending_payments()
     {
@@ -5540,221 +5665,95 @@ class DashboardController extends BaseController
                 ]
             ]);
     }
-    public function editRequest()
+    public function furnitureOptOut()
     {
-        $jwt = $this->getJwtContext();
-
-        $exhibitorContactId = $jwt['vendorId'] ?? null;
-        $exhibitorId        = $jwt['exhibitor_id'] ?? null;
-        $subEventId         = $jwt['subEventId'] ?? null;
-
-        if (!$exhibitorContactId || !$exhibitorId) {
-            return $this->response->setJSON([
-                'status'  => false,
-                'message' => 'Unauthorized.',
-            ])->setStatusCode(401);
-        }
-
-        $data   = $this->request->getJSON(true);
-        $detail = trim($data['detail'] ?? '');
-
-        if ($detail === '') {
-            return $this->response->setJSON([
-                'status'  => false,
-                'message' => 'Detail is required.',
-            ])->setStatusCode(422);
-        }
-
-        $exhibitor = $this->db->table('exhibitor_contact_persons as ecp')
-            ->join('exhibitors as e', 'e.id = ecp.exhibitor_id', 'left')
-            ->select('e.organisation_name, e.brand_name, ecp.first_name, ecp.last_name, ecp.email, ecp.country_code, ecp.mobile_number')
-            ->where('ecp.id', $exhibitorContactId)
-            ->get()
-            ->getRowArray();
-
-        if (!$exhibitor) {
-            return $this->response->setJSON([
-                'status'  => false,
-                'message' => 'Exhibitor not found.',
-            ])->setStatusCode(404);
-        }
-
-        $contactPerson = trim(($exhibitor['first_name'] ?? '') . ' ' . ($exhibitor['last_name'] ?? ''));
-        $contactNumber = trim(($exhibitor['country_code'] ?? '') . ' ' . ($exhibitor['mobile_number'] ?? ''));
-        $contactEmail  = $exhibitor['email'] ?? '';
-
-        $setupRow = $this->db->table('manual_setups')
-            ->select('notification_email')
-            ->where('sub_event_id', $subEventId)
-            ->get()
-            ->getRowArray();
-
-        $recipients = [];
-
-        if (!empty($setupRow['notification_email'])) {
-            $recipients = array_filter(
-                array_map('trim', explode(',', $setupRow['notification_email']))
-            );
-
-            $recipients = array_values(
-                array_filter(
-                    $recipients,
-                    fn($email) => filter_var($email, FILTER_VALIDATE_EMAIL)
-                )
-            );
-        }
-
-        if (empty($recipients)) {
-            log_message(
-                'warning',
-                'No valid notification_email found in manual_setup for sub_event_id: ' . $subEventId
-            );
-
-            return $this->response->setJSON([
-                'status'  => false,
-                'message' => 'Request could not be sent: no notification recipients configured.',
-            ])->setStatusCode(500);
-        }
-
-        $subject = 'Profile Edit Request — ' .
-            ($exhibitor['organisation_name'] ?? $exhibitor['brand_name'] ?? 'Exhibitor');
-
-        $htmlBody = "
-<div style='font-family: \"Segoe UI\", Arial, sans-serif; background-color: #f4f6f8; padding: 30px 0; margin: 0;'>
-  <table role='presentation' width='100%' cellpadding='0' cellspacing='0' style='max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08);'>
-
-    <!-- Header -->
-    <tr>
-      <td style='background-color: #1a2b49; padding: 24px 32px;'>
-        <h1 style='color: #ffffff; font-size: 20px; margin: 0; font-weight: 600;'>Exhibitor Change Request</h1>
-      </td>
-    </tr>
-
-    <!-- Body -->
-    <tr>
-      <td style='padding: 32px;'>
-
-        <table role='presentation' width='100%' cellpadding='0' cellspacing='0' style='margin-bottom: 24px;'>
-          <tr>
-            <td style='padding: 8px 0; color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; width: 160px;'>Organisation</td>
-            <td style='padding: 8px 0; color: #111827; font-size: 15px; font-weight: 500;'>" . htmlspecialchars($exhibitor['organisation_name'] ?? '') . "</td>
-          </tr>
-          <tr>
-            <td style='padding: 8px 0; color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;'>Brand</td>
-            <td style='padding: 8px 0; color: #111827; font-size: 15px; font-weight: 500;'>" . htmlspecialchars($exhibitor['brand_name'] ?? '') . "</td>
-          </tr>
-          <tr>
-            <td style='padding: 8px 0; color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; vertical-align: top;'>Exhibitor Name</td>
-            <td style='padding: 8px 0; color: #111827; font-size: 15px;'>
-              <span style='font-weight: 500;'>" . htmlspecialchars($contactPerson) . "</span><br>
-             
-            </td>
-          </tr>
-          <tr>
-            <td style='padding: 8px 0; color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; vertical-align: top;'>Email</td>
-            <td style='padding: 8px 0; color: #111827; font-size: 15px;'>
-              <span style='color: #4b5563; font-size: 14px;'>" . htmlspecialchars($contactEmail) . "</span>
-            </td>
-          </tr>
-          <tr>
-            <td style='padding: 8px 0; color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; vertical-align: top;'>Mobile Number</td>
-            <td style='padding: 8px 0; color: #111827; font-size: 15px;'>
-              <span style='color: #4b5563; font-size: 14px;'>" . htmlspecialchars($contactNumber) . "</span>
-            </td>
-          </tr>
-        </table>
-
-        <div style='border-top: 1px solid #e5e7eb; padding-top: 20px;'>
-          <p style='margin: 0 0 10px 0; color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;'>Requested Change</p>
-          <div style='background-color: #f9fafb; border-left: 3px solid #1a2b49; padding: 16px 18px; border-radius: 4px; color: #111827; font-size: 15px; line-height: 1.6;'>
-            " . nl2br(htmlspecialchars($detail)) . "
-          </div>
-        </div>
-
-      </td>
-    </tr>
-
-    <!-- Footer -->
-    <tr>
-      <td style='background-color: #f9fafb; padding: 18px 32px; border-top: 1px solid #e5e7eb;'>
-        <p style='margin: 0; color: #9ca3af; font-size: 12px;'>This is an automated notification regarding an exhibitor profile change request.</p>
-      </td>
-    </tr>
-
-  </table>
-</div>
-";
-
-        $failedRecipients = [];
-        $errors = [];
-
-        foreach ($recipients as $recipientEmail) {
-            try {
-                $ok = sendEmail(
-                    toEmail: $recipientEmail,
-                    toName: $recipientEmail,
-                    subject: $subject,
-                    htmlBody: $htmlBody
-                );
-
-                if (!$ok) {
-                    $failedRecipients[] = $recipientEmail;
-                    $errors[] = [
-                        'recipient' => $recipientEmail,
-                        'message'   => 'Email sending failed.',
-                    ];
-                }
-            } catch (\Throwable $e) {
-                $failedRecipients[] = $recipientEmail;
-
-                $errors[] = [
-                    'recipient' => $recipientEmail,
-                    'message'   => $e->getMessage(),
-                    'error'     => $e->getFile() . ':' . $e->getLine(),
-                ];
-
-                log_message(
-                    'error',
-                    'Edit request email exception for ' . $recipientEmail . ': ' . $e->getMessage()
-                );
+        try {
+            $jwt = $this->getJwtContext();
+            $vendorId   = $jwt['vendorId'] ?? null;
+            $subEventId = $jwt['subEventId'] ?? null;
+            if (!$vendorId || !$subEventId) {
+                return $this->response->setStatusCode(401)->setJSON([
+                    'status'  => false,
+                    'code'    => 401,
+                    'message' => 'Unauthorized.',
+                    'data'    => null,
+                ]);
             }
-        }
+            $exhibitor = $this->db->table('exhibitor_contact_persons as ecp')
+                ->join('exhibitors as e', 'ecp.exhibitor_id = e.id', 'left')
+                ->select('e.id as exhibitor_id, e.sub_event_id, e.is_need_additional_furniture')
+                ->where('ecp.id', $vendorId)
+                ->where('e.sub_event_id', $subEventId)
+                ->get()->getRowArray();
 
-        if (count($failedRecipients) === count($recipients)) {
-            log_message(
-                'error',
-                'Edit request email failed for all recipients: ' .
-                    implode(', ', $failedRecipients)
-            );
+            if (!$exhibitor) {
+                return $this->response->setStatusCode(404)->setJSON([
+                    'status'  => false,
+                    'code'    => 404,
+                    'message' => 'Exhibitor not found for this sub-event.',
+                    'data'    => null,
+                ]);
+            }
+            $post = $this->request->getJSON(true) ?? $this->request->getPost();
+            $isNeedFurniture = $post['is_need_additional_furniture'] ?? null;
+            if ($isNeedFurniture === null || !in_array((string) $isNeedFurniture, ['0', '1'], true)) {
+                return $this->response->setStatusCode(422)->setJSON([
+                    'status'  => false,
+                    'code'    => 422,
+                    'message' => 'is_need_additional_furniture must be 0 or 1.',
+                    'data'    => null,
+                ]);
+            }
+            $isNeedFurniture = (int) $isNeedFurniture;
+            if ((int) $exhibitor['is_need_additional_furniture'] === $isNeedFurniture) {
+                return $this->response->setStatusCode(200)->setJSON([
+                    'status'  => true,
+                    'code'    => 200,
+                    'message' => 'Preference already saved.',
+                    'data'    => [
+                        'is_need_additional_furniture' => $isNeedFurniture,
+                    ],
+                ]);
+            }
 
-            return $this->response->setJSON([
-                'status'            => false,
-                'message'           => 'Email failed for all recipients.',
-                'failed_recipients' => $failedRecipients,
-                'errors'            => $errors,
-            ])->setStatusCode(500);
-        }
+            $updated = $this->db->table('exhibitors')
+                ->where('id', $exhibitor['exhibitor_id'])
+                ->where('sub_event_id', $subEventId)
+                ->update([
+                    'is_need_additional_furniture' => $isNeedFurniture,
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ]);
 
-        if (!empty($failedRecipients)) {
-            log_message(
-                'warning',
-                'Edit request email failed for some recipients: ' .
-                    implode(', ', $failedRecipients)
-            );
+            if ($updated === false) {
+                return $this->response->setStatusCode(500)->setJSON([
+                    'status'  => false,
+                    'code'    => 500,
+                    'message' => 'Unable to save your preference.',
+                    'data'    => null,
+                ]);
+            }
 
-            return $this->response->setJSON([
-                'status'            => true,
-                'message'           => 'Profile edit request sent successfully to some recipients.',
-                'failed_recipients' => $failedRecipients,
-                'errors'            => $errors,
+            return $this->response->setStatusCode(200)->setJSON([
+                'status'  => true,
+                'code'    => 200,
+                'message' => $isNeedFurniture === 0
+                    ? 'Preference saved successfully.'
+                    : 'Additional furniture re-enabled successfully.',
+                'data'    => [
+                    'is_need_additional_furniture' => $isNeedFurniture,
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            log_message('error', 'furnitureOptOut failed: ' . $e->getMessage() . ' | ' . $e->getFile() . ':' . $e->getLine());
+            return $this->response->setStatusCode(500)->setJSON([
+                'status'  => false,
+                'code'    => 500,
+                'message' => 'Something went wrong while saving your preference.',
+                'data'    => null,
             ]);
         }
-
-        return $this->response->setJSON([
-            'status'  => true,
-            'message' => 'Profile edit request sent successfully.',
-        ]);
     }
+
     private function compactPdfHtml(string $html): string
     {
         $compactCss = <<<CSS

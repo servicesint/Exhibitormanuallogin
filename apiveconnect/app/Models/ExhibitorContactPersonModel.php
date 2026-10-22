@@ -161,7 +161,7 @@ class ExhibitorContactPersonModel extends Model
 
     public function getProfile($exhibitor_id)
     {
-       
+
         $columns = [
             'e.id as exhibitor_id',
             'e.brand_name',

@@ -35,14 +35,14 @@
 .fascia-input-wrap input:focus,.fascia-input-wrap textarea:focus{outline:none;box-shadow:none}
 .fascia-input-wrap.is-invalid-wrap{border-color:#e6a3a3;background:#fdf6f6}
 .validation-error{color:#c4574f;font-size:0.8em;margin-top:5px;display:block}
-.electricity-price-note{margin-top:6px;font-size:0.84rem;color:#4a72b8;font-weight:600;display:none}
+.electricity-price-note{margin-top:6px;font-size:0.84rem;color:var(--brand-primary);font-weight:600;display:none}
 .fascia-upload{display:flex;align-items:center;flex-wrap:wrap;gap:14px;padding:16px 18px;border:1.5px dashed #d9e1ec;border-radius:16px;background:#f8f9fc;position:relative}
 .fascia-upload-icon{width:44px;height:44px;border-radius:12px;background:#eaf0fb;display:flex;align-items:center;justify-content:center;color:#5b7bab;font-size:1.15rem;flex-shrink:0}
 .fascia-upload-copy{flex:1 1 220px}
 .fascia-upload-copy strong{display:block;margin-bottom:3px;font-weight:600;color:#2b3a4f;font-size:0.9rem}
 .fascia-upload-copy span{display:block;color:#7c879a;font-size:0.84rem;line-height:1.55}
-.fascia-upload-btn{display:inline-flex;align-items:center;justify-content:center;min-width:130px;padding:9px 16px;border-radius:999px;background:#4a72b8;color:#fff;cursor:pointer;transition:background 0.15s ease;border:none;font-size:0.88rem;font-weight:600;flex-shrink:0}
-.fascia-upload-btn:hover{background:#3d5f9c}
+.fascia-upload-btn{display:inline-flex;align-items:center;justify-content:center;min-width:130px;padding:9px 16px;border-radius:999px;background:var(--brand-primary);color:#fff;cursor:pointer;transition:background 0.15s ease;border:none;font-size:0.88rem;font-weight:600;flex-shrink:0}
+.fascia-upload-btn:hover{background:var(--brand-primary-dark)}
 .fascia-upload-btn.disabled-btn{opacity:0.5;cursor:not-allowed;pointer-events:none}
 .fascia-upload input[type="file"]{position:absolute;opacity:0;width:0;height:0;pointer-events:none}
 .fascia-file-name{display:block;color:#8792a3;font-size:0.82rem;width:100%}
@@ -73,15 +73,15 @@
 .note-info{margin-bottom:6px;color:#7a6a45;font-size:0.84rem;line-height:1.55}
 .note-info:last-child{margin-bottom:0}
 .fascia-actions{display:flex;justify-content:flex-end;margin-top:8px}
-.fascia-btn{min-width:150px;border-radius:999px;padding:11px 22px;font-size:0.92rem;font-weight:600;background:#4a72b8;border:none;color:#fff;cursor:pointer;transition:background 0.15s ease}
-.fascia-btn:hover{background:#3d5f9c}
+.fascia-btn{min-width:150px;border-radius:999px;padding:11px 22px;font-size:0.92rem;font-weight:600;background:var(--brand-primary);border:none;color:#fff;cursor:pointer;transition:background 0.15s ease}
+.fascia-btn:hover{background:var(--brand-primary-dark)}
 .fascia-btn.disabled-btn{opacity:0.5;cursor:not-allowed;pointer-events:none}
 .status-badge{font-size:0.72rem;vertical-align:middle;margin-left:6px;text-transform:capitalize;font-weight:600}
 .rejection-reason-box{margin-top:10px;padding:10px 14px;background:#fdf3f2;border:1px solid #f2c9c5;border-radius:10px;color:#9c3a32;font-size:0.84rem;line-height:1.5;display:none}
 .rejection-reason-box strong{display:block;margin-bottom:3px;font-weight:700}
 .guidelines-content{display:flex;flex-direction:column;gap:14px;padding:4px 0}
-.guideline-item{display:flex;align-items:flex-start;gap:14px;padding:12px 16px;background:#f8f9fc;border-radius:10px;border-left:3px solid #4a72b8}
-.guideline-item i{font-size:1.2rem;margin-top:2px;flex-shrink:0;color:#4a72b8}
+.guideline-item{display:flex;align-items:flex-start;gap:14px;padding:12px 16px;background:#f8f9fc;border-radius:10px;border-left:3px solid var(--brand-primary)}
+.guideline-item i{font-size:1.2rem;margin-top:2px;flex-shrink:0;color:var(--brand-primary)}
 .guideline-item i.text-warning{color:#ffc107}
 .guideline-item i.text-danger{color:#dc3545}
 .guideline-item strong{display:block;color:#253345;font-size:0.9rem;margin-bottom:2px}
@@ -91,8 +91,8 @@
 #designGuidelinesModal .modal-title{color:#253345;font-weight:700;font-size:1.05rem;display:flex;align-items:center}
 #designGuidelinesModal .modal-body{padding:24px;background:#fff}
 #designGuidelinesModal .modal-footer{border-top:1px solid #eef2f8;padding:14px 24px;background:#fff}
-#designGuidelinesModal .btn-primary{border-radius:999px;padding:10px 28px;font-weight:600;background:#4a72b8;border:none}
-#designGuidelinesModal .btn-primary:hover{background:#3d5f9c}
+#designGuidelinesModal .btn-primary{border-radius:999px;padding:10px 28px;font-weight:600;background:var(--brand-primary);border:none}
+#designGuidelinesModal .btn-primary:hover{background:var(--brand-primary-dark)}
 @media (max-width:700px){.fascia-card-head,.fascia-form-layout{padding-left:20px;padding-right:20px}.fab-col-2,.fab-col-5,.fab-col-6{grid-column:span 12}}
 @media (max-width:520px){.fascia-card-head{padding:20px 16px 14px}.fascia-wrapper{padding:16px 12px 28px}.fascia-form-layout{padding:20px 16px 24px}.fascia-upload{flex-direction:column;align-items:stretch;text-align:center}.fascia-upload-btn{width:100%}}
 #designPreviewModal .modal-content{border:none;border-radius:18px;overflow:hidden;box-shadow:0 20px 50px rgba(20,40,80,0.18)}
@@ -104,7 +104,7 @@
 #designPreviewModalImg{display:none;border-radius:8px;max-width:100%;max-height:65vh}
 #designPreviewModalPdf{display:none;width:100%;height:68vh;border:none;border-radius:8px}
 #designPreviewModal .modal-footer{border-top:1px solid #eef2f8;padding:14px 22px;background:#fff}
-#designPreviewModal .download-btn{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:999px;background:#f2f5fb;color:#4a72b8;font-weight:600;font-size:0.86rem;text-decoration:none;border:1px solid #e2e8f1;transition:background 0.15s ease}
+#designPreviewModal .download-btn{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:999px;background:#f2f5fb;color:var(--brand-primary);font-weight:600;font-size:0.86rem;text-decoration:none;border:1px solid #e2e8f1;transition:background 0.15s ease}
 #designPreviewModal .download-btn:hover{background:#e7edf8}
 .fascia-card-head-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:8px}
 .fascia-card-head-top .fascia-title{margin-bottom:0}
@@ -118,7 +118,7 @@
 .rejection-reason-box .view-more-reason{color:#c4574f;font-weight:700;text-decoration:underline;cursor:pointer;margin-left:4px;white-space:nowrap}
 .pay-now-confirm{text-align:left;padding:8px 0}
 .pay-now-confirm .detail-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0f0f0}
-.pay-now-confirm .detail-row:last-child{border-bottom:none;font-weight:700;font-size:1.05rem;padding-top:8px;border-top:2px solid #4a72b8}
+.pay-now-confirm .detail-row:last-child{border-bottom:none;font-weight:700;font-size:1.05rem;padding-top:8px;border-top:2px solid var(--brand-primary)}
 .pay-now-confirm .label{color:#6b7891}
 .pay-now-confirm .value{color:#253345;font-weight:600}
 .rejection-reason-swal-popup{
@@ -196,6 +196,17 @@
     .rejection-reason-modal-body{
         max-height:60vh;
     }
+}
+@media (max-width:767.98px){
+    .fascia-card-head-top{flex-direction:column;align-items:stretch;gap:12px}
+    .badge-date{white-space:normal;justify-content:center;padding:9px 14px;font-size:0.85rem}
+    .fascia-btn{width:100%;min-width:0}
+    .pdf-preview-box{max-width:100%}
+    .fascia-preview-block{flex-direction:column}
+    .rejection-reason-box{flex:1 1 auto;width:100%}
+    #designPreviewModal .modal-body{padding:14px;min-height:200px}
+    #designPreviewModal .modal-footer{flex-wrap:wrap;gap:8px}
+    #designPreviewModal .download-btn{width:100%;justify-content:center}
 }
 </style>
 
@@ -636,6 +647,15 @@ $(function() {
 
         if (window.getFormStatus) {
             status = window.getFormStatus('fascia');
+            if (status === 'expired') {
+                const enabledFlags = window.onlineFormsEnableDisable;
+                status = !enabledFlags || parseInt(enabledFlags.fascia, 10) === 1
+                    ? 'enabled_open'
+                    : 'enabled_closed';
+            }
+            if (status !== 'disabled' && isFasciaDueDateExpired()) {
+                status = 'expired';
+            }
         } else if (window.onlineFormsEnableDisable) {
             const enabled =
                 parseInt(window.onlineFormsEnableDisable.fascia, 10) === 1;
@@ -673,14 +693,20 @@ $(function() {
         }
 
         if (status === 'enabled_closed' || status === 'expired') {
+            if (isViewOnly) {
+                return true;
+            }
             isViewOnly = true;
+
+            const dueDateText = getFormattedFasciaDueDate();
+            const dueDateSuffix = dueDateText ? ' (' + dueDateText + ')' : '';
 
             const msgDiv = document.getElementById('readonlyMessage');
 
             if (msgDiv) {
                 if (status === 'expired') {
                     msgDiv.querySelector('span').textContent =
-                        'The due date for Fascias has passed. You can view your existing submission but can no longer make changes.';
+                        'The due date for Fascias' + dueDateSuffix + ' has passed. You can view your existing submission but can no longer make changes.';
                 }
 
                 msgDiv.style.display = 'block';
@@ -699,7 +725,7 @@ $(function() {
             if (window.showToast) {
                 const msg =
                     status === 'expired'
-                        ? 'Due date has passed. View only mode.'
+                        ? 'Due date' + dueDateSuffix + ' has passed. View only mode.'
                         : 'View only mode. You can view your existing submissions only.';
 
                 window.showToast(msg, 'warning');
@@ -709,16 +735,33 @@ $(function() {
         return true;
     }
 
-    function renderFasciaDueDate() {
-        const dueDate =
-            window.onlineFormsDueDates &&
-            window.onlineFormsDueDates.fascia;
+    let fasciaDueDate = null;
 
-        const $dueDateEl = $('#fasciaduedate');
+    function fetchFasciaDueDate() {
+        const token = getAuthToken();
+
+        $.ajax({
+            url: FASCIA_URL,
+            type: 'GET',
+            headers: {
+                Authorization: token ? `Bearer ${token}` : ''
+            },
+            dataType: 'json',
+            success: function(response) {
+                if (response?.date) {
+                    fasciaDueDate = response.date;
+                    renderFasciaDueDate();
+                    checkFasciaStatus();
+                }
+            }
+        });
+    }
+
+    function getFormattedFasciaDueDate() {
+        const dueDate = fasciaDueDate;
 
         if (!dueDate) {
-            $dueDateEl.text('--');
-            return;
+            return '';
         }
 
         let formatted = dueDate;
@@ -731,7 +774,28 @@ $(function() {
             }
         }
 
-        $dueDateEl.text(formatted);
+        return formatted;
+    }
+
+    function isFasciaDueDateExpired() {
+        const dueDate = fasciaDueDate;
+
+        if (!dueDate || /^0{4}-0{2}-0{2}/.test(String(dueDate))) {
+            return false;
+        }
+
+        const due = new Date(String(dueDate).slice(0, 10) + 'T23:59:59');
+
+        return !isNaN(due) && due < new Date();
+    }
+
+    function renderFasciaDueDate() {
+        const formatted = getFormattedFasciaDueDate();
+        const expired = formatted && isFasciaDueDateExpired();
+
+        $('#fasciaduedate')
+            .text(expired ? formatted + ' (Expired)' : (formatted || '--'))
+            .css('color', expired ? '#dc2626' : '');
     }
 
     function setRawSubmitDisabled(disabled) {
@@ -1256,25 +1320,25 @@ $(function() {
     }
 
     function showRejectionReason(
-        status,
-        reason,
-        otherReason
-    ) {
-        const $reasonBox =
-            $('#designRejectionReason');
+    status,
+    reason,
+    otherReason
+) {
+    const $reasonBox =
+        $('#designRejectionReason');
 
-        const normalized =
-            String(status || '')
-                .trim()
-                .toLowerCase();
+    const normalized =
+        String(status || '')
+            .trim()
+            .toLowerCase();
 
-        if (normalized !== 'rejected') {
-            $reasonBox
-                .hide()
-                .empty();
+    if (normalized !== 'rejected') {
+        $reasonBox
+            .hide()
+            .empty();
 
-            return;
-        }
+        return;
+    }
 
     const rawReason =
         (
@@ -1334,7 +1398,7 @@ $(function() {
         <div class="rejection-reason-modal-body">${safeHtml}</div>
     `,
     confirmButtonText: 'Close',
-    confirmButtonColor: '#4a72b8',
+    confirmButtonColor: brandColor(),
     width: '720px',
     heightAuto: false,
     customClass: {
@@ -1827,6 +1891,12 @@ function formatPlainTextToHtml(text) {
                 renderFasciaNotes(
                     response?.raw_text || ''
                 );
+
+                if (response?.date) {
+                    fasciaDueDate = response.date;
+                    renderFasciaDueDate();
+                    checkFasciaStatus();
+                }
             }
         });
     }
@@ -2290,6 +2360,8 @@ function formatPlainTextToHtml(text) {
 
     if (!<?= json_encode(!empty($saved)) ?>) {
         fetchSavedFascia();
+    } else {
+        fetchFasciaDueDate();
     }
 
     fetchElectricityItem();

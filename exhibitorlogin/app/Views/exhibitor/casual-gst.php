@@ -59,7 +59,7 @@
         padding: 9px 16px;
         border-radius: 999px;
         background: #eaf0fb;
-        color: #4a72b8;
+        color: var(--brand-primary);
         font-weight: 600;
         font-size: 0.86rem;
         white-space: nowrap;
@@ -98,7 +98,7 @@
     }
 
     .gst-info-panel a {
-        color: #4a72b8;
+        color: var(--brand-primary);
         font-weight: 600;
         text-decoration: underline;
     }
@@ -199,7 +199,7 @@
         margin-top: 3px;
         width: 18px;
         height: 18px;
-        accent-color: #4a72b8;
+        accent-color: var(--brand-primary);
         cursor: pointer;
         flex-shrink: 0;
     }
@@ -274,7 +274,7 @@
         min-width: 130px;
         padding: 9px 16px;
         border-radius: 999px;
-        background: #4a72b8;
+        background: var(--brand-primary);
         color: #fff;
         cursor: pointer;
         transition: background 0.15s ease;
@@ -285,7 +285,7 @@
     }
 
     .upload-btn:hover {
-        background: #3d5f9c;
+        background: var(--brand-primary-dark);
     }
 
     .gst-upload input[type="file"] {
@@ -308,7 +308,7 @@
         align-items: center;
         gap: 6px;
         margin-top: 10px;
-        color: #4a72b8;
+        color: var(--brand-primary);
         font-weight: 600;
         font-size: 0.86rem;
         text-decoration: none;
@@ -340,7 +340,7 @@
         padding: 11px 22px;
         font-size: 0.92rem;
         font-weight: 600;
-        background: #4a72b8;
+        background: var(--brand-primary);
         border: none;
         color: #fff;
         cursor: pointer;
@@ -348,7 +348,7 @@
     }
 
     .gst-btn:hover {
-        background: #3d5f9c;
+        background: var(--brand-primary-dark);
     }
 
     .gst-submitted-box {
@@ -782,6 +782,17 @@
             });
         }
 
+        // Prefer the shared toast; fall back to SweetAlert2, then a plain alert.
+        function notify(message, type) {
+            if (typeof window.showToast === 'function') {
+                window.showToast(message, type);
+            } else if (window.Swal) {
+                Swal.fire({ text: message, icon: type === 'error' ? 'error' : 'success', timer: 3000, showConfirmButton: false });
+            } else {
+                alert(message);
+            }
+        }
+
         function submitGstForm(form) {
             const formData = new FormData(form);
             const token = localStorage.getItem('api_token') || sessionStorage.getItem('api_token') || '';
@@ -798,15 +809,15 @@
                 success(response) {
                     const message = response.message || (response.status ? 'Submitted successfully' : 'Submission failed');
                     if (response.status || response.success) {
-                        alert(message);
+                        notify(message, 'success');
                         fetchCasualGstDetails();
                     } else {
-                        alert(message);
+                        notify(message, 'error');
                     }
                 },
                 error(xhr) {
                     const errorMessage = xhr.responseJSON?.message || 'Server error. Please try again.';
-                    alert(errorMessage);
+                    notify(errorMessage, 'error');
                 }
             });
             return false;
